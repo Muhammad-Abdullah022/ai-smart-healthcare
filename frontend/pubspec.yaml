@@ -1,0 +1,32 @@
+name: ai_smart_healthcare
+description: "AI Smart Healthcare - Disease Assessment and Patient Support System"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Screen navigation
+  go_router: ^14.6.2
+  # Simple state management
+  provider: ^6.1.2
+  # Talking to the FastAPI backend
+  http: ^1.2.2
+  # Secure place to keep login tokens (Android Keystore / iOS Keychain)
+  flutter_secure_storage: ^9.2.2
+  # Small non-secret settings (e.g. "onboarding already seen")
+  shared_preferences: ^2.3.3
+  # Inter font
+  google_fonts: ^6.2.1
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
