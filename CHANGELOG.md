@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 — 2026-11-01
+### Added
+- AI service layer (Gemini + Groq, fallback, retries, schema validation) and medical safety rules.
+- AI Symptom Checker with triage, follow-up questions, explanation and private history (features 1, 2, 4).
+- In-memory DB dev mode, Chrome/Windows support, run scripts.
+
 ## 0.1.0 — 2026-11-01
 ### Added
 - Excel task tracker (227 tasks, 8 sheets, live dashboard).

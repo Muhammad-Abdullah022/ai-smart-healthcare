@@ -27,9 +27,15 @@ class Settings(BaseSettings):
     # Lets the Flutter web app (Chrome, any localhost port) call the API during development.
     cors_origin_regex: str = r"http://(localhost|127\.0\.0\.1)(:\d+)?"
 
+    # ----- AI providers (keys live ONLY here, never in the Flutter app) -----
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash"
     xai_api_key: str = ""   # xAI Grok (keys start with "xai-")
     groq_api_key: str = ""  # Groq (keys start with "gsk_")
+    groq_model: str = "llama-3.3-70b-versatile"
+    ai_primary: str = "gemini"      # which provider to try first
+    ai_fallback: str = "groq"       # used if the first one fails
+    ai_timeout_seconds: float = 30.0
 
     @field_validator("jwt_secret")
     @classmethod

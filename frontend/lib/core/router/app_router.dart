@@ -18,6 +18,7 @@ import '../../screens/records/records_screen.dart';
 import '../../screens/search/search_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/splash/splash_screen.dart';
+import '../../screens/symptoms/symptom_checker_screen.dart';
 
 /// Screens anyone can open without logging in.
 const _publicRoutes = {'/onboarding', '/login', '/register', '/forgot-password'};
@@ -78,7 +79,14 @@ GoRouter createRouter(AuthProvider auth) {
       ),
       GoRoute(
         path: '/feature/:number',
-        builder: (_, state) => FeatureScreen(number: int.tryParse(state.pathParameters['number']!) ?? 0),
+        builder: (_, state) {
+          final number = int.tryParse(state.pathParameters['number']!) ?? 0;
+          // Features that are built get their own screen; the rest show "being built".
+          return switch (number) {
+            1 || 2 || 4 => const SymptomCheckerScreen(),
+            _ => FeatureScreen(number: number),
+          };
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

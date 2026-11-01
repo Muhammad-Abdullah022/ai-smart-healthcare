@@ -45,10 +45,10 @@ const List<HealthModule> healthModules = [
     icon: Icons.medical_services_outlined,
     color: Color(0xFF14B8A6),
     features: [
-      HealthFeature(1, 'AI Symptom Checker', Icons.sick_outlined),
-      HealthFeature(2, 'Adaptive Cross-Questioning', Icons.quiz_outlined),
+      HealthFeature(1, 'AI Symptom Checker', Icons.sick_outlined, status: FeatureStatus.available),
+      HealthFeature(2, 'Adaptive Cross-Questioning', Icons.quiz_outlined, status: FeatureStatus.available),
       HealthFeature(3, 'Disease Prediction & Risk Assessment', Icons.analytics_outlined),
-      HealthFeature(4, 'Patient Triage', Icons.priority_high),
+      HealthFeature(4, 'Patient Triage', Icons.priority_high, status: FeatureStatus.available),
       HealthFeature(5, 'Medical Test Recommendation', Icons.biotech_outlined),
       HealthFeature(6, 'Nearby Laboratory Finder', Icons.location_on_outlined,
           status: FeatureStatus.prototype, note: _noData),

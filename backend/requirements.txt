@@ -10,9 +10,10 @@ pymongo==4.9.2
 # Security: password hashing and login tokens
 bcrypt==4.2.1
 PyJWT==2.10.1
+# Calling the AI providers' web APIs
+httpx==0.28.1
 # In-memory database for quick local runs (USE_MEMORY_DB=true) and tests
 mongomock-motor==0.0.34
 
 # ---- Testing only ----
 pytest==8.3.4
-httpx==0.28.1

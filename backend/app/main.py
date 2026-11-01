@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.db.mongo import create_client, ensure_indexes
-from app.routers import auth, profile
+from app.routers import assessments, auth, profile
 
 
 @asynccontextmanager
@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
     app.include_router(auth.router)
     app.include_router(profile.router)
+    app.include_router(assessments.router)
 
     @app.get("/health", tags=["system"])
     async def health():
