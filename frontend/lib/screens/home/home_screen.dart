@@ -54,17 +54,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SectionTitle('Your health areas'),
-                GroupedList(children: [
-                  for (final m in healthModules)
-                    ListRow(
-                      icon: m.icon,
-                      title: m.title,
-                      subtitle: m.subtitle,
-                      color: m.color,
-                      tint: m.tint,
-                      onTap: () => context.push('/module/${m.id}'),
+                for (final m in healthModules)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: SectionCard(
+                      padding: EdgeInsets.zero,
+                      child: ListRow(
+                        icon: m.icon,
+                        title: m.title,
+                        subtitle: m.subtitle,
+                        color: m.color,
+                        tint: m.tint,
+                        onTap: () => context.push('/module/${m.id}'),
+                      ),
                     ),
-                ]),
+                  ),
                 const SizedBox(height: 24),
                 const Text(
                   'Health information only — not a diagnosis. In an emergency call 1122.',
