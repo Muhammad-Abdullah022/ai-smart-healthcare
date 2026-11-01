@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 22),
                 const Row(
                   children: [
-                    Expanded(child: _QuickAction(Icons.sick_outlined, 'Check symptoms', 1, AppColors.diagnosis, AppColors.diagnosisTint)),
+                    Expanded(child: _QuickAction(Icons.sick_outlined, 'Symptoms', 1, AppColors.diagnosis, AppColors.diagnosisTint)),
                     SizedBox(width: 10),
                     Expanded(child: _QuickAction(Icons.medication_outlined, 'Medicines', 35, AppColors.medicine, AppColors.medicineTint)),
                     SizedBox(width: 10),
@@ -228,10 +228,13 @@ class _QuickAction extends StatelessWidget {
               child: Icon(icon, color: color, size: 26),
             ),
             const SizedBox(height: 8),
-            Text(label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, height: 1.25, color: AppColors.text)),
+            SizedBox(
+              height: 32, // same height for one- and two-line labels keeps icons aligned
+              child: Text(label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, height: 1.25, color: AppColors.text)),
+            ),
           ],
         ),
       ),
