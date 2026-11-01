@@ -19,6 +19,8 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   # Small non-secret settings (e.g. "onboarding already seen")
   shared_preferences: ^2.3.3
+  # QR code for the emergency medical card (feature 44)
+  qr_flutter: ^4.1.0
   # Inter font
   google_fonts: ^6.2.1
   cupertino_icons: ^1.0.8

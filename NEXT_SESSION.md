@@ -14,3 +14,9 @@ Current task: **A-03 / Phase B (Testing)**. Next task: **A-03 verification → C
 ## Update 2026-11-01 (afternoon)
 Symptom checker built. Next: user runs app + backend and does one symptom check (verifies Gemini/Groq keys).
 Then: E-12 SOS, E-16/E-25 mental health screening + crisis support, C-11 roles, C-12 file storage.
+
+## Update 2026-11-01 (evening) - UI phase
+Done: gentle redesign, all 50 features have screens saving to MongoDB (/entries), readings chart (41), emergency QR card (44, qr_flutter), profile header, grouped settings, RUN/START_BACKEND.bat + RUN/START_FRONTEND.bat.
+Pending tracker updates: ~/t1.json, ~/t2.json (Excel was open - re-apply when closed).
+Next UI items: file/photo upload (8, 26, 38), PDF summary (50), local notifications (33), maps (6, 28), voice (13), camera (20, 21), Urdu.
+Then: run `flutter analyze` + `flutter test` on the PC and fix findings; logic per feature.

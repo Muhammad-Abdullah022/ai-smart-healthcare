@@ -12,6 +12,7 @@ import '../../widgets/confirm_dialog.dart';
 import '../../widgets/error_banner.dart';
 import '../../widgets/feature_page.dart';
 import '../../widgets/section_card.dart';
+import '../../widgets/trend_chart.dart';
 
 /// One screen for every feature that has a form in [featureForms].
 /// It shows the form, saves to the backend, and lists what was saved before.
@@ -223,6 +224,10 @@ class _FeatureFormScreenState extends State<FeatureFormScreen> {
       tint: module.tint,
       notice: _spec.notice,
       children: [
+        if (widget.number == 41) ...[
+          _ReadingsTrend(entries: _entries, color: module.color),
+          const SizedBox(height: 16),
+        ],
         SectionCard(
           padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
           child: Form(
@@ -278,6 +283,70 @@ class _FeatureFormScreenState extends State<FeatureFormScreen> {
           },
         ),
       ],
+    );
+  }
+}
+
+
+/// Feature 41: chart of the most recent measurement type the user logged.
+class _ReadingsTrend extends StatefulWidget {
+  const _ReadingsTrend({required this.entries, required this.color});
+
+  final Future<List<Entry>> entries;
+  final Color color;
+
+  @override
+  State<_ReadingsTrend> createState() => _ReadingsTrendState();
+}
+
+class _ReadingsTrendState extends State<_ReadingsTrend> {
+  String? _measure;
+
+  static List<double> _parse(String raw) => RegExp(r'\d+(\.\d+)?')
+      .allMatches(raw)
+      .map((m) => double.parse(m.group(0)!))
+      .take(2)
+      .toList();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Entry>>(
+      future: widget.entries,
+      builder: (context, snap) {
+        final entries = snap.data ?? const <Entry>[];
+        final measures = <String>{for (final e in entries) if (e.data['measure'] is String) e.data['measure'] as String};
+        if (measures.isEmpty) return const SizedBox.shrink();
+        final selected = (_measure != null && measures.contains(_measure)) ? _measure! : measures.first;
+        final rows = entries.where((e) => e.data['measure'] == selected && e.data['value'] is String).toList()
+          ..sort((a, b) => '${a.data['date']}'.compareTo('${b.data['date']}'));
+        final points = <TrendPoint>[
+          for (final e in rows)
+            if (_parse(e.data['value'] as String).isNotEmpty)
+              TrendPoint(DateTime.tryParse('${e.data['date']}') ?? e.createdAt, _parse(e.data['value'] as String)),
+        ];
+        final unit = rows.isEmpty ? '' : '${rows.last.data['unit'] ?? ''}';
+        return SectionCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final m in measures)
+                    ChoiceChip(
+                      label: Text(m),
+                      selected: m == selected,
+                      onSelected: (_) => setState(() => _measure = m),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TrendChart(points: points, unit: unit, color: widget.color),
+            ],
+          ),
+        );
+      },
     );
   }
 }

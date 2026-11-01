@@ -10,6 +10,7 @@ import '../../screens/mental/screening_screen.dart';
 import '../../screens/modules/feature_form_screen.dart';
 import '../../screens/modules/feature_screen.dart';
 import '../../screens/records/activity_screen.dart';
+import '../../screens/records/emergency_card_screen.dart';
 import '../../screens/settings/consent_screen.dart';
 import '../../screens/symptoms/symptom_checker_screen.dart';
 
@@ -36,6 +37,8 @@ Widget screenForFeature(int number) {
       return const MedicinesScreen();
     case 48:
       return const ConsentScreen();
+    case 44:
+      return const EmergencyCardScreen();
     case 49:
       return const ActivityScreen();
   }
