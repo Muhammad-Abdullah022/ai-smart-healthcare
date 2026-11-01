@@ -28,7 +28,8 @@ class Settings(BaseSettings):
     cors_origin_regex: str = r"http://(localhost|127\.0\.0\.1)(:\d+)?"
 
     gemini_api_key: str = ""
-    xai_api_key: str = ""
+    xai_api_key: str = ""   # xAI Grok (keys start with "xai-")
+    groq_api_key: str = ""  # Groq (keys start with "gsk_")
 
     @field_validator("jwt_secret")
     @classmethod

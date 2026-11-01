@@ -17,7 +17,16 @@ using Google Gemini and xAI Grok (through the backend only) for AI features.
 
 The task tracker lives separately at `E:\FYP SESMTER\task\Healthcare_AI_Task_Tracker.xlsx`.
 
-## Quick start
+## Run everything with one command
+From VS Code's terminal:
+```powershell
+cd "E:\FYP SESMTER\app\frontend"
+.\run.bat -d chrome      # or: -d windows, or no -d to pick the emulator
+```
+`run.bat` starts the backend in its own window (if it is not already running), then runs `flutter run`.
+Or press **F5** in VS Code with the "App + Backend" configuration.
+
+## Quick start (manual)
 
 ### 1. Backend
 ```powershell
