@@ -88,3 +88,19 @@ def test_audit_events_recorded(registered):
     client.post("/auth/login", json={"email": VALID_USER["email"], "password": "Wrong1234"})
     actions = asyncio.run(client.app.state.db.audit_events.distinct("action"))
     assert "user.register" in actions and "user.login_failed" in actions
+
+
+def test_cors_allows_flutter_web_on_localhost(client):
+    response = client.options(
+        "/auth/login",
+        headers={"Origin": "http://localhost:54321", "Access-Control-Request-Method": "POST"},
+    )
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:54321"
+
+
+def test_cors_blocks_unknown_sites(client):
+    response = client.options(
+        "/auth/login",
+        headers={"Origin": "https://evil.example.com", "Access-Control-Request-Method": "POST"},
+    )
+    assert "access-control-allow-origin" not in response.headers

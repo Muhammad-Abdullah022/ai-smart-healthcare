@@ -6,9 +6,9 @@ cd /d "%~dp0..\frontend"
 echo ==== %DATE% %TIME% ==== > "%LOG%"
 echo ---- flutter --version >> "%LOG%"
 call flutter --version >> "%LOG%" 2>&1
-if not exist android (
-  echo ---- flutter create android platform >> "%LOG%"
-  call flutter create . --platforms=android --org com.fyp.healthcare --project-name ai_smart_healthcare >> "%LOG%" 2>&1
+if not exist web (
+  echo ---- flutter create android, web, windows platforms >> "%LOG%"
+  call flutter create . --platforms=android,web,windows --org com.fyp.healthcare --project-name ai_smart_healthcare >> "%LOG%" 2>&1
   REM flutter create adds a sample test for its counter app; remove it.
   findstr /m "MyApp" test\widget_test.dart >nul 2>&1 && del test\widget_test.dart
 )

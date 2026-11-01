@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -60,10 +59,9 @@ class ApiClient {
       response = await http.Response.fromStream(streamed);
     } on TimeoutException {
       throw ApiException('The server is taking too long. Please try again.', code: 'timeout');
-    } on SocketException {
-      throw ApiException('No connection to the server. Check your internet.', code: 'offline');
     } on http.ClientException {
-      throw ApiException('No connection to the server. Check your internet.', code: 'offline');
+      // Also covers "server not running" on Android, Windows and Chrome.
+      throw ApiException('Cannot reach the server. Is the backend running?', code: 'offline');
     }
 
     // Access token expired: try to refresh once, then repeat the request.

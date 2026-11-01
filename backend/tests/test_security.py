@@ -48,3 +48,21 @@ def test_tampered_token_rejected():
 def test_short_jwt_secret_refused():
     with pytest.raises(ValueError):
         Settings(mongodb_uri="mongodb://x", jwt_secret="too-short")
+
+
+def test_memory_db_mode_starts_without_atlas(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from app.core.config import get_settings
+    from app.main import create_app
+
+    monkeypatch.setenv("USE_MEMORY_DB", "true")
+    monkeypatch.setenv("MONGODB_URI", "")
+    get_settings.cache_clear()
+    try:
+        with TestClient(create_app()) as client:
+            assert client.post("/auth/register", json={
+                "full_name": "Test User", "email": "t@example.com",
+                "password": "Secure123", "accepted_terms": True}).status_code == 201
+    finally:
+        get_settings.cache_clear()

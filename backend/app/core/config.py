@@ -13,7 +13,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_name: str = "AI Smart Healthcare API"
-    mongodb_uri: str = Field(..., description="MongoDB Atlas connection string")
+    # Set USE_MEMORY_DB=true to run without MongoDB Atlas (data is lost when the server stops).
+    use_memory_db: bool = False
+    mongodb_uri: str = Field(default="", description="MongoDB Atlas connection string")
     mongodb_db: str = "ai_smart_healthcare"
 
     jwt_secret: str = Field(..., description="Secret used to sign login tokens")
@@ -22,6 +24,8 @@ class Settings(BaseSettings):
     refresh_token_days: int = 7
 
     cors_origins: str = ""
+    # Lets the Flutter web app (Chrome, any localhost port) call the API during development.
+    cors_origin_regex: str = r"http://(localhost|127\.0\.0\.1)(:\d+)?"
 
     gemini_api_key: str = ""
     xai_api_key: str = ""

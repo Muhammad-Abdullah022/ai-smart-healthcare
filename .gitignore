@@ -41,3 +41,4 @@ frontend/ios/Flutter/Generated.xcconfig
 .DS_Store
 Thumbs.db
 scripts/*.log
+_to_delete/
