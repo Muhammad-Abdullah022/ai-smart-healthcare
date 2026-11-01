@@ -20,8 +20,9 @@ echo Getting packages...
 call flutter pub get
 
 echo.
-echo Starting the app in Chrome...
-call flutter run -d chrome
+echo Building the app... it opens at http://localhost:5555 (refresh the page if it is blank at first)
+start "" http://localhost:5555
+call flutter run -d web-server --web-port 5555 --web-hostname localhost --release
 echo.
 echo App stopped.
 pause

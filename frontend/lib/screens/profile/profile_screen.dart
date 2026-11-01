@@ -34,7 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My profile'),
+        title: const Text('My profile', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
             tooltip: 'Settings',
@@ -63,19 +63,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 _Header(profile: profile),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 _InfoCard(title: 'Personal details', rows: [
                   ('Date of birth', profile.dateOfBirth ?? 'Not set'),
                   ('Gender', _gender(profile.gender)),
                   ('Phone', profile.phone ?? 'Not set'),
                 ]),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 _InfoCard(title: 'Medical basics', rows: [
                   ('Blood group', profile.bloodGroup),
                   ('Allergies', profile.allergies.isEmpty ? 'None recorded' : profile.allergies.join(', ')),
                   ('Conditions', profile.conditions.isEmpty ? 'None recorded' : profile.conditions.join(', ')),
                 ]),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 _InfoCard(
                   title: 'Emergency contacts',
                   rows: profile.emergencyContacts.isEmpty
@@ -118,25 +118,58 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initials = profile.fullName.trim().split(RegExp(r'\s+')).take(2).map((p) => p[0]).join();
-    return SectionCard(
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: AppColors.primary,
-            child: Text(initials.toUpperCase(),
-                style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700)),
+    Widget stat(String value, String label) => Expanded(
+          child: Column(
+            children: [
+              Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 2),
+              Text(label, style: const TextStyle(color: Color(0xFFB8C7D9), fontSize: 12)),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(profile.fullName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 4),
-                Text(profile.email, style: const TextStyle(color: AppColors.textMuted)),
-              ],
-            ),
+        );
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primary, AppColors.primaryDeep],
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: AppColors.accent,
+                child: Text(initials.toUpperCase(),
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(profile.fullName,
+                        style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(profile.email, style: const TextStyle(color: Color(0xFFB8C7D9), fontSize: 13)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Container(height: 1, color: Colors.white.withAlpha(30)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              stat(profile.bloodGroup == 'Unknown' ? '—' : profile.bloodGroup, 'Blood group'),
+              stat('${profile.allergies.length}', 'Allergies'),
+              stat('${profile.emergencyContacts.length}', 'Contacts'),
+            ],
           ),
         ],
       ),
@@ -156,22 +189,31 @@ class _InfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
-          const SizedBox(height: 8),
-          for (final (label, value) in rows)
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.primary)),
+          const SizedBox(height: 4),
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) const Divider(height: 1, color: Color(0xFFEEF2F6)),
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 120,
-                    child: Text(label, style: const TextStyle(color: AppColors.textMuted)),
+                  Text(rows[i].$1, style: const TextStyle(color: AppColors.textMuted)),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(rows[i].$2,
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: rows[i].$2.startsWith('Not set') || rows[i].$2.startsWith('None')
+                              ? const Color(0xFFA0AAB7)
+                              : AppColors.text,
+                        )),
                   ),
-                  Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
                 ],
               ),
             ),
+          ],
         ],
       ),
     );
