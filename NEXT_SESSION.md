@@ -20,3 +20,16 @@ Done: gentle redesign, all 50 features have screens saving to MongoDB (/entries)
 Pending tracker updates: ~/t1.json, ~/t2.json (Excel was open - re-apply when closed).
 Next UI items: file/photo upload (8, 26, 38), PDF summary (50), local notifications (33), maps (6, 28), voice (13), camera (20, 21), Urdu.
 Then: run `flutter analyze` + `flutter test` on the PC and fix findings; logic per feature.
+
+## Decision 2026-11-01: DESIGN FIRST (no logic for now)
+User wants to focus only on design and improve it day by day. Logic waits.
+Daily design plan (one area per day, user reviews with screenshots):
+ Day 1: Home + bottom navigation (spacing, icons, header details)
+ Day 2: Symptom checker form + result page
+ Day 3: Medicines (Today / Add) + reminders look
+ Day 4: Mental health screens (mood, breathing, checks, crisis)
+ Day 5: Records tab + feature forms + saved lists
+ Day 6: Profile, Edit profile, Settings, Consent
+ Day 7: Onboarding, Login, Sign up, Splash + empty/error/loading states
+ Then: micro-details (animations on actions, icons, Urdu-ready text sizes), dark mode (optional)
+Ask the user for a screenshot of each screen at the start of each day.
