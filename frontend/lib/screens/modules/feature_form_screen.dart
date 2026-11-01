@@ -203,7 +203,7 @@ class _FeatureFormScreenState extends State<FeatureFormScreen> {
       if (v == null || v == false) continue;
       parts.add(v == true ? f.label : (v is List ? v.join(', ') : '$v'));
     }
-    return parts.join('  ·  ');
+    return parts.join(', ');
   }
 
   @override
@@ -224,7 +224,7 @@ class _FeatureFormScreenState extends State<FeatureFormScreen> {
       notice: _spec.notice,
       children: [
         SectionCard(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
           child: Form(
             key: _formKey,
             child: Column(
@@ -237,9 +237,7 @@ class _FeatureFormScreenState extends State<FeatureFormScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
-        const Text('Saved', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.primary)),
-        const SizedBox(height: 10),
+        const SectionTitle('Your entries'),
         FutureBuilder<List<Entry>>(
           future: _entries,
           builder: (context, snap) {
@@ -251,50 +249,32 @@ class _FeatureFormScreenState extends State<FeatureFormScreen> {
             }
             if (snap.hasError) {
               final e = snap.error;
-              return Text(e is ApiException ? e.message : 'Could not load saved entries.',
+              return Text(e is ApiException ? e.message : 'Could not load your entries.',
                   style: const TextStyle(color: AppColors.textMuted));
             }
             final items = snap.data!;
             if (items.isEmpty) {
-              return Text('Nothing saved yet. Fill in the form above to add your first entry.',
-                  style: TextStyle(color: AppColors.textMuted.withAlpha(220)));
+              return const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Text('Nothing here yet. What you save above will appear here.',
+                    style: TextStyle(color: AppColors.textMuted, height: 1.5)),
+              );
             }
-            return Column(
-              children: [
-                for (final e in items)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: SectionCard(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-                      child: Row(
-                        children: [
-                          Container(width: 4, height: 40, decoration: BoxDecoration(color: module.color, borderRadius: BorderRadius.circular(2))),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(_entryTitle(e), style: const TextStyle(fontWeight: FontWeight.w600)),
-                                if (_entrySubtitle(e).isNotEmpty)
-                                  Text(_entrySubtitle(e),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
-                                Text(when(e.createdAt), style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Remove',
-                            icon: const Icon(Icons.close, size: 20, color: AppColors.textMuted),
-                            onPressed: () => _remove(e),
-                          ),
-                        ],
-                      ),
-                    ),
+            return GroupedList(children: [
+              for (final e in items)
+                ListRow(
+                  icon: feature.icon,
+                  color: module.color,
+                  tint: module.tint,
+                  title: _entryTitle(e),
+                  subtitle: [_entrySubtitle(e), when(e.createdAt)].where((s) => s.isNotEmpty).join('\n'),
+                  trailing: IconButton(
+                    tooltip: 'Remove',
+                    icon: const Icon(Icons.close, size: 18, color: Color(0xFFB3BDC9)),
+                    onPressed: () => _remove(e),
                   ),
-              ],
-            );
+                ),
+            ]);
           },
         ),
       ],

@@ -52,7 +52,7 @@ void main() {
     await tester.tap(find.text('Add to history'));
     await tester.pumpAndSettle();
     expect(saved.single, {'kind': 'Condition', 'name': 'Asthma'});
-    await tester.scrollUntilVisible(find.text('Asthma'), 200);
-    expect(find.text('Asthma'), findsOneWidget);
+    await tester.scrollUntilVisible(find.textContaining('Asthma'), 200);
+    expect(find.textContaining('Asthma'), findsOneWidget);
   });
 }

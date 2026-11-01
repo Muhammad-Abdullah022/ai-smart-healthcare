@@ -6,7 +6,6 @@ import '../../core/theme/app_colors.dart';
 import '../../models/feature_catalog.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/medicine_repository.dart';
-import '../../widgets/medical_disclaimer.dart';
 import '../../widgets/pulse_line.dart';
 import '../../widgets/section_card.dart';
 
@@ -42,10 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const _SosStrip(),
-                const SizedBox(height: 24),
-                const Text('Quick actions',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                const SizedBox(height: 12),
+                const SizedBox(height: 22),
                 const Row(
                   children: [
                     Expanded(child: _QuickAction(Icons.sick_outlined, 'Check symptoms', 1, AppColors.diagnosis, AppColors.diagnosisTint)),
@@ -57,16 +53,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(child: _QuickAction(Icons.monitor_heart_outlined, 'Readings', 41, AppColors.records, AppColors.recordsTint)),
                   ],
                 ),
-                const SizedBox(height: 28),
-                const Text('Your health areas',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.primary)),
-                const SizedBox(height: 12),
-                for (final module in healthModules) ...[
-                  _ModuleCard(module: module),
-                  const SizedBox(height: 12),
-                ],
-                const SizedBox(height: 8),
-                const MedicalDisclaimer(compact: true),
+                const SectionTitle('Your health areas'),
+                GroupedList(children: [
+                  for (final m in healthModules)
+                    ListRow(
+                      icon: m.icon,
+                      title: m.title,
+                      subtitle: m.subtitle,
+                      color: m.color,
+                      tint: m.tint,
+                      onTap: () => context.push('/module/${m.id}'),
+                    ),
+                ]),
+                const SizedBox(height: 24),
+                const Text(
+                  'Health information only — not a diagnosis. In an emergency call 1122.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                ),
               ],
             ),
           ),
@@ -173,7 +177,7 @@ class _SosStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SectionCard(
-      color: const Color(0xFFFFF1F1),
+      color: const Color(0xFFFFF6F6),
       onTap: () => context.push('/feature/12'),
       child: const Row(
         children: [
@@ -210,71 +214,26 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SectionCard(
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
       onTap: () => context.push('/feature/$feature'),
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
-      child: Column(
-        children: [
-          IconBadge(icon: icon, color: color, background: tint),
-          const SizedBox(height: 8),
-          Text(label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, height: 1.2)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModuleCard extends StatelessWidget {
-  const _ModuleCard({required this.module});
-
-  final HealthModule module;
-
-  @override
-  Widget build(BuildContext context) {
-    final ready = module.features.where((f) => f.status == FeatureStatus.available).length;
-    return SectionCard(
-      onTap: () => context.push('/module/${module.id}'),
-      padding: EdgeInsets.zero,
-      child: Row(
-        children: [
-          Container(
-            width: 88,
-            height: 92,
-            decoration: BoxDecoration(
-              color: module.tint,
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
+              child: Icon(icon, color: color, size: 26),
             ),
-            child: Icon(module.icon, color: module.color, size: 36),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(module.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                const SizedBox(height: 3),
-                Text(module.subtitle, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: ready / module.features.length,
-                    minHeight: 5,
-                    color: module.color,
-                    backgroundColor: module.tint,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12),
-            child: Icon(Icons.chevron_right, color: AppColors.textMuted),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, height: 1.25, color: AppColors.text)),
+          ],
+        ),
       ),
     );
   }

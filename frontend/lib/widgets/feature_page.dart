@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 
-/// Standard layout for every feature: a soft band in the module's colour with the
-/// feature's icon, name and one plain sentence about what it does, then the content.
+/// Standard layout for every feature: a large, calm title, one muted sentence about
+/// what the screen does, an optional quiet note, then the content. No coloured bands.
 class FeaturePage extends StatelessWidget {
   const FeaturePage({
     super.key,
@@ -26,8 +26,6 @@ class FeaturePage extends StatelessWidget {
   final List<Widget> children;
   final List<Widget>? actions;
   final Widget? floatingActionButton;
-
-  /// Optional banner under the header, e.g. "Prototype: sample data".
   final String? notice;
 
   @override
@@ -35,68 +33,47 @@ class FeaturePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       floatingActionButton: floatingActionButton,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            backgroundColor: tint,
-            foregroundColor: AppColors.primary,
-            actions: actions,
-            title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ),
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-              decoration: BoxDecoration(
-                color: tint,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+      appBar: AppBar(actions: actions),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(11)),
+                child: Icon(icon, color: color, size: 20),
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: AppColors.softShadow,
-                    ),
-                    child: Icon(icon, color: color, size: 28),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      purpose,
-                      style: const TextStyle(fontSize: 15, height: 1.45, color: AppColors.text),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (notice != null)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: AppColors.warningTint, borderRadius: BorderRadius.circular(14)),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.science_outlined, size: 20, color: Color(0xFFB45309)),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(notice!, style: const TextStyle(fontSize: 13, height: 1.4))),
-                    ],
-                  ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.primary, height: 1.2, letterSpacing: -0.3),
                 ),
               ),
-            ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-            sliver: SliverList(delegate: SliverChildListDelegate(children)),
+            ],
           ),
+          const SizedBox(height: 10),
+          Text(purpose, style: const TextStyle(fontSize: 15, height: 1.5, color: AppColors.textMuted)),
+          if (notice != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, right: 8),
+                  child: Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                ),
+                Expanded(
+                  child: Text(notice!, style: const TextStyle(fontSize: 13, height: 1.45, color: AppColors.textMuted)),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 24),
+          ...children,
         ],
       ),
     );
