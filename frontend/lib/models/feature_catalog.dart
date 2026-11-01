@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
+
 /// Where a feature currently stands. Shown honestly on its tile.
 enum FeatureStatus { available, inDevelopment, prototype }
 
@@ -23,6 +25,7 @@ class HealthModule {
     required this.subtitle,
     required this.icon,
     required this.color,
+    required this.tint,
     required this.features,
   });
 
@@ -31,6 +34,7 @@ class HealthModule {
   final String subtitle;
   final IconData icon;
   final Color color;
+  final Color tint;
   final List<HealthFeature> features;
 }
 
@@ -43,13 +47,14 @@ const List<HealthModule> healthModules = [
     title: 'AI Diagnosis & Medical Assistance',
     subtitle: 'Symptoms, triage, reports, doctors, SOS',
     icon: Icons.medical_services_outlined,
-    color: Color(0xFF14B8A6),
+    color: AppColors.diagnosis,
+    tint: AppColors.diagnosisTint,
     features: [
       HealthFeature(1, 'AI Symptom Checker', Icons.sick_outlined, status: FeatureStatus.available),
       HealthFeature(2, 'Adaptive Cross-Questioning', Icons.quiz_outlined, status: FeatureStatus.available),
-      HealthFeature(3, 'Disease Prediction & Risk Assessment', Icons.analytics_outlined),
+      HealthFeature(3, 'Disease Prediction & Risk Assessment', Icons.analytics_outlined, status: FeatureStatus.available),
       HealthFeature(4, 'Patient Triage', Icons.priority_high, status: FeatureStatus.available),
-      HealthFeature(5, 'Medical Test Recommendation', Icons.biotech_outlined),
+      HealthFeature(5, 'Medical Test Recommendation', Icons.biotech_outlined, status: FeatureStatus.available),
       HealthFeature(6, 'Nearby Laboratory Finder', Icons.location_on_outlined,
           status: FeatureStatus.prototype, note: _noData),
       HealthFeature(7, 'Lab Test Price Comparison', Icons.price_check,
@@ -60,7 +65,7 @@ const List<HealthModule> healthModules = [
       HealthFeature(11, 'Appointment Booking & Email', Icons.event_available_outlined,
           status: FeatureStatus.prototype,
           note: 'Uses doctors added and verified by an admin; no live clinic availability.'),
-      HealthFeature(12, 'Emergency Detection & SOS', Icons.sos_outlined),
+      HealthFeature(12, 'Emergency Detection & SOS', Icons.sos_outlined, status: FeatureStatus.available),
       HealthFeature(13, 'Voice Assistant (Urdu / English / Roman Urdu)', Icons.mic_none),
       HealthFeature(14, 'Recovery Monitoring & Follow-Up', Icons.healing_outlined),
       HealthFeature(15, 'Medical Second Opinion Support', Icons.fact_check_outlined),
@@ -71,7 +76,8 @@ const List<HealthModule> healthModules = [
     title: 'Mental Health & Stress',
     subtitle: 'Screening, mood, breathing, support',
     icon: Icons.self_improvement,
-    color: Color(0xFF8B5CF6),
+    color: AppColors.mind,
+    tint: AppColors.mindTint,
     features: [
       HealthFeature(16, 'Mental Health Screening', Icons.psychology_outlined, status: FeatureStatus.available),
       HealthFeature(17, 'Mental Health Chatbot', Icons.chat_bubble_outline),
@@ -92,7 +98,8 @@ const List<HealthModule> healthModules = [
     title: 'Medicine & Pharmacy',
     subtitle: 'Prescriptions, reminders, safety checks',
     icon: Icons.medication_outlined,
-    color: Color(0xFFF59E0B),
+    color: AppColors.medicine,
+    tint: AppColors.medicineTint,
     features: [
       HealthFeature(26, 'Prescription & Handwriting Reader', Icons.receipt_long_outlined),
       HealthFeature(27, 'Medicine Identification from Image', Icons.camera_alt_outlined),
@@ -102,11 +109,11 @@ const List<HealthModule> healthModules = [
           status: FeatureStatus.prototype, note: _noData),
       HealthFeature(30, 'Same-Salt / Generic Alternatives', Icons.swap_horiz),
       HealthFeature(31, 'Drug Interaction & Safety Checker', Icons.warning_amber_outlined),
-      HealthFeature(32, 'Allergy & Contraindication Warning', Icons.do_not_disturb_on_outlined),
+      HealthFeature(32, 'Allergy & Contraindication Warning', Icons.do_not_disturb_on_outlined, status: FeatureStatus.available),
       HealthFeature(33, 'Smart Medicine Reminders', Icons.alarm),
       HealthFeature(34, 'Schedule from Prescription Image', Icons.schedule),
-      HealthFeature(35, 'Manual Medicine Entry & Schedule', Icons.edit_calendar_outlined),
-      HealthFeature(36, 'Intake Tracking & Missed-Dose Alerts', Icons.task_alt),
+      HealthFeature(35, 'Manual Medicine Entry & Schedule', Icons.edit_calendar_outlined, status: FeatureStatus.available),
+      HealthFeature(36, 'Intake Tracking & Missed-Dose Alerts', Icons.task_alt, status: FeatureStatus.available),
       HealthFeature(37, 'Medicine Info & Side Effects', Icons.info_outline),
     ],
   ),
@@ -115,7 +122,8 @@ const List<HealthModule> healthModules = [
     title: 'Health Records & Patient Care',
     subtitle: 'EHR, history, family, QR passport',
     icon: Icons.folder_shared_outlined,
-    color: Color(0xFF3B82F6),
+    color: AppColors.records,
+    tint: AppColors.recordsTint,
     features: [
       HealthFeature(38, 'Electronic Health Records', Icons.folder_open_outlined),
       HealthFeature(39, 'Medical History', Icons.history_edu_outlined),
@@ -126,10 +134,10 @@ const List<HealthModule> healthModules = [
       HealthFeature(43, 'Family & Caregiver Management', Icons.family_restroom),
       HealthFeature(44, 'Emergency Medical Passport (QR)', Icons.qr_code_2),
       HealthFeature(45, 'Personalized Health Recommendations', Icons.recommend_outlined),
-      HealthFeature(46, 'Explainable AI Decisions', Icons.lightbulb_outline),
+      HealthFeature(46, 'Explainable AI Decisions', Icons.lightbulb_outline, status: FeatureStatus.available),
       HealthFeature(47, 'Doctor Verification & AI Approval', Icons.verified_user_outlined),
-      HealthFeature(48, 'Data Security & Consent', Icons.lock_outline),
-      HealthFeature(49, 'Decision History & Audit Trail', Icons.manage_history),
+      HealthFeature(48, 'Data Security & Consent', Icons.lock_outline, status: FeatureStatus.available),
+      HealthFeature(49, 'Decision History & Audit Trail', Icons.manage_history, status: FeatureStatus.available),
       HealthFeature(50, 'Health Summary PDF Report', Icons.picture_as_pdf_outlined),
     ],
   ),
@@ -141,5 +149,21 @@ HealthModule? moduleById(String id) {
   }
   return null;
 }
+
+/// The module a feature belongs to.
+HealthModule moduleOf(int featureNumber) {
+  for (final m in healthModules) {
+    if (m.features.any((f) => f.number == featureNumber)) return m;
+  }
+  return healthModules.first;
+}
+
+HealthFeature? featureByNumber(int number) {
+  for (final f in allFeatures) {
+    if (f.number == number) return f;
+  }
+  return null;
+}
+
 
 List<HealthFeature> get allFeatures => [for (final m in healthModules) ...m.features];

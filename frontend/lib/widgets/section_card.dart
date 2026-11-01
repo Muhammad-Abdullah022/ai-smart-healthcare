@@ -2,29 +2,35 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 
-/// White rounded card used to group content.
+/// White rounded card with a soft navy-tinted shadow, used to group content.
 class SectionCard extends StatelessWidget {
-  const SectionCard({super.key, required this.child, this.padding = const EdgeInsets.all(16), this.onTap});
+  const SectionCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+    this.onTap,
+    this.color = AppColors.card,
+  });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.card,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: child,
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppColors.softShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(padding: padding, child: child),
         ),
       ),
     );
@@ -33,7 +39,13 @@ class SectionCard extends StatelessWidget {
 
 /// Small rounded icon with a tinted background.
 class IconBadge extends StatelessWidget {
-  const IconBadge({super.key, required this.icon, this.color = AppColors.accent, this.background = AppColors.accentTint, this.size = 44});
+  const IconBadge({
+    super.key,
+    required this.icon,
+    this.color = AppColors.accent,
+    this.background = AppColors.accentTint,
+    this.size = 44,
+  });
 
   final IconData icon;
   final Color color;
@@ -45,8 +57,8 @@ class IconBadge extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(12)),
-      child: Icon(icon, color: color, size: size * 0.55),
+      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(size * 0.32)),
+      child: Icon(icon, color: color, size: size * 0.52),
     );
   }
 }

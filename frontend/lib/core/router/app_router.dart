@@ -8,11 +8,6 @@ import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/home/main_shell.dart';
-import '../../screens/mental/breathing_screen.dart';
-import '../../screens/mental/crisis_screen.dart';
-import '../../screens/mental/mood_screen.dart';
-import '../../screens/mental/screening_screen.dart';
-import '../../screens/modules/feature_screen.dart';
 import '../../screens/modules/module_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
 import '../../screens/onboarding/onboarding_screen.dart';
@@ -23,7 +18,7 @@ import '../../screens/search/search_screen.dart';
 import '../../screens/settings/consent_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/splash/splash_screen.dart';
-import '../../screens/symptoms/symptom_checker_screen.dart';
+import 'feature_screens.dart';
 
 /// Screens anyone can open without logging in.
 const _publicRoutes = {'/onboarding', '/login', '/register', '/forgot-password'};
@@ -85,19 +80,7 @@ GoRouter createRouter(AuthProvider auth) {
       ),
       GoRoute(
         path: '/feature/:number',
-        builder: (_, state) {
-          final number = int.tryParse(state.pathParameters['number']!) ?? 0;
-          // Features that are built get their own screen; the rest show "being built".
-          return switch (number) {
-            1 || 2 || 4 => const SymptomCheckerScreen(),
-            16 => const ScreeningScreen(),
-            18 => const ScreeningScreen(initialInstrument: 'gad7'),
-            22 => const BreathingScreen(),
-            24 => const MoodScreen(),
-            25 => const CrisisScreen(),
-            _ => FeatureScreen(number: number),
-          };
-        },
+        builder: (_, state) => screenForFeature(int.tryParse(state.pathParameters['number']!) ?? 0),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

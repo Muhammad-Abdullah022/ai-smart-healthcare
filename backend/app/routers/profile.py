@@ -46,3 +46,11 @@ async def update_profile(
         await repo.update_profile(user["_id"], changes)
     await repo.audit(user["_id"], "profile.update", {"fields": sorted(body.model_fields_set)})
     return _profile_out(user, await repo.get_profile(user["_id"]))
+
+
+@router.get("/activity")
+async def my_activity(user: dict = Depends(get_current_user), repo: UserRepository = Depends(get_repo)):
+    """Feature 49: the user's own audit trail (what happened in their account, and when)."""
+    cursor = repo.db.audit_events.find({"user_id": user["_id"]}).sort("created_at", -1).limit(100)
+    return [{"action": d["action"], "details": d.get("details", {}), "created_at": d["created_at"]}
+            async for d in cursor]

@@ -52,3 +52,12 @@ def test_users_only_see_their_own_profile(registered):
     profile_b = client.get("/profile", headers=auth_header(tokens_b)).json()
     assert profile_b["full_name"] == "Bilal"
     assert profile_b["allergies"] == []
+
+
+def test_activity_shows_only_own_events(registered):
+    client, tokens = registered
+    client.patch("/profile", headers=auth_header(tokens), json={"blood_group": "A+"})
+    actions = [a["action"] for a in client.get("/profile/activity", headers=auth_header(tokens)).json()]
+    assert actions[0] == "profile.update" and "user.register" in actions
+    other = client.post("/auth/register", json={**VALID_USER, "email": "z@example.com"}).json()
+    assert [a["action"] for a in client.get("/profile/activity", headers=auth_header(other)).json()] == ["user.register"]
