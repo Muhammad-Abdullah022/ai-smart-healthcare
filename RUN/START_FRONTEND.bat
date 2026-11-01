@@ -1,6 +1,6 @@
 @echo off
 title AI Smart Healthcare - APP
-REM Double-click this SECOND (after the backend says "Application startup complete").
+REM Double-click this AFTER START_BACKEND shows "Application startup complete".
 cd /d "%~dp0..\frontend"
 
 where flutter >nul 2>&1
@@ -20,9 +20,8 @@ echo Getting packages...
 call flutter pub get
 
 echo.
-echo Starting the app. When you see "is being served at", open http://localhost:5555 in Chrome.
-start "" http://localhost:5555
-call flutter run -d web-server --web-port 5555 --web-hostname localhost --release
+echo Starting the app in Chrome...
+call flutter run -d chrome
 echo.
 echo App stopped.
 pause
