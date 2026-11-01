@@ -22,6 +22,7 @@ def _profile_out(user: dict, profile: dict | None) -> ProfileOut:
         conditions=profile.get("conditions", []),
         emergency_contacts=profile.get("emergency_contacts", []),
         language=profile.get("language", "en"),
+        notification_prefs=profile.get("notification_prefs") or {},
     )
 
 

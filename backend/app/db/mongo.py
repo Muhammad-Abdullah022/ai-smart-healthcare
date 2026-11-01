@@ -17,4 +17,9 @@ async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     # MongoDB deletes expired refresh tokens automatically (TTL index).
     await db.refresh_tokens.create_index([("expires_at", ASCENDING)], expireAfterSeconds=0)
     await db.symptom_assessments.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
+    await db.consents.create_index([("user_id", ASCENDING), ("category", ASCENDING), ("created_at", DESCENDING)])
+    await db.notifications.create_index([("user_id", ASCENDING), ("read", ASCENDING), ("created_at", DESCENDING)])
+    await db.mental_assessments.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
+    await db.mood_entries.create_index([("user_id", ASCENDING), ("day", ASCENDING)], unique=True)
+    await db.breathing_sessions.create_index([("user_id", ASCENDING)])
     await db.audit_events.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])

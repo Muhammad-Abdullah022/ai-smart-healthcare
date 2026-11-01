@@ -8,6 +8,10 @@ import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/home/main_shell.dart';
+import '../../screens/mental/breathing_screen.dart';
+import '../../screens/mental/crisis_screen.dart';
+import '../../screens/mental/mood_screen.dart';
+import '../../screens/mental/screening_screen.dart';
 import '../../screens/modules/feature_screen.dart';
 import '../../screens/modules/module_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
@@ -16,6 +20,7 @@ import '../../screens/profile/edit_profile_screen.dart';
 import '../../screens/profile/profile_screen.dart';
 import '../../screens/records/records_screen.dart';
 import '../../screens/search/search_screen.dart';
+import '../../screens/settings/consent_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/splash/splash_screen.dart';
 import '../../screens/symptoms/symptom_checker_screen.dart';
@@ -72,6 +77,7 @@ GoRouter createRouter(AuthProvider auth) {
         builder: (_, state) => EditProfileScreen(profile: state.extra! as Profile),
       ),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+      GoRoute(path: '/settings/consent', builder: (_, __) => const ConsentScreen()),
       GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
       GoRoute(
         path: '/module/:id',
@@ -84,6 +90,11 @@ GoRouter createRouter(AuthProvider auth) {
           // Features that are built get their own screen; the rest show "being built".
           return switch (number) {
             1 || 2 || 4 => const SymptomCheckerScreen(),
+            16 => const ScreeningScreen(),
+            18 => const ScreeningScreen(initialInstrument: 'gad7'),
+            22 => const BreathingScreen(),
+            24 => const MoodScreen(),
+            25 => const CrisisScreen(),
             _ => FeatureScreen(number: number),
           };
         },

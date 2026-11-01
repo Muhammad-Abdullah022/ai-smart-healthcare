@@ -12,7 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.db.mongo import create_client, ensure_indexes
-from app.routers import assessments, auth, profile
+from app.core.rate_limit import RateLimiter
+from app.routers import admin, assessments, auth, consents, mental, notifications, profile
 
 
 @asynccontextmanager
@@ -50,10 +51,15 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    app.state.rate_limiter = RateLimiter()
     register_error_handlers(app)
     app.include_router(auth.router)
     app.include_router(profile.router)
     app.include_router(assessments.router)
+    app.include_router(consents.router)
+    app.include_router(notifications.router)
+    app.include_router(admin.router)
+    app.include_router(mental.router)
 
     @app.get("/health", tags=["system"])
     async def health():

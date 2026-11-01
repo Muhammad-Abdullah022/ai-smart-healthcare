@@ -63,6 +63,12 @@ class EmergencyContact(BaseModel):
     relation: str = Field(default="", max_length=40)
 
 
+class NotificationPrefs(BaseModel):
+    medicine_reminders: bool = True
+    appointments: bool = True
+    health_tips: bool = False
+
+
 class ProfileUpdate(BaseModel):
     """All fields are optional so the app can update one field at a time."""
     full_name: str | None = Field(default=None, min_length=2, max_length=80)
@@ -74,6 +80,7 @@ class ProfileUpdate(BaseModel):
     conditions: list[str] | None = Field(default=None, max_length=50)
     emergency_contacts: list[EmergencyContact] | None = Field(default=None, max_length=5)
     language: Literal["en", "ur", "roman_ur"] | None = None
+    notification_prefs: NotificationPrefs | None = None
 
 
 class ProfileOut(BaseModel):
@@ -88,3 +95,4 @@ class ProfileOut(BaseModel):
     conditions: list[str] = []
     emergency_contacts: list[EmergencyContact] = []
     language: str = "en"
+    notification_prefs: NotificationPrefs = NotificationPrefs()

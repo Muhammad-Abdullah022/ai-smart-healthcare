@@ -3,6 +3,7 @@ import jwt
 from fastapi import APIRouter, Depends, status
 
 from app.core.errors import ApiError
+from app.core.rate_limit import limit_by_ip
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -38,7 +39,8 @@ async def _issue_tokens(repo: UserRepository, user: dict) -> TokenResponse:
     return TokenResponse(access_token=access, refresh_token=refresh)
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[limit_by_ip("register", 5, 600)])
 async def register(body: RegisterRequest, repo: UserRepository = Depends(get_repo)):
     user = await repo.create_user(body.email, hash_password(body.password), body.full_name)
     if user is None:
@@ -47,7 +49,7 @@ async def register(body: RegisterRequest, repo: UserRepository = Depends(get_rep
     return await _issue_tokens(repo, user)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, dependencies=[limit_by_ip("login", 10, 300)])
 async def login(body: LoginRequest, repo: UserRepository = Depends(get_repo)):
     user = await repo.find_by_email(body.email)
     password_hash = user["password_hash"] if user else _DUMMY_HASH

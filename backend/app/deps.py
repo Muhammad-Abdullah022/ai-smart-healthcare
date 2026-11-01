@@ -36,3 +36,17 @@ async def get_current_user(
     if user is None:
         raise ApiError(status.HTTP_401_UNAUTHORIZED, "invalid_token", "Please log in again.")
     return user
+
+
+def require_roles(*allowed: str):
+    """Dependency: only users with one of these roles may continue (task C-11).
+
+    Roles: patient (default), caregiver, doctor, admin.
+    """
+
+    async def dependency(user: dict = Depends(get_current_user)) -> dict:
+        if not set(user.get("roles", [])) & set(allowed):
+            raise ApiError(status.HTTP_403_FORBIDDEN, "forbidden", "You do not have permission to do this.")
+        return user
+
+    return dependency

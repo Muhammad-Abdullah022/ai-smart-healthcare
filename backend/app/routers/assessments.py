@@ -17,6 +17,7 @@ from app.ai.safety import DISCLAIMER, EMERGENCY_NUMBERS, check_red_flags, remove
 from app.ai.service import AIService, AIUnavailableError
 from app.core.config import get_settings
 from app.core.errors import ApiError
+from app.core.rate_limit import limit_by_user
 from app.deps import get_current_user, get_repo
 from app.models.assessment import (
     TRIAGE_ORDER,
@@ -50,7 +51,8 @@ def _out(doc: dict) -> AssessmentOut:
     return AssessmentOut(id=str(doc["_id"]), **{k: v for k, v in doc.items() if k not in ("_id", "user_id")})
 
 
-@router.post("/symptoms", response_model=AssessmentOut, status_code=status.HTTP_201_CREATED)
+@router.post("/symptoms", response_model=AssessmentOut, status_code=status.HTTP_201_CREATED,
+             dependencies=[limit_by_user("ai_symptoms", 20, 3600)])
 async def assess_symptoms(
     body: SymptomRequest,
     user: dict = Depends(get_current_user),

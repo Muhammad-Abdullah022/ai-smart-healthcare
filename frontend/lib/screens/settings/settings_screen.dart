@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/config/app_config.dart';
@@ -55,10 +56,12 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: Text('Reminder settings arrive with medicine reminders'),
                 ),
                 const Divider(),
-                const ListTile(
-                  leading: Icon(Icons.lock_outline),
-                  title: Text('Privacy & consent'),
-                  subtitle: Text('Camera, microphone and location are only requested when a feature needs them'),
+                ListTile(
+                  leading: const Icon(Icons.lock_outline),
+                  title: const Text('Privacy & consent'),
+                  subtitle: const Text('Choose what the app may use. Everything is off until you allow it.'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/settings/consent'),
                 ),
               ],
             ),
