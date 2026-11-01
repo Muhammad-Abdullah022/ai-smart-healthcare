@@ -1,0 +1,12 @@
+{
+  "name": "AI Smart Healthcare",
+  "short_name": "AI Healthcare",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#16324F",
+  "theme_color": "#16324F",
+  "description": "AI Smart Healthcare - Disease Assessment and Patient Support System",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": []
+}
