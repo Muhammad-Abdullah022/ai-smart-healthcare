@@ -33,3 +33,8 @@ Daily design plan (one area per day, user reviews with screenshots):
  Day 7: Onboarding, Login, Sign up, Splash + empty/error/loading states
  Then: micro-details (animations on actions, icons, Urdu-ready text sizes), dark mode (optional)
 Ask the user for a screenshot of each screen at the start of each day.
+
+## 2026-11-08
+- Done: AI Health Assistant chat (language, voice, read aloud, history, report upload, comparison). Committed.
+- To check on PC: run START_BACKEND.bat (installs python-multipart), START_FRONTEND.bat (gets new Flutter packages), then `flutter analyze` and `flutter test`.
+- Next ideas from user: wait for the user's next list ("baki bad ma bataa hu").

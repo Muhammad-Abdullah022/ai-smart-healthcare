@@ -17,3 +17,10 @@
   records & notifications empty states, medical disclaimer, emergency numbers card. 4 test files.
 - Docs: README, ARCHITECTURE, backend README with MongoDB Atlas steps.
 - `scripts/flutter_checks.bat` to run Flutter checks on Windows.
+
+## 2026-11-08 — AI Health Assistant chatbot
+- New chat (features 13, 8, 9): asks the language first (English / اردو / Roman Urdu), reads replies aloud, voice messages, saved chat history.
+- Upload a report (camera, photo, PDF) inside the chat or in "My reports"; Gemini reads values and flags them; no medicine advice.
+- Old vs new report comparison.
+- Backend: /assistant/chat, /assistant/chats, /reports (upload, list, compare, retry). New package python-multipart.
+- Flutter packages: flutter_tts, speech_to_text, file_picker, image_picker, http_parser. Android: RECORD_AUDIO, CAMERA.
