@@ -14,7 +14,7 @@ from app.labs.catalog import family_of
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "labs"
 FILES = ("all_target_cities_tehsils.csv", "sourced_lab_records_starter.csv", "sourced_test_prices_starter.csv")
 # Extra researched data, same columns (kept separate so each file's origin stays clear).
-EXTRA_LAB_FILES = ("added_lab_records.csv",)
+EXTRA_LAB_FILES = ("added_lab_records.csv", "phc_registered_labs.csv")
 EXTRA_PRICE_FILES = ("added_test_prices.csv",)
 # A price row with city "*" is a chain-wide published rate: it applies to that lab's branches in every city.
 ALL_CITIES = "*"
