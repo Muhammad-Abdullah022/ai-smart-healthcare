@@ -17,6 +17,7 @@ import '../reports/reports_screen.dart';
 import '../symptoms/symptom_checker_screen.dart';
 import '../symptoms/symptom_history_screen.dart';
 import 'chat_history_screen.dart';
+import 'voice_settings_sheet.dart';
 
 /// One item in the chat list.
 class _Item {
@@ -450,12 +451,18 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
         title: const Text('Health assistant'),
         actions: [
           IconButton(
-            tooltip: _speak ? 'Reading replies aloud (tap to mute)' : 'Replies muted (tap to read aloud)',
+            tooltip: 'Voice settings',
             icon: Icon(_speak ? Icons.volume_up_outlined : Icons.volume_off_outlined),
-            onPressed: () {
-              setState(() => _speak = !_speak);
-              if (!_speak) _voice.stopSpeaking();
-            },
+            onPressed: () => showVoiceSettings(
+              context,
+              voice: _voice,
+              language: _lang ?? chatLanguages.first,
+              speakOn: _speak,
+              onSpeakChanged: (v) {
+                setState(() => _speak = v);
+                if (!v) _voice.stopSpeaking();
+              },
+            ),
           ),
           IconButton(
             tooltip: 'Chat history',

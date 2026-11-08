@@ -1,4 +1,5 @@
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
@@ -11,6 +12,100 @@ class VoiceService {
   Future<void> _queue = Future.value();
   int _generation = 0; // bumped on stop, so queued messages are dropped
 
+  /// Chosen voice per language prefix ("en" / "ur"), and voice settings. Saved on the device.
+  final Map<String, Map<String, String>> _voices = {};
+  double pitch = 1.0;
+  double rate = 0.5;
+  bool _prefsLoaded = false;
+
+  Future<void> _loadPrefs() async {
+    if (_prefsLoaded) return;
+    _prefsLoaded = true;
+    try {
+      final p = await SharedPreferences.getInstance();
+      for (final lang in ['en', 'ur']) {
+        final name = p.getString('tts_voice_$lang');
+        final locale = p.getString('tts_locale_$lang');
+        if (name != null && locale != null) _voices[lang] = {'name': name, 'locale': locale};
+      }
+      pitch = p.getDouble('tts_pitch') ?? 1.0;
+      rate = p.getDouble('tts_rate') ?? 0.5;
+    } catch (_) {}
+  }
+
+  static String _prefix(String locale) => locale.split(RegExp('[-_]')).first.toLowerCase();
+
+  /// Voices installed for this language (e.g. all English voices for "en-IN").
+  Future<List<Map<String, String>>> voicesFor(String locale) async {
+    await _loadPrefs();
+    try {
+      final all = await _tts.getVoices;
+      final want = _prefix(locale);
+      final list = <Map<String, String>>[
+        for (final v in (all as List? ?? const []))
+          if (v is Map && v['name'] != null && v['locale'] != null && _prefix('${v['locale']}') == want)
+            {
+              'name': '${v['name']}',
+              'locale': '${v['locale']}',
+              if (v['gender'] != null) 'gender': '${v['gender']}',
+            }
+      ];
+      list.sort((a, b) => a['name']!.compareTo(b['name']!));
+      return list;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// The saved voice name for this language, or null for the default voice.
+  Future<String?> chosenVoice(String locale) async {
+    await _loadPrefs();
+    return _voices[_prefix(locale)]?['name'];
+  }
+
+  Future<void> chooseVoice(String locale, Map<String, String>? voice) async {
+    final lang = _prefix(locale);
+    if (voice == null) {
+      _voices.remove(lang);
+    } else {
+      _voices[lang] = {'name': voice['name']!, 'locale': voice['locale']!};
+    }
+    try {
+      final p = await SharedPreferences.getInstance();
+      if (voice == null) {
+        await p.remove('tts_voice_$lang');
+        await p.remove('tts_locale_$lang');
+      } else {
+        await p.setString('tts_voice_$lang', voice['name']!);
+        await p.setString('tts_locale_$lang', voice['locale']!);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> setTone({double? pitch, double? rate}) async {
+    if (pitch != null) this.pitch = pitch;
+    if (rate != null) this.rate = rate;
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setDouble('tts_pitch', this.pitch);
+      await p.setDouble('tts_rate', this.rate);
+    } catch (_) {}
+  }
+
+  /// Best guess whether a voice is female, from its gender field or its name.
+  static bool? isFemale(Map<String, String> v) {
+    final g = v['gender']?.toLowerCase();
+    if (g != null && g.isNotEmpty) return g.startsWith('f');
+    final n = v['name']!.toLowerCase();
+    const female = ['female', 'zira', 'aria', 'jenny', 'hazel', 'susan', 'heera', 'uzma', 'samantha', 'karen',
+        'moira', 'tessa', 'veena', 'neerja', 'swara', 'emma', 'libby', 'sonia', 'clara', 'natasha', 'catherine', 'linda'];
+    const male = ['male', 'david', 'mark', 'george', 'ravi', 'asad', 'guy', 'ryan', 'prabhat', 'daniel', 'alex',
+        'james', 'richard', 'sean', 'salman'];
+    if (female.any(n.contains)) return true;
+    if (male.any((m) => n.contains(m) && !n.contains('female'))) return false;
+    return null;
+  }
+
   /// Speak [text] in [locale] (e.g. "ur-PK") after anything already being read.
   /// Falls back to English if that voice is missing.
   Future<void> speak(String text, String locale) {
@@ -18,10 +113,17 @@ class VoiceService {
     _queue = _queue.then((_) async {
       if (gen != _generation) return;
       try {
+        await _loadPrefs();
         await _tts.awaitSpeakCompletion(true);
-        final available = await _tts.isLanguageAvailable(locale);
-        await _tts.setLanguage(available == true ? locale : 'en-US');
-        await _tts.setSpeechRate(0.5);
+        final voice = _voices[_prefix(locale)];
+        if (voice != null) {
+          await _tts.setVoice(voice);
+        } else {
+          final available = await _tts.isLanguageAvailable(locale);
+          await _tts.setLanguage(available == true ? locale : 'en-US');
+        }
+        await _tts.setPitch(pitch);
+        await _tts.setSpeechRate(rate);
         await _tts.speak(text);
       } catch (_) {
         // No text-to-speech on this device: stay silent.

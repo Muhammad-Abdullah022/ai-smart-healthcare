@@ -157,6 +157,10 @@ class ApiClient {
       throw ApiException(message,
           code: error['code'] as String? ?? 'error', statusCode: response.statusCode);
     }
+    if (response.statusCode == 404) {
+      throw ApiException('The backend is an old version. Close the backend window and run START_BACKEND.bat again.',
+          code: 'old_backend', statusCode: 404);
+    }
     throw ApiException('Something went wrong (error ${response.statusCode}). Please try again.',
         statusCode: response.statusCode);
   }

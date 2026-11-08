@@ -29,6 +29,12 @@ if not exist .env (
   exit /b 1
 )
 
+REM Close any old backend still using port 8000 (otherwise the app may talk to old code).
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8000 " ^| findstr LISTENING') do (
+  echo Closing old backend process %%p...
+  taskkill /F /T /PID %%p >nul 2>&1
+)
+
 echo [3/3] Starting backend at http://localhost:8000  (API docs: http://localhost:8000/docs)
 echo Wait for "Application startup complete", then start the app.
 echo.
