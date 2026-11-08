@@ -1,27 +1,15 @@
 @echo off
-title AI Smart Healthcare - APP
-REM Double-click this AFTER START_BACKEND shows "Application startup complete".
+title AI Smart Healthcare - FRONTEND
+REM Start START_BACKEND.bat first. Then run this and choose a device by number (Chrome, Windows, phone, emulator).
 cd /d "%~dp0..\frontend"
 
-where flutter >nul 2>&1
-if errorlevel 1 (
-  echo Flutter was not found. Make sure Flutter is installed and added to PATH.
-  pause
-  exit /b 1
-)
+REM If a phone or emulator is connected by USB, link it to the backend on this PC (ignored otherwise).
+set ADB=adb
+where adb >nul 2>&1 || set ADB="%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"
+%ADB% reverse tcp:8000 tcp:8000 >nul 2>&1
 
-if not exist android (
-  echo [setup] Adding Android / Web / Windows folders - first time only...
-  call flutter create . --platforms=android,web,windows --org com.fyp.healthcare --project-name ai_smart_healthcare
-  findstr /m "MyApp" test\widget_test.dart >nul 2>&1 && del test\widget_test.dart
-)
-
-echo Getting packages...
 call flutter pub get
-
 echo.
-echo Starting the app in Chrome...
-call flutter run -d chrome
-echo.
-echo App stopped.
+echo Choose where to run the app (type the number and press Enter):
+call flutter run
 pause
