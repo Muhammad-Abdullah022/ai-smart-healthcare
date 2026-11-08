@@ -51,7 +51,9 @@ def language_rule(language: str) -> str:
     """Appended to every system prompt: all text the user sees must be in their language."""
     return (f"\n- Write ALL text values (causes, reasons, questions, steps, summaries) in "
             f"{LANGUAGE_NAMES.get(language, LANGUAGE_NAMES['en'])}. Keep JSON keys and enum values "
-            f"(like triage_level, likelihood) in English exactly as specified.")
+            f"(like triage_level, likelihood) in English exactly as specified. Always write test names "
+            f"(tests_to_discuss) and the doctor type (specialist_type) in English medical terms, e.g. "
+            f"\"Complete Blood Count (CBC)\", \"General physician\".")
 
 
 REPORT_PROMPT_VERSION = "report-v1"

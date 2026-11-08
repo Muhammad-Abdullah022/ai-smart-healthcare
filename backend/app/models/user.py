@@ -80,6 +80,7 @@ class ProfileUpdate(BaseModel):
     conditions: list[str] | None = Field(default=None, max_length=50)
     emergency_contacts: list[EmergencyContact] | None = Field(default=None, max_length=5)
     language: Literal["en", "ur", "roman_ur"] | None = None
+    city: str | None = Field(default=None, max_length=60)
     notification_prefs: NotificationPrefs | None = None
 
 
@@ -95,4 +96,5 @@ class ProfileOut(BaseModel):
     conditions: list[str] = []
     emergency_contacts: list[EmergencyContact] = []
     language: str = "en"
+    city: str | None = None
     notification_prefs: NotificationPrefs = NotificationPrefs()

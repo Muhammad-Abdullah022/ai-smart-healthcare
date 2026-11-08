@@ -8,6 +8,8 @@ import '../../models/assessment.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../services/assessment_repository.dart';
+import '../labs/booking_sheet.dart';
+import '../labs/lab_options_screen.dart';
 import 'symptom_history_screen.dart';
 import 'symptom_result_screen.dart';
 import 'triage_style.dart';
@@ -372,7 +374,7 @@ class SymptomResultBubble extends StatelessWidget {
                 ],
                 if (a.testsToDiscuss.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  _InfoLine(icon: Icons.biotech_outlined, label: 'Tests to ask about', value: a.testsToDiscuss.join(', ')),
+                  _InfoLine(icon: Icons.biotech_outlined, label: 'Tests (English)', value: a.testsToDiscuss.join(', ')),
                 ],
               ],
             ),
@@ -392,8 +394,22 @@ class SymptomResultBubble extends StatelessWidget {
                 if (a.specialistType != null)
                   TextButton.icon(
                     icon: const Icon(Icons.event_available_outlined, size: 18),
-                    label: const Text('Book doctor'),
-                    onPressed: () => GoRouter.of(context).push('/feature/11'),
+                    label: Text('Book ${a.specialistType}'),
+                    onPressed: () => showBookingSheet(
+                      context,
+                      specialty: a.specialistType!,
+                      reason: [
+                        a.symptoms,
+                        if (a.possibleCauses.isNotEmpty) 'Possible: ${a.possibleCauses.first.name}',
+                      ].join(' — '),
+                    ),
+                  ),
+                if (a.testsToDiscuss.isNotEmpty)
+                  TextButton.icon(
+                    icon: const Icon(Icons.biotech_outlined, size: 18),
+                    label: const Text('Labs & prices'),
+                    onPressed: () => Navigator.of(context)
+                        .push(MaterialPageRoute(builder: (_) => LabOptionsScreen(tests: a.testsToDiscuss))),
                   ),
                 if (a.testsToDiscuss.isNotEmpty)
                   TextButton.icon(
