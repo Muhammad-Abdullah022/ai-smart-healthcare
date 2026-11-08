@@ -27,8 +27,8 @@ async def cities(user: dict = Depends(get_current_user), db=Depends(get_db)):
 
 
 @router.get("/options")
-async def lab_options(city: str, tests: list[str] = Query(default=[]), user: dict = Depends(get_current_user),
-                      db=Depends(get_db)):
+async def lab_options(city: str, tests: list[str] = Query(default=[]), other_limit: int = Query(8, ge=0, le=2000),
+                      user: dict = Depends(get_current_user), db=Depends(get_db)):
     """For each suggested test: its English name and up to 5 labs in the city, cheapest published price first.
 
     A chain's branches in the city are shown once (with the branch count); chain-wide prices apply to them.
@@ -74,5 +74,7 @@ async def lab_options(city: str, tests: list[str] = Query(default=[]), user: dic
         info = lab_info(key, group[0]["lab_name"])
         if info["lab"] not in priced_labs:
             other_labs.append({**info, "source_url": group[0]["source_url"], "checked": group[0]["checked"]})
+    other_labs.sort(key=lambda o: (-o["branches"], not o["phone"], o["lab"].lower()))
     return {"city": city, "known_city": known_city, "tests": results,
-            "labs_without_prices": other_labs[:6], "note": PRICE_NOTE, "directory_url": DIRECTORY_URL}
+            "labs_without_prices": other_labs[:other_limit], "other_total": len(other_labs),
+            "note": PRICE_NOTE, "directory_url": DIRECTORY_URL}

@@ -130,6 +130,13 @@ class _LabOptionsScreenState extends State<LabOptionsScreen> {
               style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
           const SizedBox(height: 6),
           for (final l in o.otherLabs) _LabRow(offer: l, priceText: 'Ask lab'),
+          if (o.otherTotal > o.otherLabs.length)
+            OutlinedButton.icon(
+              icon: const Icon(Icons.list_alt_outlined),
+              label: Text('See all ${o.otherTotal} labs in ${o.city}'),
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => AllLabsScreen(repository: _repo, city: o.city))),
+            ),
         ],
         if (o.tests.every((t) => t.offers.isEmpty) && o.otherLabs.isEmpty)
           Padding(
@@ -282,6 +289,63 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
                     onTap: () => Navigator.of(context).pop(c.city),
                   );
                 },
+              ),
+            ),
+          ]);
+        },
+      ),
+    );
+  }
+}
+
+
+/// Every registered lab in a city (PHC list and others), searchable by name or area.
+class AllLabsScreen extends StatefulWidget {
+  const AllLabsScreen({super.key, required this.repository, required this.city});
+  final LabRepository repository;
+  final String city;
+
+  @override
+  State<AllLabsScreen> createState() => _AllLabsScreenState();
+}
+
+class _AllLabsScreenState extends State<AllLabsScreen> {
+  late final Future<LabOptions> _future = widget.repository.options(widget.city, const [], otherLimit: 2000);
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Labs in ${widget.city}')),
+      body: FutureBuilder<LabOptions>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) return const LoadingView();
+          if (snap.hasError) return const ErrorView(message: 'Could not load labs.');
+          final q = _q.toLowerCase();
+          final list = snap.data!.otherLabs
+              .where((l) => q.isEmpty || '${l.lab} ${l.branch} ${l.address}'.toLowerCase().contains(q))
+              .toList();
+          return Column(children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: TextField(
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search lab name or area'),
+                onChanged: (v) => setState(() => _q = v),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: Text('${list.length} labs · registered with the Punjab Healthcare Commission and other sources. '
+                  'Prices are not published by most labs — please call or visit to ask.',
+                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            ),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.only(bottom: 24),
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEEF2F6)),
+                itemBuilder: (_, i) => _LabRow(offer: list[i], priceText: ''),
               ),
             ),
           ]);

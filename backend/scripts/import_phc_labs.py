@@ -93,31 +93,99 @@ def find_columns(header: list[str]) -> dict[str, int] | None:
     return cols if cols["name"] is not None and cols["address"] is not None else None
 
 
+# Spellings used in addresses -> the city/tehsil names the app uses.
+CITY_ALIASES = {"hassanabdal": "Hassan Abdal", "hasan abdal": "Hassan Abdal", "burawala": "Burewala",
+                "burewala": "Burewala", "d g khan": "Dera Ghazi Khan", "dg khan": "Dera Ghazi Khan",
+                "d.g khan": "Dera Ghazi Khan", "d.g.khan": "Dera Ghazi Khan", "muzaffar garh": "Muzaffargarh",
+                "rahimyar khan": "Rahim Yar Khan", "r y khan": "Rahim Yar Khan", "ryk": "Rahim Yar Khan",
+                "jehlum": "Jhelum", "bahawal nagar": "Bahawalnagar", "mandi bahaudin": "Mandi Bahauddin",
+                "m b din": "Mandi Bahauddin", "sheikhpura": "Sheikhupura", "shiekhupura": "Sheikhupura",
+                "t t singh": "Toba Tek Singh", "tt singh": "Toba Tek Singh", "pak pattan": "Pakpattan",
+                "kamonke": "Kamoke", "kamoki": "Kamoke", "wah cantt": "Taxila", "arif wala": "Arifwala",
+                "chichawatni": "Chichawatni", "mian chanu": "Mian Channu", "taunsa": "Taunsa Sharif",
+                "ahmedpur east": "Ahmedpur East", "ahmad pur east": "Ahmedpur East", "muridkay": "Muridke",
+                "jaranwala": "Jaranwala", "kot adu": "Kot Addu", "gujar khan": "Gujar Khan"}
+
+
+def _k(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+def clean(text: str) -> str:
+    text = re.sub(r"'{2,}", "'", str(text or ""))
+    return " ".join(text.split()).strip(" ,")
+
+
+def find_city(address: str, allowed: list[str]) -> str:
+    """A tehsil of the lab's own district named in the address ("Multan Road, Lahore" stays Lahore)."""
+    low = " " + re.sub(r"[^a-z0-9]+", " ", address.lower()) + " "
+    hits = [city for alias, city in CITY_ALIASES.items()
+            if " " + re.sub(r"[^a-z0-9]+", " ", alias).strip() + " " in low]
+    hits += [c for c in allowed if " " + c.lower() + " " in low]
+    # Ignore "X Road" (a road named after another town) unless the town is also named elsewhere.
+    hits = [c for c in hits if c in allowed and not re.search(rf"\b{c.lower()}\s+(road|rd)\b", low.strip())
+            or (c in allowed and low.count(" " + c.lower() + " ") > 1)]
+    return hits[0] if hits else ""
+
+
+def district_city(district: str, known: list[str]) -> str:
+    alias = CITY_ALIASES.get(district.lower())
+    return alias or next((c for c in known if c.lower() == district.lower()), district)
+
+
+def chain_name(name: str) -> tuple[str, str]:
+    """Big chains: use one lab name so chain-wide prices apply; keep the original as the branch."""
+    low = name.lower()
+    if low.startswith("chughtai"):
+        return "Chughtai Lab", name
+    if low.startswith("excel lab"):
+        return "Excel Labs", name
+    if low.startswith("islamabad diagnostic cent"):
+        return "Islamabad Diagnostic Centre (IDC)", name
+    return name, ""
+
+
 def main(files: list[str]) -> None:
     known = sorted({r["city_or_tehsil_as_provided"] for r in csv.DictReader(
         (DATA / "all_target_cities_tehsils.csv").open(encoding="utf-8-sig"))}, key=len, reverse=True)
+    by_district: dict[str, set[str]] = {}
+    for r in csv.DictReader((DATA / "all_target_cities_tehsils.csv").open(encoding="utf-8-sig")):
+        by_district.setdefault(_k(r["district_as_provided"]), set()).add(r["city_or_tehsil_as_provided"])
     out, seen = [], set()
+    # Labs already in the other data files (same name and city) are not added twice.
+    existing = set()
+    for other in ("sourced_lab_records_starter.csv", "added_lab_records.csv"):
+        if (DATA / other).exists():
+            for r in csv.DictReader((DATA / other).open(encoding="utf-8-sig")):
+                existing.add((_k(r["lab_name"]), _k(r["city_or_tehsil"])))
     for f in files:
         rows = read_rows(Path(f))
         cols = None
         for r in rows:
             if cols is None:
                 cols = find_columns(r)
-                continue
+                if cols is None and len(r) == 4 and str(r[0]).strip().isdigit():
+                    # Pasted PHC table without its header row: Sr. | District | Lab name | Address
+                    cols = {"name": 2, "address": 3, "district": 1, "city": None, "phone": None, "reg": None}
+                else:
+                    continue
             if len(r) <= max(i for i in cols.values() if i is not None):
                 continue
             get = lambda k: r[cols[k]].strip() if cols[k] is not None and cols[k] < len(r) else ""
-            name, address = get("name"), get("address")
+            name, address = clean(get("name")), clean(get("address"))
             if not name or name.lower() == "name":
                 continue
-            district = get("district")
-            city = get("city") or next((c for c in known if re.search(rf"\b{re.escape(c)}\b", address, re.I)), "") \
-                or next((c for c in known if c.lower() == district.lower()), district)
-            key = (name.lower(), address.lower())
-            if key in seen:
+            district = clean(get("district"))
+            home = district_city(district, known)
+            allowed = sorted(by_district.get(_k(district), set()) | by_district.get(_k(home), set()) | {home},
+                             key=len, reverse=True)
+            city = get("city") or find_city(address, allowed) or home
+            lab_name, branch = chain_name(name)
+            key = (name.lower(), re.sub(r"\W", "", address.lower()))
+            if key in seen or (_k(lab_name if branch else name), _k(city)) in existing and not branch:
                 continue
             seen.add(key)
-            out.append({"district": district, "city_or_tehsil": city, "lab_name": name, "branch_name": "",
+            out.append({"district": district, "city_or_tehsil": city, "lab_name": lab_name, "branch_name": branch,
                         "address": address, "phone": get("phone"), "lab_type": "PHC registered",
                         "test_menu_url": "", "price_list_url": "", "price_status": "No public price list verified",
                         "source_url": SOURCE, "source_type": "Punjab Healthcare Commission registered labs directory"

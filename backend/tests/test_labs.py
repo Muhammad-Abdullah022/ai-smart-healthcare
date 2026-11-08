@@ -66,3 +66,12 @@ def test_government_rates_burewala(registered):
                       params={"city": "Burewala", "tests": ["Urine complete examination", "Blood sugar"]}).json()
     assert data["tests"][0]["offers"][0]["price_pkr"] == 10
     assert data["tests"][1]["offers"][0]["lab"] == "THQ Hospital Burewala Laboratory"
+
+
+def test_phc_registered_labs_loaded(registered):
+    client, tokens = registered
+    h = auth_header(tokens)
+    data = client.get("/labs/options", headers=h, params={"city": "Lahore", "other_limit": 2000}).json()
+    assert data["other_total"] > 300 and len(data["labs_without_prices"]) == data["other_total"]
+    taxila = client.get("/labs/options", headers=h, params={"city": "Taxila"}).json()
+    assert taxila["other_total"] >= 5

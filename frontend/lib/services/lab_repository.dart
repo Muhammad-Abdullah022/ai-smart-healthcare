@@ -48,6 +48,7 @@ class LabOptions {
         otherLabs = (j['labs_without_prices'] as List<dynamic>)
             .map((o) => LabOffer.fromJson(o as Map<String, dynamic>))
             .toList(),
+        otherTotal = j['other_total'] as int? ?? 0,
         note = j['note'] as String? ?? '',
         directoryUrl = j['directory_url'] as String? ?? '';
 
@@ -55,6 +56,9 @@ class LabOptions {
   final bool knownCity;
   final List<TestLabs> tests;
   final List<LabOffer> otherLabs;
+
+  /// How many labs in the city have no published price for these tests (only some are in [otherLabs]).
+  final int otherTotal;
   final String note;
   final String directoryUrl;
 }
@@ -81,9 +85,10 @@ class LabRepository {
     return data.map((c) => CityOption.fromJson(c as Map<String, dynamic>)).toList();
   }
 
-  Future<LabOptions> options(String city, List<String> tests) async {
+  Future<LabOptions> options(String city, List<String> tests, {int otherLimit = 8}) async {
     final q = [
       'city=${Uri.encodeQueryComponent(city)}',
+      'other_limit=$otherLimit',
       for (final t in tests) 'tests=${Uri.encodeQueryComponent(t)}',
     ].join('&');
     return LabOptions.fromJson(await api.get('/labs/options?$q') as Map<String, dynamic>);
