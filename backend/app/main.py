@@ -13,7 +13,7 @@ from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.db.mongo import create_client, ensure_indexes
 from app.core.rate_limit import RateLimiter
-from app.routers import admin, assessments, auth, consents, entries, medicines, mental, notifications, profile, sos
+from app.routers import admin, assessments, assistant, auth, consents, entries, medicines, mental, notifications, profile, reports, sos
 
 
 @asynccontextmanager
@@ -63,6 +63,8 @@ def create_app() -> FastAPI:
     app.include_router(medicines.router)
     app.include_router(sos.router)
     app.include_router(entries.router)
+    app.include_router(reports.router)
+    app.include_router(assistant.router)
 
     @app.get("/health", tags=["system"])
     async def health():

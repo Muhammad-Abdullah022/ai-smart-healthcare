@@ -84,8 +84,9 @@ class FakeProvider(AIProvider):
         self.replies = list(replies)
         self.calls = 0
 
-    async def generate_json(self, system, prompt):
+    async def generate_json(self, system, prompt, images=None):
         self.calls += 1
+        self.last_images = images
         reply = self.replies.pop(0)
         if isinstance(reply, Exception):
             raise reply

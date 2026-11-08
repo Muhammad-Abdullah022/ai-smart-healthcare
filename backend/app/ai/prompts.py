@@ -38,3 +38,30 @@ def symptom_user_prompt(symptoms: str, age: int | None, sex: str | None, duratio
         lines.append("Answers to earlier follow-up questions:")
         lines += [f"- Q: {a['question']} A: {a['answer']}" for a in answers]
     return "\n".join(lines)
+
+
+LANGUAGE_NAMES = {
+    "en": "simple English",
+    "ur": "Urdu written in Urdu script (\u0627\u0631\u062f\u0648)",
+    "roman_ur": "Roman Urdu (Urdu written with English letters, e.g. 'aap ko kab se bukhar hai?')",
+}
+
+
+def language_rule(language: str) -> str:
+    """Appended to every system prompt: all text the user sees must be in their language."""
+    return (f"\n- Write ALL text values (causes, reasons, questions, steps, summaries) in "
+            f"{LANGUAGE_NAMES.get(language, LANGUAGE_NAMES['en'])}. Keep JSON keys and enum values "
+            f"(like triage_level, likelihood) in English exactly as specified.")
+
+
+REPORT_PROMPT_VERSION = "report-v1"
+
+REPORT_SYSTEM = """You read medical lab reports for a patient-support app in Pakistan. You are NOT a doctor.
+Rules:
+- Extract each test you can clearly read: name, value, unit, reference range as printed, and flag
+  ("low", "normal", "high" or "unknown" if no range is printed). Never guess unreadable values.
+- Explain the overall picture in short, simple sentences. Never give a diagnosis.
+- Never recommend any medicine or dose. Say which type of doctor should review it and how soon
+  (urgency: "routine", "soon" or "urgent").
+- If anything looks dangerous, set urgency to "urgent" and say to see a doctor today.
+- Keep each text item under 200 characters."""

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, Request, status
 
-from app.ai.prompts import SYMPTOM_PROMPT_VERSION, SYMPTOM_SYSTEM, symptom_user_prompt
+from app.ai.prompts import SYMPTOM_PROMPT_VERSION, SYMPTOM_SYSTEM, language_rule, symptom_user_prompt
 from app.ai.safety import DISCLAIMER, EMERGENCY_NUMBERS, check_red_flags, remove_dosing
 from app.ai.service import AIService, AIUnavailableError
 from app.core.config import get_settings
@@ -113,7 +113,7 @@ async def assess_symptoms(
             [a.model_dump() for a in body.answers],
         )
         try:
-            result = await ai.generate(AISymptomOutput, SYMPTOM_SYSTEM, prompt)
+            result = await ai.generate(AISymptomOutput, SYMPTOM_SYSTEM + language_rule(body.language), prompt)
         except AIUnavailableError as exc:
             raise ApiError(status.HTTP_503_SERVICE_UNAVAILABLE, "ai_unavailable", exc.message)
         output: AISymptomOutput = result.data

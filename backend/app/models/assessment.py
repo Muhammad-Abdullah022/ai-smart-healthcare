@@ -21,6 +21,7 @@ class SymptomRequest(BaseModel):
     age: int | None = Field(default=None, ge=0, le=120)
     sex: Literal["male", "female", "other"] | None = None
     answers: list[FollowUpAnswer] = Field(default_factory=list, max_length=10)
+    language: Literal["en", "ur", "roman_ur"] = "en"
 
 
 # ----- What the AI must return (validated before use) -----

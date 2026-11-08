@@ -21,7 +21,10 @@ class AIProviderError(Exception):
 class AIProvider:
     name = "base"
 
-    async def generate_json(self, system: str, prompt: str) -> str:
+    supports_images = False
+
+    async def generate_json(self, system: str, prompt: str, images: list[tuple[str, str]] | None = None) -> str:
+        """images: list of (mime_type, base64_data)."""
         raise NotImplementedError
 
 
@@ -38,6 +41,7 @@ class GeminiProvider(AIProvider):
     """Google Gemini via the generateContent REST API, asking for JSON output."""
 
     name = "gemini"
+    supports_images = True
     base_url = "https://generativelanguage.googleapis.com/v1beta"
 
     def __init__(self, api_key: str, model: str, timeout: float, client: httpx.AsyncClient | None = None):
@@ -46,12 +50,13 @@ class GeminiProvider(AIProvider):
         self.timeout = timeout
         self._client = client
 
-    async def generate_json(self, system: str, prompt: str) -> str:
+    async def generate_json(self, system: str, prompt: str, images: list[tuple[str, str]] | None = None) -> str:
         if not self.api_key:
             raise AIProviderError(self.name, "GEMINI_API_KEY is not set", retryable=False)
+        parts = [{"inline_data": {"mime_type": m, "data": d}} for m, d in (images or [])] + [{"text": prompt}]
         body = {
             "systemInstruction": {"parts": [{"text": system}]},
-            "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+            "contents": [{"role": "user", "parts": parts}],
             "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2},
         }
         url = f"{self.base_url}/models/{self.model}:generateContent"
@@ -75,7 +80,9 @@ class GroqProvider(AIProvider):
         self.timeout = timeout
         self._client = client
 
-    async def generate_json(self, system: str, prompt: str) -> str:
+    async def generate_json(self, system: str, prompt: str, images: list[tuple[str, str]] | None = None) -> str:
+        if images:
+            raise AIProviderError(self.name, "cannot read images", retryable=False)
         if not self.api_key:
             raise AIProviderError(self.name, "GROQ_API_KEY is not set", retryable=False)
         body = {

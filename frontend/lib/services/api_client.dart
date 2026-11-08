@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../core/config/app_config.dart';
 import 'token_storage.dart';
@@ -43,6 +44,45 @@ class ApiClient {
   Future<dynamic> patch(String path, {Object? body}) => _send('PATCH', path, body: body);
   Future<dynamic> put(String path, {Object? body}) => _send('PUT', path, body: body);
   Future<dynamic> delete(String path) => _send('DELETE', path);
+
+  /// Upload one file (multipart/form-data), e.g. a medical report photo or PDF.
+  Future<dynamic> postFile(String path,
+      {required List<int> bytes,
+      required String filename,
+      required String mimeType,
+      Map<String, String> fields = const {},
+      bool retried = false}) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'))
+      ..fields.addAll(fields)
+      ..files.add(http.MultipartFile.fromBytes('file', bytes,
+          filename: filename, contentType: _mediaType(mimeType)));
+    final token = await tokens.readAccessToken();
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+
+    http.Response response;
+    try {
+      // Reading a report with AI can take longer than a normal request.
+      final streamed = await _http.send(request).timeout(AppConfig.requestTimeout * 2);
+      response = await http.Response.fromStream(streamed);
+    } on TimeoutException {
+      throw ApiException('The server is taking too long. Please try again.', code: 'timeout');
+    } on http.ClientException {
+      throw ApiException('Cannot reach the server. Is the backend running?', code: 'offline');
+    }
+    if (response.statusCode == 401 && !retried) {
+      if (await _refreshTokens()) {
+        return postFile(path,
+            bytes: bytes, filename: filename, mimeType: mimeType, fields: fields, retried: true);
+      }
+      onSessionExpired?.call();
+    }
+    return _decode(response);
+  }
+
+  static MediaType _mediaType(String mime) {
+    final parts = mime.split('/');
+    return parts.length == 2 ? MediaType(parts[0], parts[1]) : MediaType('application', 'octet-stream');
+  }
 
   Future<dynamic> _send(String method, String path,
       {Object? body, bool auth = true, bool retried = false}) async {

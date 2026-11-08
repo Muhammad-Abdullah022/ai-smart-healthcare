@@ -29,15 +29,91 @@ class ModuleScreen extends StatelessWidget {
       color: module.color,
       tint: module.tint,
       children: [
+        if (module.id == 'diagnosis') ...[
+          const _AssistantHero(),
+          const SizedBox(height: 16),
+        ],
         GroupedList(children: [
           for (final f in module.features)
             // Features 2–5 (questions, prediction, triage, tests) live inside the Symptom Checker chat.
-            if (!mergedIntoSymptomChecker.contains(f.number))
+            // Feature 13 (the assistant) is the large card above.
+            if (!mergedIntoSymptomChecker.contains(f.number) && !(module.id == 'diagnosis' && f.number == 13))
               FeatureTile(feature: f, color: module.color, tint: module.tint, inGroup: true),
         ]),
       ],
     );
   }
+}
+
+/// Big entry card for the AI Health Assistant chatbot.
+class _AssistantHero extends StatelessWidget {
+  const _AssistantHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/feature/13'),
+        child: Ink(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryDeep],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(color: AppColors.accent, borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.forum_outlined, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('AI Health Assistant',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                  Text('English · اردو · Roman Urdu', style: TextStyle(color: Color(0xFFB8C7D9), fontSize: 13)),
+                ]),
+              ),
+              const Icon(Icons.arrow_forward, color: Colors.white),
+            ]),
+            const SizedBox(height: 14),
+            const Wrap(spacing: 8, runSpacing: 8, children: [
+              _HeroChip(icon: Icons.chat_bubble_outline, label: 'Ask anything'),
+              _HeroChip(icon: Icons.mic_none, label: 'Voice message'),
+              _HeroChip(icon: Icons.volume_up_outlined, label: 'Reads aloud'),
+              _HeroChip(icon: Icons.upload_file_outlined, label: 'Upload report'),
+              _HeroChip(icon: Icons.compare_arrows, label: 'Old vs new'),
+              _HeroChip(icon: Icons.history, label: 'History'),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeroChip extends StatelessWidget {
+  const _HeroChip({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(color: const Color(0x1FFFFFFF), borderRadius: BorderRadius.circular(20)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 14, color: Colors.white),
+          const SizedBox(width: 5),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+        ]),
+      );
 }
 
 /// One feature row. Inside a module it is a plain row; on its own (search) it gets a card.

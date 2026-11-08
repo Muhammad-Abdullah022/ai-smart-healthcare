@@ -1,0 +1,123 @@
+"""General health chat ("ask anything") with saved conversations.
+
+Safety: emergency words are checked first (no AI); the assistant gives general health
+information only, never diagnoses, never names medicines or doses.
+"""
+from datetime import datetime, timezone
+from typing import Literal
+
+from fastapi import APIRouter, Depends, Request, status
+from pydantic import BaseModel, Field
+
+from app.ai.prompts import language_rule
+from app.ai.safety import EMERGENCY_NUMBERS, check_red_flags
+from app.ai.service import AIUnavailableError
+from app.core.errors import ApiError
+from app.core.rate_limit import limit_by_user
+from app.deps import get_current_user, get_db
+from app.repositories.user_repository import to_object_id
+from app.routers.assessments import get_ai_service
+
+router = APIRouter(prefix="/assistant", tags=["assistant"])
+
+ASSISTANT_SYSTEM = """You are a friendly health information assistant in a patient-support app in Pakistan.
+Rules:
+- Answer general health questions clearly and briefly (under 120 words), in plain words.
+- You are NOT a doctor: never diagnose, never name a medicine to take, never give doses.
+- If the user describes their own symptoms, give general guidance and set suggest_symptom_check to true.
+- If anything sounds urgent, tell them to see a doctor today or call 1122.
+- Reply as JSON: {"reply": "...", "suggest_symptom_check": true|false}"""
+
+EMERGENCY_REPLY = {
+    "en": "This could be an emergency. Please call 1122 now or go to the nearest hospital emergency department.",
+    "ur": "یہ ایمرجنسی ہو سکتی ہے۔ ابھی 1122 پر کال کریں یا قریبی ہسپتال کی ایمرجنسی میں جائیں۔",
+    "roman_ur": "Yeh emergency ho sakti hai. Abhi 1122 par call karein ya qareebi hospital ki emergency mein jayein.",
+}
+
+
+class AIChatOutput(BaseModel):
+    reply: str = Field(max_length=1500)
+    suggest_symptom_check: bool = False
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=1000)
+    language: Literal["en", "ur", "roman_ur"] = "en"
+    chat_id: str | None = None
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    text: str
+    emergency: bool = False
+    at: datetime
+
+
+class ChatOut(BaseModel):
+    chat_id: str
+    reply: ChatMessage
+    suggest_symptom_check: bool
+    emergency_numbers: list[dict] = []
+
+
+class ChatSummary(BaseModel):
+    id: str
+    title: str
+    language: str
+    updated_at: datetime
+    messages: int
+
+
+@router.post("/chat", response_model=ChatOut, dependencies=[limit_by_user("ai_chat", 60, 3600)])
+async def chat(body: ChatRequest, request: Request, user: dict = Depends(get_current_user), db=Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    convo = None
+    if body.chat_id:
+        oid = to_object_id(body.chat_id)
+        convo = await db.assistant_chats.find_one({"_id": oid, "user_id": user["_id"]}) if oid else None
+        if convo is None:
+            raise ApiError(status.HTTP_404_NOT_FOUND, "not_found", "Chat not found.")
+    if convo is None:
+        convo = {"user_id": user["_id"], "title": body.message[:60], "language": body.language,
+                 "messages": [], "created_at": now, "updated_at": now}
+        convo["_id"] = (await db.assistant_chats.insert_one(convo)).inserted_id
+
+    user_msg = {"role": "user", "text": body.message, "emergency": False, "at": now}
+    red = check_red_flags(body.message)
+    if red:
+        reply = {"role": "assistant", "text": EMERGENCY_REPLY[body.language], "emergency": True, "at": now}
+        suggest, numbers = False, EMERGENCY_NUMBERS
+    else:
+        history = "\n".join(f"{m['role']}: {m['text']}" for m in convo["messages"][-10:])
+        prompt = (f"Conversation so far:\n{history}\n\n" if history else "") + f"user: {body.message}"
+        try:
+            result = await get_ai_service(request).generate(
+                AIChatOutput, ASSISTANT_SYSTEM + language_rule(body.language), prompt)
+        except AIUnavailableError as exc:
+            raise ApiError(status.HTTP_503_SERVICE_UNAVAILABLE, "ai_unavailable", exc.message)
+        reply = {"role": "assistant", "text": result.data.reply, "emergency": False, "at": now}
+        suggest, numbers = result.data.suggest_symptom_check, []
+
+    await db.assistant_chats.update_one(
+        {"_id": convo["_id"]},
+        {"$push": {"messages": {"$each": [user_msg, reply]}}, "$set": {"updated_at": now, "language": body.language}},
+    )
+    return ChatOut(chat_id=str(convo["_id"]), reply=ChatMessage(**reply), suggest_symptom_check=suggest,
+                   emergency_numbers=numbers)
+
+
+@router.get("/chats", response_model=list[ChatSummary])
+async def list_chats(user: dict = Depends(get_current_user), db=Depends(get_db)):
+    cursor = db.assistant_chats.find({"user_id": user["_id"]}).sort("updated_at", -1).limit(50)
+    return [ChatSummary(id=str(c["_id"]), title=c["title"], language=c.get("language", "en"),
+                        updated_at=c["updated_at"], messages=len(c.get("messages", []))) async for c in cursor]
+
+
+@router.get("/chats/{chat_id}")
+async def get_chat(chat_id: str, user: dict = Depends(get_current_user), db=Depends(get_db)):
+    oid = to_object_id(chat_id)
+    c = await db.assistant_chats.find_one({"_id": oid, "user_id": user["_id"]}) if oid else None
+    if c is None:
+        raise ApiError(status.HTTP_404_NOT_FOUND, "not_found", "Chat not found.")
+    return {"id": chat_id, "title": c["title"], "language": c.get("language", "en"),
+            "messages": [ChatMessage(**m).model_dump() for m in c.get("messages", [])]}

@@ -13,6 +13,7 @@ class AssessmentRepository {
     int? severity,
     int? age,
     String? sex,
+    String language = 'en',
     List<Map<String, String>> answers = const [],
   }) async {
     final data = await api.post('/assessments/symptoms', body: {
@@ -21,6 +22,7 @@ class AssessmentRepository {
       if (severity != null) 'severity': severity,
       if (age != null) 'age': age,
       if (sex != null) 'sex': sex,
+      'language': language,
       'answers': answers,
     }) as Map<String, dynamic>;
     return Assessment.fromJson(data);

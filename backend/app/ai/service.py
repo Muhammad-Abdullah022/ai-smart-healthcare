@@ -48,7 +48,8 @@ class AIService:
         providers = [available[name] for name in dict.fromkeys(order) if name in available]
         return cls(providers)
 
-    async def generate(self, schema: type[T], system: str, prompt: str) -> AIResult:
+    async def generate(self, schema: type[T], system: str, prompt: str,
+                       images: list[tuple[str, str]] | None = None) -> AIResult:
         """Try each provider in order; validate the JSON against `schema`."""
         system = system + "\n\nReply with ONE JSON object only, matching this JSON schema:\n" + json.dumps(
             schema.model_json_schema()
@@ -56,7 +57,8 @@ class AIService:
         for provider in self.providers:
             for attempt in range(1, self.attempts + 1):
                 try:
-                    raw = await provider.generate_json(system, prompt)
+                    raw = await provider.generate_json(system, prompt, images) if images else \
+                        await provider.generate_json(system, prompt)
                     return AIResult(schema.model_validate_json(_strip_fences(raw)), provider.name)
                 except AIProviderError as exc:
                     log.warning("AI provider failed: %s (attempt %s)", exc, attempt)

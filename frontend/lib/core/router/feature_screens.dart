@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/feature_forms.dart';
+import '../../providers/auth_provider.dart';
+import '../../screens/assistant/assistant_chat_screen.dart';
+import '../../screens/reports/report_compare_screen.dart';
+import '../../screens/reports/reports_screen.dart';
+import '../../services/report_repository.dart';
 import '../../screens/emergency/sos_screen.dart';
 import '../../screens/medicines/medicines_screen.dart';
 import '../../screens/mental/breathing_screen.dart';
@@ -21,8 +27,16 @@ Widget screenForFeature(int number) {
     // test suggestions and the "Why this result?" explanation.
     case 1 || 2 || 3 || 4 || 5 || 46:
       return const SymptomCheckerScreen();
+    case 8:
+      return const ReportsScreen();
+    case 9:
+      return Builder(
+        builder: (ctx) => ReportCompareScreen(repository: ReportRepository(ctx.read<AuthProvider>().repository.api)),
+      );
     case 12:
       return const SosScreen();
+    case 13:
+      return const AssistantChatScreen();
     case 16:
       return const ScreeningScreen();
     case 18:
