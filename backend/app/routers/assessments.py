@@ -76,7 +76,10 @@ LIMITATIONS = (
 def get_ai_service(request: Request) -> AIService:
     # Tests put a fake service on app.state.ai.
     service = getattr(request.app.state, "ai", None)
-    return service or AIService.from_settings(get_settings())
+    if service is None:
+        # Built once and kept, so providers remember things like a working Groq model.
+        service = request.app.state.ai = AIService.from_settings(get_settings())
+    return service
 
 
 def _raise_to(level: str, minimum: str) -> str:

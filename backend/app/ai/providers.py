@@ -88,9 +88,15 @@ class GroqProvider(AIProvider):
     name = "groq"
     url = "https://api.groq.com/openai/v1/chat/completions"
 
+    # Tried in order if the configured model is not available to this account (HTTP 404).
+    BACKUP_MODELS = ("llama-3.3-70b-versatile", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.1-8b-instant")
+
     def __init__(self, api_key: str, model: str, timeout: float, client: httpx.AsyncClient | None = None):
         self.api_key = api_key
-        self.model = model
+        # GROQ_MODEL may list several models separated by commas.
+        configured = [m.strip() for m in model.split(",") if m.strip()]
+        self.models = list(dict.fromkeys(configured + list(self.BACKUP_MODELS)))
+        self.model = self.models[0]
         self.timeout = timeout
         self._client = client
 
@@ -99,14 +105,24 @@ class GroqProvider(AIProvider):
             raise AIProviderError(self.name, "cannot read images", retryable=False)
         if not self.api_key:
             raise AIProviderError(self.name, "GROQ_API_KEY is not set", retryable=False)
-        body = {
-            "model": self.model,
-            "temperature": 0.2,
-            "response_format": {"type": "json_object"},
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
-        }
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        data = await _post(self.name, self.url, body, headers, self.timeout, self._client)
+        while True:
+            body = {
+                "model": self.model,
+                "temperature": 0.2,
+                "response_format": {"type": "json_object"},
+                "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],
+            }
+            try:
+                data = await _post(self.name, self.url, body, headers, self.timeout, self._client)
+                break
+            except AIProviderError as exc:
+                # Model missing for this account: switch to the next one and remember it.
+                nxt = self.models.index(self.model) + 1
+                if "HTTP 404" in str(exc) and nxt < len(self.models):
+                    self.model = self.models[nxt]
+                    continue
+                raise
         try:
             return data["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError):

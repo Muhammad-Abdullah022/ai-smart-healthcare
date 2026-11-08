@@ -163,3 +163,19 @@ def test_urgent_flag_level():
 def test_dosing_removed():
     kept = remove_dosing(["Rest well", "Take 500 mg paracetamol", "Drink 2 tablets daily", "See a doctor"])
     assert kept == ["Rest well", "See a doctor"]
+
+
+def test_groq_switches_to_next_model_when_missing():
+    seen = []
+
+    def handler(request):
+        model = __import__("json").loads(request.content)["model"]
+        seen.append(model)
+        if model == "llama-3.3-70b-versatile":
+            return httpx.Response(404, json={"error": {"message": "model does not exist"}})
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+
+    provider = GroqProvider("KEY", "llama-3.3-70b-versatile", 5, client=_client(handler))
+    assert run(provider.generate_json("s", "p")) == "{}"
+    assert seen == ["llama-3.3-70b-versatile", "openai/gpt-oss-120b"]
+    assert provider.model == "openai/gpt-oss-120b"
