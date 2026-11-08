@@ -52,6 +52,21 @@ class _Tables(HTMLParser):
 
 def read_rows(path: Path) -> list[list[str]]:
     suffix = path.suffix.lower()
+    if suffix in (".mhtml", ".mht"):
+        # Chrome "Webpage, Single File": the page as shown on screen, including tables built by scripts.
+        import email
+        msg = email.message_from_bytes(path.read_bytes())
+        html = ""
+        for part in msg.walk():
+            if part.get_content_type() == "text/html":
+                html += part.get_payload(decode=True).decode(part.get_content_charset() or "utf-8", "replace")
+        p = _Tables()
+        p.feed(html)
+        return p.rows
+    if suffix == ".txt":
+        # Copied from the page and pasted into Notepad: columns separated by tabs.
+        return [line.split("\t") for line in path.read_text(encoding="utf-8", errors="replace").splitlines()
+                if "\t" in line]
     if suffix in (".html", ".htm", ".aspx"):
         p = _Tables()
         p.feed(path.read_text(encoding="utf-8", errors="replace"))
@@ -110,7 +125,7 @@ def main(files: list[str]) -> None:
                         "source_checked_date": date.today().isoformat(),
                         "data_status": "Registered with PHC; prices not published — ask the lab"})
         if cols is None:
-            print(f"{f}: could not find a table with name and address columns")
+            print(f"{f}: no lab table found in this file (was the list visible when it was saved?)")
     with OUT.open("w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, COLS)
         w.writeheader()
@@ -122,4 +137,9 @@ def main(files: list[str]) -> None:
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
-    main(sys.argv[1:])
+    args = sys.argv[1:]
+    # A folder: import every saved page in it.
+    if len(args) == 1 and Path(args[0]).is_dir():
+        args = [str(p) for p in sorted(Path(args[0]).iterdir())
+                if p.suffix.lower() in (".html", ".htm", ".mhtml", ".mht", ".csv", ".xlsx", ".txt")]
+    main(args)
