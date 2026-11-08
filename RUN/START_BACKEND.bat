@@ -38,6 +38,8 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8000 " ^| findstr LISTENING
 echo [3/3] Starting backend at http://localhost:8000  (API docs: http://localhost:8000/docs)
 echo Wait for "Application startup complete", then start the app.
 echo.
+REM Check files every few seconds, so code updated by Claude is picked up without a restart.
+set WATCHFILES_FORCE_POLLING=true
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 echo.
 echo Backend stopped.
