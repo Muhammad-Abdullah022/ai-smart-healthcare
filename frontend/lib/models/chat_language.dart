@@ -70,8 +70,8 @@ const chatLanguages = [
   ChatLanguage(
     code: 'roman_ur',
     label: 'Roman Urdu',
-    // Roman Urdu is written in English letters, so an English (India) voice reads it best.
-    ttsLocale: 'en-IN',
+    // Read aloud with an Urdu or Hindi voice (see VoiceService); English (India) only as a last resort.
+    ttsLocale: 'hi-IN',
     speechLocale: 'ur_PK',
     greeting: 'Theek hai, hum Roman Urdu mein baat karein ge. Sehat ka koi bhi sawal poochein, '
         'voice message bhejein, ya apni medical report upload karein, main asaan alfaaz mein samjhaun ga.',

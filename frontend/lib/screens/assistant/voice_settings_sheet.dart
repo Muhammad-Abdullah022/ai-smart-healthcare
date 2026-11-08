@@ -10,8 +10,8 @@ Future<void> showVoiceSettings(BuildContext context,
     required ChatLanguage language,
     required bool speakOn,
     required ValueChanged<bool> onSpeakChanged}) async {
-  final voices = await voice.voicesFor(language.ttsLocale);
-  var chosen = await voice.chosenVoice(language.ttsLocale);
+  final voices = await voice.voicesFor(language.code);
+  var chosen = await voice.chosenVoice(language.code);
   var on = speakOn;
   if (!context.mounted) return;
   final sample = switch (language.code) {
@@ -21,9 +21,9 @@ Future<void> showVoiceSettings(BuildContext context,
   };
 
   Future<void> pick(StateSetter setSheet, Map<String, String>? v) async {
-    await voice.chooseVoice(language.ttsLocale, v);
+    await voice.chooseVoice(language.code, v);
     setSheet(() => chosen = v?['name']);
-    await voice.speakNow(sample, language.ttsLocale);
+    await voice.speakNow(sample, language.code);
   }
 
   Future<void> pickGender(StateSetter setSheet, bool female) async {
@@ -37,7 +37,7 @@ Future<void> showVoiceSettings(BuildContext context,
       // Pitch makes the default voice sound higher or deeper.
       await voice.setTone(pitch: female ? 1.25 : 0.85);
       setSheet(() {});
-      await voice.speakNow(sample, language.ttsLocale);
+      await voice.speakNow(sample, language.code);
       return;
     }
     await pick(setSheet, match.first);
@@ -94,7 +94,7 @@ Future<void> showVoiceSettings(BuildContext context,
                 onChanged: (v) => setSheet(() => voice.pitch = v),
                 onChangeEnd: (v) async {
                   await voice.setTone(pitch: v);
-                  await voice.speakNow(sample, language.ttsLocale);
+                  await voice.speakNow(sample, language.code);
                 },
               ),
               Text('Speed', style: Theme.of(ctx).textTheme.labelLarge),
@@ -107,7 +107,7 @@ Future<void> showVoiceSettings(BuildContext context,
                 onChanged: (v) => setSheet(() => voice.rate = v),
                 onChangeEnd: (v) async {
                   await voice.setTone(rate: v);
-                  await voice.speakNow(sample, language.ttsLocale);
+                  await voice.speakNow(sample, language.code);
                 },
               ),
               const Divider(),

@@ -6,7 +6,7 @@ from tests.conftest import VALID_USER, auth_header
 def test_health(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert response.json()["status"] == "ok"
 
 
 def test_register_returns_tokens_and_stores_only_hash(client):

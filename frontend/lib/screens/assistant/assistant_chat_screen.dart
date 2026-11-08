@@ -121,6 +121,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
   void initState() {
     super.initState();
     _input.addListener(() => setState(() {}));
+    _voice.toDevanagari = _repo.speech;
     if (widget.chatId != null) {
       _loadChat(widget.chatId!);
     } else {
@@ -164,7 +165,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
   }
 
   void _say(String text) {
-    if (_speak && _lang != null && text.isNotEmpty) _voice.speak(text, _lang!.ttsLocale);
+    if (_speak && _lang != null && text.isNotEmpty) _voice.speak(text, _lang!.code);
   }
 
   void _chooseLanguage(ChatLanguage l) {
@@ -219,6 +220,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
         _chatId = r.chatId;
         _items.add(_Item.bot(r.message.text, emergency: r.message.emergency));
       });
+      _voice.remember(r.message.text, r.speech);
       _say(r.message.text);
       if (r.suggestSymptomCheck && !r.message.emergency) {
         // The user described symptoms: check them step by step, right here.
@@ -437,7 +439,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
         _Kind.result => SymptomResultBubble(assessment: i.assessment!),
         _Kind.text => _Bubble(
             item: i,
-            onSpeak: i.fromUser || i.isError || _lang == null ? null : () => _voice.speakNow(i.text, _lang!.ttsLocale),
+            onSpeak: i.fromUser || i.isError || _lang == null ? null : () => _voice.speakNow(i.text, _lang!.code),
           ),
       };
 

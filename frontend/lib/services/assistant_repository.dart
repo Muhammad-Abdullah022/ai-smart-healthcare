@@ -16,9 +16,13 @@ class ChatMessage {
 }
 
 class AssistantReply {
-  AssistantReply({required this.chatId, required this.message, required this.suggestSymptomCheck});
+  AssistantReply(
+      {required this.chatId, required this.message, required this.suggestSymptomCheck, this.speech = ''});
 
   final String chatId;
+
+  /// Same reply in Devanagari, only for reading aloud with a Hindi voice.
+  final String speech;
   final ChatMessage message;
   final bool suggestSymptomCheck;
 }
@@ -65,6 +69,7 @@ class AssistantRepository {
       chatId: data['chat_id'] as String,
       message: ChatMessage.fromJson(data['reply'] as Map<String, dynamic>),
       suggestSymptomCheck: data['suggest_symptom_check'] as bool? ?? false,
+      speech: data['speech'] as String? ?? '',
     );
   }
 
@@ -78,6 +83,12 @@ class AssistantRepository {
       ],
     }) as Map<String, dynamic>;
     return data['chat_id'] as String;
+  }
+
+  /// Urdu / Roman Urdu text written in Devanagari, for a Hindi voice to read aloud.
+  Future<String?> speech(String text) async {
+    final data = await api.post('/assistant/speech', body: {'text': text}) as Map<String, dynamic>;
+    return data['speech'] as String?;
   }
 
   Future<List<ChatSummary>> chats() async {

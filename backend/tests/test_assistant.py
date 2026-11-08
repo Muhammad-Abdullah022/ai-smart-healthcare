@@ -57,3 +57,13 @@ def test_log_symptom_check_into_chat(registered):
     other = client.post("/auth/register", json={**VALID_USER, "email": "q@example.com"}).json()
     assert client.post("/assistant/log", headers=auth_header(other), json={
         "chat_id": new["chat_id"], "messages": [{"role": "user", "text": "x"}]}).status_code == 404
+
+
+def test_speech_text_for_urdu_voice(registered):
+    client, tokens = registered
+    h = auth_header(tokens)
+    _ai(client, json.dumps({"reply": "Pani piyein.", "suggest_symptom_check": False, "speech": "पानी पियें।"}),
+        json.dumps({"speech": "मशवरा करें"}))
+    r = client.post("/assistant/chat", headers=h, json={"message": "garmi", "language": "roman_ur"}).json()
+    assert r["speech"] == "पानी पियें।"
+    assert client.post("/assistant/speech", headers=h, json={"text": "mashwara karein"}).json()["speech"] == "मशवरा करें"

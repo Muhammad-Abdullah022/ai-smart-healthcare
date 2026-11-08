@@ -90,7 +90,7 @@ void main() {
     expect(find.text('Roman Urdu'), findsOneWidget);
     await tester.tap(find.text('Roman Urdu'));
     await tester.pump();
-    expect(voice.spoken.single, startsWith('en-IN:Theek hai'));
+    expect(voice.spoken.single, startsWith('roman_ur:Theek hai'));
 
     await tester.enterText(find.byType(TextField), 'bukhar mein kya karein?');
     await tester.pump();
@@ -101,7 +101,7 @@ void main() {
     // Symptoms described -> the symptom check starts in the same chat, in the same language.
     expect(checkLanguage, 'roman_ur');
     expect(find.text('Kab se bukhar hai?'), findsOneWidget);
-    expect(voice.spoken, contains('en-IN:Pani zyada piyein.'));
-    expect(voice.spoken.last, 'en-IN:Kab se bukhar hai?');
+    expect(voice.spoken, contains('roman_ur:Pani zyada piyein.'));
+    expect(voice.spoken.last, 'roman_ur:Kab se bukhar hai?');
   });
 }

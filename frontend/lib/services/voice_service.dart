@@ -5,8 +5,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+final _urduScript = RegExp(r'[؀-ۿ]');
+final _devanagariScript = RegExp(r'[ऀ-ॿ]');
+
 /// Reads replies aloud and turns the user's voice into text.
 /// Every call is wrapped, so a device without a voice engine never crashes the chat.
+///
+/// Urdu / Roman Urdu: an English voice reads Roman Urdu badly, and most PCs and browsers
+/// have no Urdu voice. Spoken Urdu and Hindi sound almost the same, so we:
+///  1. use an Urdu voice for Urdu-script text when the device has one (many phones do);
+///  2. otherwise write the same Urdu words in Devanagari (backend AI, cached) and use a
+///     Hindi voice (e.g. Chrome's "Google हिन्दी");
+///  3. otherwise fall back to an English (India) voice.
+/// The screen always shows the original Urdu / Roman Urdu text.
 class VoiceService {
   late final FlutterTts _tts = FlutterTts();
   late final SpeechToText _speech = SpeechToText();
@@ -14,72 +25,86 @@ class VoiceService {
   Future<void> _queue = Future.value();
   int _generation = 0; // bumped on stop, so queued messages are dropped
 
-  /// Chosen voice per language prefix ("en" / "ur"), and voice settings. Saved on the device.
+  /// Turns Urdu / Roman Urdu text into Devanagari for a Hindi voice (set by the chat screen).
+  Future<String?> Function(String text)? toDevanagari;
+  final Map<String, String> _devanagari = {};
+
+  /// Chosen voice per group ("en" or "ur"), and voice settings. Saved on the device.
   final Map<String, Map<String, String>> _voices = {};
   double pitch = 1.0;
   double rate = 0.5;
   bool _prefsLoaded = false;
+  List<Map<String, String>>? _installed;
+
+  /// Remember a ready-made Devanagari version (the chat reply already includes one).
+  void remember(String text, String devanagari) {
+    if (devanagari.trim().isNotEmpty) _devanagari[text] = devanagari;
+  }
+
+  static String _group(String languageCode) => languageCode == 'en' ? 'en' : 'ur';
+  static String _prefix(String locale) => locale.split(RegExp('[-_]')).first.toLowerCase();
 
   Future<void> _loadPrefs() async {
     if (_prefsLoaded) return;
     _prefsLoaded = true;
     try {
       final p = await SharedPreferences.getInstance();
-      for (final lang in ['en', 'ur']) {
-        final name = p.getString('tts_voice_$lang');
-        final locale = p.getString('tts_locale_$lang');
-        if (name != null && locale != null) _voices[lang] = {'name': name, 'locale': locale};
+      for (final g in ['en', 'ur']) {
+        final name = p.getString('tts_voice_$g');
+        final locale = p.getString('tts_locale_$g');
+        if (name != null && locale != null) _voices[g] = {'name': name, 'locale': locale};
       }
       pitch = p.getDouble('tts_pitch') ?? 1.0;
       rate = p.getDouble('tts_rate') ?? 0.5;
     } catch (_) {}
   }
 
-  static String _prefix(String locale) => locale.split(RegExp('[-_]')).first.toLowerCase();
-
-  /// Voices installed for this language (e.g. all English voices for "en-IN").
-  Future<List<Map<String, String>>> voicesFor(String locale) async {
-    await _loadPrefs();
+  Future<List<Map<String, String>>> _allVoices() async {
+    if (_installed != null && _installed!.isNotEmpty) return _installed!;
     try {
       final all = await _tts.getVoices.timeout(const Duration(seconds: 3));
-      final want = _prefix(locale);
-      final list = <Map<String, String>>[
+      _installed = [
         for (final v in (all as List? ?? const []))
-          if (v is Map && v['name'] != null && v['locale'] != null && _prefix('${v['locale']}') == want)
+          if (v is Map && v['name'] != null && v['locale'] != null)
             {
               'name': '${v['name']}',
               'locale': '${v['locale']}',
               if (v['gender'] != null) 'gender': '${v['gender']}',
             }
-      ];
-      list.sort((a, b) => a['name']!.compareTo(b['name']!));
-      return list;
+      ]..sort((a, b) => a['name']!.compareTo(b['name']!));
     } catch (_) {
-      return [];
+      _installed = [];
     }
+    return _installed!;
   }
 
-  /// The saved voice name for this language, or null for the default voice.
-  Future<String?> chosenVoice(String locale) async {
+  /// Voices that can be used for this chat language (Urdu chats: Urdu and Hindi voices).
+  Future<List<Map<String, String>>> voicesFor(String languageCode) async {
     await _loadPrefs();
-    return _voices[_prefix(locale)]?['name'];
+    final want = _group(languageCode) == 'en' ? {'en'} : {'ur', 'hi'};
+    return [for (final v in await _allVoices()) if (want.contains(_prefix(v['locale']!))) v];
   }
 
-  Future<void> chooseVoice(String locale, Map<String, String>? voice) async {
-    final lang = _prefix(locale);
+  Future<String?> chosenVoice(String languageCode) async {
+    await _loadPrefs();
+    return _voices[_group(languageCode)]?['name'];
+  }
+
+  Future<void> chooseVoice(String languageCode, Map<String, String>? voice) async {
+    final g = _group(languageCode);
     if (voice == null) {
-      _voices.remove(lang);
+      _voices.remove(g);
     } else {
-      _voices[lang] = {'name': voice['name']!, 'locale': voice['locale']!};
+      _voices[g] = {'name': voice['name']!, 'locale': voice['locale']!};
     }
     try {
       final p = await SharedPreferences.getInstance();
       if (voice == null) {
-        await p.remove('tts_voice_$lang');
-        await p.remove('tts_locale_$lang');
+        await p.remove('tts_voice_$g');
+        await p.remove('tts_locale_$g');
       } else {
-        await p.setString('tts_voice_$lang', voice['name']!);
-        await p.setString('tts_locale_$lang', voice['locale']!);
+        await p.setString('tts_voice_$g', voice['name']!);
+        await p.setString('tts_locale_$g', voice['locale']!);
       }
     } catch (_) {}
   }
@@ -94,7 +119,6 @@ class VoiceService {
     } catch (_) {}
   }
 
-  /// Best guess whether a voice is female, from its gender field or its name.
   static bool? isFemale(Map<String, String> v) {
     final g = v['gender']?.toLowerCase();
     if (g != null && g.isNotEmpty) return g.startsWith('f');
@@ -108,19 +132,62 @@ class VoiceService {
     return null;
   }
 
-  /// Speak [text] in [locale] (e.g. "ur-PK") after anything already being read.
-  /// Falls back to English if that voice is missing.
+  Future<String?> _toDevanagari(String text) async {
+    if (_devanagariScript.hasMatch(text)) return text;
+    final cached = _devanagari[text];
+    if (cached != null) return cached;
+    final convert = toDevanagari;
+    if (convert == null) return null;
+    try {
+      final d = await convert(text).timeout(const Duration(seconds: 10));
+      if (d != null && d.trim().isNotEmpty) _devanagari[text] = d;
+      return d;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Decide what to read and with which voice.
+  Future<(String, Map<String, String>?, String)> _plan(String text, String languageCode) async {
+    if (_group(languageCode) == 'en') return (text, _voices['en'], 'en-US');
+    final voices = await _allVoices();
+    final chosen = _voices['ur'];
+    Map<String, String>? firstOf(String p) {
+      for (final v in voices) {
+        if (_prefix(v['locale']!) == p) return v;
+      }
+      return null;
+    }
+
+    final chosenIs = chosen == null ? null : _prefix(chosen['locale']!);
+    final urVoice = chosenIs == 'ur' ? chosen : firstOf('ur');
+    final hiVoice = chosenIs == 'hi' ? chosen : firstOf('hi');
+    final isUrduScript = _urduScript.hasMatch(text);
+
+    if (isUrduScript && urVoice != null && chosenIs != 'hi') return (text, urVoice, 'ur-PK');
+    if (hiVoice != null) {
+      final d = await _toDevanagari(text);
+      if (d != null) return (d, hiVoice, 'hi-IN');
+    }
+    if (isUrduScript) return (text, urVoice, 'ur-PK');
+    return (text, null, 'en-IN');
+  }
+
+  /// Speak [text] for a chat in [languageCode] ("en" / "ur" / "roman_ur"),
+  /// after anything already being read.
   ///
   /// We wait for each sentence ourselves (with a time limit) instead of trusting the engine:
-  /// in Chrome the "finished" event is sometimes never sent (after stop, or for long text),
-  /// which used to block all later speech, including the speaker button.
-  Future<void> speak(String text, String locale) {
+  /// in Chrome the "finished" event is sometimes never sent, which used to block all speech.
+  Future<void> speak(String text, String languageCode) {
     final gen = _generation;
     _queue = _queue.then((_) async {
       if (gen != _generation) return;
       try {
-        await _prepare(locale);
-        for (final part in _sentences(text)) {
+        await _loadPrefs();
+        final (say, voice, locale) = await _plan(text, languageCode);
+        if (gen != _generation) return;
+        await _prepare(voice, locale);
+        for (final part in _sentences(say)) {
           if (gen != _generation) return;
           await _speakOne(part);
         }
@@ -134,8 +201,7 @@ class VoiceService {
   bool _handlersSet = false;
   Completer<void>? _current;
 
-  Future<void> _prepare(String locale) async {
-    await _loadPrefs();
+  Future<void> _prepare(Map<String, String>? voice, String locale) async {
     if (!_handlersSet) {
       _handlersSet = true;
       void done() {
@@ -148,9 +214,8 @@ class VoiceService {
       _tts.setErrorHandler((_) => done());
       await _tts.awaitSpeakCompletion(false);
     }
-    final voice = _voices[_prefix(locale)];
     if (voice != null) {
-      await _tts.setVoice(voice).timeout(const Duration(seconds: 2));
+      await _tts.setVoice({'name': voice['name']!, 'locale': voice['locale']!}).timeout(const Duration(seconds: 2));
     } else {
       final available =
           await _tts.isLanguageAvailable(locale).timeout(const Duration(seconds: 2), onTimeout: () => false);
@@ -172,7 +237,7 @@ class VoiceService {
   /// Short pieces read more reliably than one long block (Chrome cuts long text off).
   static List<String> _sentences(String text) {
     final parts = text
-        .split(RegExp(r'(?<=[.!?۔؟])\s+|\n+'))
+        .split(RegExp(r'(?<=[.!?।۔؟])\s+|\n+'))
         .map((p) => p.trim())
         .where((p) => p.isNotEmpty)
         .toList();
@@ -180,11 +245,11 @@ class VoiceService {
   }
 
   /// Stop now and read [text] instead (the speaker button on a message).
-  Future<void> speakNow(String text, String locale) async {
+  Future<void> speakNow(String text, String languageCode) async {
     await stopSpeaking();
     // Chrome sometimes drops speech started right after a stop; wait a moment.
     await Future<void>.delayed(const Duration(milliseconds: 150));
-    await speak(text, locale);
+    await speak(text, languageCode);
   }
 
   Future<void> stopSpeaking() async {
@@ -197,7 +262,6 @@ class VoiceService {
   }
 
   /// Start listening. [onText] gets the words so far; [isFinal] is true at the end.
-  /// Returns false if the microphone or speech recognition is not available.
   Future<bool> listen(String locale, void Function(String words, bool isFinal) onText,
       {void Function()? onDone}) async {
     try {
