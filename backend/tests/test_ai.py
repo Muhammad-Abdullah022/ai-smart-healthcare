@@ -179,3 +179,18 @@ def test_groq_switches_to_next_model_when_missing():
     assert run(provider.generate_json("s", "p")) == "{}"
     assert seen == ["llama-3.3-70b-versatile", "openai/gpt-oss-120b"]
     assert provider.model == "openai/gpt-oss-120b"
+
+
+def test_gemini_uses_next_model_when_rate_limited():
+    seen = []
+
+    def handler(request):
+        model = request.url.path.split("/models/")[1].split(":")[0]
+        seen.append(model)
+        if model == "gemini-2.5-flash":
+            return httpx.Response(429, json={"error": {"message": "quota"}})
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "{}"}]}}]})
+
+    provider = GeminiProvider("KEY", "gemini-2.5-flash", 5, client=_client(handler))
+    assert run(provider.generate_json("s", "p")) == "{}"
+    assert seen == ["gemini-2.5-flash", "gemini-3.5-flash-lite"]

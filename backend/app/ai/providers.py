@@ -52,34 +52,54 @@ class GeminiProvider(AIProvider):
     supports_images = True
     base_url = "https://generativelanguage.googleapis.com/v1beta"
 
+    # Free-tier limits are per model, so when one model is busy (HTTP 429) or not available to this
+    # key (404/400), the next one is tried with the same key. GEMINI_MODEL may list several, comma-separated.
+    BACKUP_MODELS = ("gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash",
+                     "gemini-2.5-flash-lite")
+
     def __init__(self, api_key: str, model: str, timeout: float, client: httpx.AsyncClient | None = None):
         self.api_key = api_key
-        self.model = model
+        configured = [m.strip() for m in model.split(",") if m.strip()]
+        self.models = list(dict.fromkeys(configured + list(self.BACKUP_MODELS)))
+        self.model = self.models[0]
         self.timeout = timeout
         self._client = client
+        self._unavailable: set[str] = set()
+
+    def _body(self, model: str, system: str, prompt: str, images) -> dict:
+        parts = [{"inline_data": {"mime_type": m, "data": d}} for m, d in (images or [])] + [{"text": prompt}]
+        config = {"responseMimeType": "application/json", "temperature": 0.2}
+        if model.startswith("gemini-2.5-flash"):
+            # "Thinking" made replies take 7-14 s. These are short structured answers checked by our
+            # own safety rules, so it is switched off (~2-4 s). Newer flash-lite models think little anyway.
+            config["thinkingConfig"] = {"thinkingBudget": 0}
+        return {"systemInstruction": {"parts": [{"text": system}]},
+                "contents": [{"role": "user", "parts": parts}], "generationConfig": config}
 
     async def generate_json(self, system: str, prompt: str, images: list[tuple[str, str]] | None = None) -> str:
         if not self.api_key:
             raise AIProviderError(self.name, "GEMINI_API_KEY is not set", retryable=False)
-        parts = [{"inline_data": {"mime_type": m, "data": d}} for m, d in (images or [])] + [{"text": prompt}]
-        body = {
-            "systemInstruction": {"parts": [{"text": system}]},
-            "contents": [{"role": "user", "parts": parts}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "temperature": 0.2,
-                # "Thinking" made replies take 7-14 s (close to the time limit). These are short,
-                # structured answers checked by our own safety rules, so it is switched off: ~2-4 s.
-                **({"thinkingConfig": {"thinkingBudget": 0}} if "flash" in self.model else {}),
-            },
-        }
-        url = f"{self.base_url}/models/{self.model}:generateContent"
-        data = await _post(self.name, url, body, {"x-goog-api-key": self.api_key}, self.timeout, self._client)
-        try:
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-        except (KeyError, IndexError, TypeError):
-            # Happens e.g. when the reply was blocked by Gemini's safety filters.
-            raise AIProviderError(self.name, "reply had no text")
+        last: AIProviderError | None = None
+        for model in [m for m in self.models if m not in self._unavailable]:
+            url = f"{self.base_url}/models/{model}:generateContent"
+            try:
+                data = await _post(self.name, url, self._body(model, system, prompt, images),
+                                   {"x-goog-api-key": self.api_key}, self.timeout, self._client)
+            except AIProviderError as exc:
+                text = str(exc)
+                if "API key rejected" in text:
+                    raise
+                if "HTTP 404" in text or ("HTTP 400" in text and "model" in text.lower()):
+                    self._unavailable.add(model)  # not available to this key: skip it from now on
+                last = exc
+                continue  # rate limit, timeout or server error: try the next model now
+            self.model = model
+            try:
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+            except (KeyError, IndexError, TypeError):
+                # Happens e.g. when the reply was blocked by Gemini's safety filters.
+                raise AIProviderError(self.name, "reply had no text")
+        raise last or AIProviderError(self.name, "no Gemini model available")
 
 
 class GroqProvider(AIProvider):
