@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
@@ -39,7 +41,7 @@ class VoiceService {
   Future<List<Map<String, String>>> voicesFor(String locale) async {
     await _loadPrefs();
     try {
-      final all = await _tts.getVoices;
+      final all = await _tts.getVoices.timeout(const Duration(seconds: 3));
       final want = _prefix(locale);
       final list = <Map<String, String>>[
         for (final v in (all as List? ?? const []))
@@ -108,23 +110,20 @@ class VoiceService {
 
   /// Speak [text] in [locale] (e.g. "ur-PK") after anything already being read.
   /// Falls back to English if that voice is missing.
+  ///
+  /// We wait for each sentence ourselves (with a time limit) instead of trusting the engine:
+  /// in Chrome the "finished" event is sometimes never sent (after stop, or for long text),
+  /// which used to block all later speech, including the speaker button.
   Future<void> speak(String text, String locale) {
     final gen = _generation;
     _queue = _queue.then((_) async {
       if (gen != _generation) return;
       try {
-        await _loadPrefs();
-        await _tts.awaitSpeakCompletion(true);
-        final voice = _voices[_prefix(locale)];
-        if (voice != null) {
-          await _tts.setVoice(voice);
-        } else {
-          final available = await _tts.isLanguageAvailable(locale);
-          await _tts.setLanguage(available == true ? locale : 'en-US');
+        await _prepare(locale);
+        for (final part in _sentences(text)) {
+          if (gen != _generation) return;
+          await _speakOne(part);
         }
-        await _tts.setPitch(pitch);
-        await _tts.setSpeechRate(rate);
-        await _tts.speak(text);
       } catch (_) {
         // No text-to-speech on this device: stay silent.
       }
@@ -132,14 +131,66 @@ class VoiceService {
     return _queue;
   }
 
+  bool _handlersSet = false;
+  Completer<void>? _current;
+
+  Future<void> _prepare(String locale) async {
+    await _loadPrefs();
+    if (!_handlersSet) {
+      _handlersSet = true;
+      void done() {
+        final c = _current;
+        if (c != null && !c.isCompleted) c.complete();
+      }
+
+      _tts.setCompletionHandler(done);
+      _tts.setCancelHandler(done);
+      _tts.setErrorHandler((_) => done());
+      await _tts.awaitSpeakCompletion(false);
+    }
+    final voice = _voices[_prefix(locale)];
+    if (voice != null) {
+      await _tts.setVoice(voice).timeout(const Duration(seconds: 2));
+    } else {
+      final available =
+          await _tts.isLanguageAvailable(locale).timeout(const Duration(seconds: 2), onTimeout: () => false);
+      await _tts.setLanguage(available == true ? locale : 'en-US').timeout(const Duration(seconds: 2));
+    }
+    await _tts.setPitch(pitch);
+    await _tts.setSpeechRate(rate);
+  }
+
+  Future<void> _speakOne(String part) async {
+    final c = Completer<void>();
+    _current = c;
+    await _tts.speak(part);
+    // About 1 second per 12 characters at normal speed, plus a margin.
+    final limit = Duration(milliseconds: 3000 + (part.length * 90 / (rate / 0.5)).round());
+    await c.future.timeout(limit, onTimeout: () {});
+  }
+
+  /// Short pieces read more reliably than one long block (Chrome cuts long text off).
+  static List<String> _sentences(String text) {
+    final parts = text
+        .split(RegExp(r'(?<=[.!?۔؟])\s+|\n+'))
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? [text] : parts;
+  }
+
   /// Stop now and read [text] instead (the speaker button on a message).
   Future<void> speakNow(String text, String locale) async {
     await stopSpeaking();
+    // Chrome sometimes drops speech started right after a stop; wait a moment.
+    await Future<void>.delayed(const Duration(milliseconds: 150));
     await speak(text, locale);
   }
 
   Future<void> stopSpeaking() async {
     _generation++;
+    final c = _current;
+    if (c != null && !c.isCompleted) c.complete();
     try {
       await _tts.stop();
     } catch (_) {}
