@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, Field
 
 from app.ai.prompts import language_rule
-from app.ai.safety import EMERGENCY_NUMBERS, check_red_flags
+from app.ai.safety import EMERGENCY_NUMBERS, check_red_flags, remove_medicine_sentences
 from app.ai.service import AIUnavailableError
 from app.core.errors import ApiError
 from app.core.rate_limit import limit_by_user
@@ -40,6 +40,12 @@ EMERGENCY_REPLY = {
     "en": "This could be an emergency. Please call 1122 now or go to the nearest hospital emergency department.",
     "ur": "یہ ایمرجنسی ہو سکتی ہے۔ ابھی 1122 پر کال کریں یا قریبی ہسپتال کی ایمرجنسی میں جائیں۔",
     "roman_ur": "Yeh emergency ho sakti hai. Abhi 1122 par call karein ya qareebi hospital ki emergency mein jayein.",
+}
+
+NO_MEDICINE_NOTE = {
+    "en": "For any medicine, please ask a doctor or pharmacist.",
+    "ur": "کسی بھی دوا کے لیے ڈاکٹر یا فارماسسٹ سے مشورہ کریں۔",
+    "roman_ur": "Kisi bhi dawa ke liye doctor ya pharmacist se mashwara karein.",
 }
 
 EMERGENCY_SPEECH = {
@@ -123,9 +129,14 @@ async def chat(body: ChatRequest, request: Request, user: dict = Depends(get_cur
                 AIChatOutput, ASSISTANT_SYSTEM + language_rule(body.language), prompt)
         except AIUnavailableError as exc:
             raise ApiError(status.HTTP_503_SERVICE_UNAVAILABLE, "ai_unavailable", exc.message)
-        reply = {"role": "assistant", "text": result.data.reply, "emergency": False, "at": now}
+        text = remove_medicine_sentences(result.data.reply)
+        if text != result.data.reply.strip():
+            # A medicine was mentioned: drop those sentences and point to a doctor/pharmacist instead.
+            text = (text + " " + NO_MEDICINE_NOTE[body.language]).strip()
+        reply = {"role": "assistant", "text": text, "emergency": False, "at": now}
         suggest, numbers = result.data.suggest_symptom_check, []
-        speech = result.data.speech if body.language != "en" else ""
+        # The Devanagari copy may still contain the removed sentences, so only use it if nothing was removed.
+        speech = result.data.speech if body.language != "en" and text == result.data.reply.strip() else ""
 
     await db.assistant_chats.update_one(
         {"_id": convo["_id"]},

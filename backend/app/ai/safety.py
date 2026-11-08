@@ -77,9 +77,32 @@ def check_red_flags(text: str) -> RedFlagResult | None:
 _DOSE_PATTERN = re.compile(r"\b\d+(\.\d+)?\s?(mg|mcg|ml|g|tablets?|tabs?|capsules?|units?)\b", re.IGNORECASE)
 
 
-def remove_dosing(items: list[str]) -> list[str]:
-    """Drop any AI suggestion that contains a medicine dose."""
-    return [item for item in items if not _DOSE_PATTERN.search(item)]
+# Common medicine names (generic and Pakistani brands). The AI must not suggest medicines at all.
+_MEDICINE_PATTERN = re.compile(
+    r"\b(paracetamol|panadol|calpol|acetaminophen|ibuprofen|brufen|advil|aspirin|disprin|diclofenac|"
+    r"voltral|mefenamic|ponstan|naproxen|antibiotics?|amoxicillin|augmentin|azithromycin|azomax|"
+    r"ciprofloxacin|flagyl|metronidazole|antihistamines?|cetirizine|loratadine|omeprazole|risek|"
+    r"antacid|ors\b|steroids?|prednisolone|insulin|metformin|cough syrup|syrup|tablets?|capsules?|"
+    r"injections?|painkillers?|pain killers?|dawa le|dawai le|goli)\b",
+    re.IGNORECASE,
+)
+
+
+def mentions_medicine(text: str) -> bool:
+    return bool(_MEDICINE_PATTERN.search(text))
+
+
+def remove_dosing(items: list[str], medicines: bool = True) -> list[str]:
+    """Drop any AI suggestion that contains a medicine dose, or (medicines=True) names a medicine."""
+    return [item for item in items
+            if not _DOSE_PATTERN.search(item) and not (medicines and mentions_medicine(item))]
+
+
+def remove_medicine_sentences(text: str) -> str:
+    """Remove sentences of a free-text reply that suggest a medicine or a dose."""
+    parts = re.split(r"(?<=[.!?۔؟])\s+", text)
+    kept = [p for p in parts if not _DOSE_PATTERN.search(p) and not mentions_medicine(p)]
+    return " ".join(kept).strip()
 
 
 DISCLAIMER = (

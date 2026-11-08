@@ -75,3 +75,13 @@ def test_self_harm_gets_helplines_in_language(registered):
                     json={"message": "main khudkushi karna chahta hoon", "language": "roman_ur"}).json()
     assert r["reply"]["emergency"] and "0800-22-444" in r["reply"]["text"]
     assert any(n["number"] == "0800-22-444" for n in r["emergency_numbers"])
+
+
+def test_medicine_sentences_removed_from_chat(registered):
+    client, tokens = registered
+    _ai(client, json.dumps({"reply": "Aaram karein. Paracetamol le sakte hain. Pani piyein.",
+                            "suggest_symptom_check": False, "speech": "x"}))
+    r = client.post("/assistant/chat", headers=auth_header(tokens),
+                    json={"message": "bukhar", "language": "roman_ur"}).json()
+    assert "aracetamol" not in r["reply"]["text"] and "pharmacist" in r["reply"]["text"]
+    assert r["speech"] == ""

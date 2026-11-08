@@ -157,7 +157,7 @@ async def assess_symptoms(
             rules.append("Severity 8 or more: triage raised to at least 'moderate'")
         next_steps = remove_dosing(output.next_steps) or ["Please see a doctor to discuss these symptoms."]
         if len(next_steps) < len(output.next_steps):
-            rules.append("Removed AI text that mentioned a medicine dose")
+            rules.append("Removed AI text that mentioned a medicine or a dose")
 
         doc.update(
             emergency=level == "critical",
@@ -167,7 +167,7 @@ async def assess_symptoms(
             possible_causes=[c.model_dump() for c in output.possible_causes],
             next_steps=next_steps,
             follow_up_questions=output.follow_up_questions,
-            tests_to_discuss=remove_dosing(output.tests_to_discuss),
+            tests_to_discuss=remove_dosing(output.tests_to_discuss, medicines=False),
             specialist_type=output.specialist_type,
             warning_signs=remove_dosing(output.warning_signs),
             explanation=Explanation(

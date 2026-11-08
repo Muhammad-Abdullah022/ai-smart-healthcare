@@ -34,7 +34,15 @@ def _check_status(provider: str, response: httpx.Response) -> None:
     if response.status_code in (401, 403):
         raise AIProviderError(provider, "API key rejected", retryable=False)
     if response.status_code >= 400:
-        raise AIProviderError(provider, f"HTTP {response.status_code}", retryable=response.status_code >= 500)
+        # Include the API's own short error text (e.g. "model not found") to make problems clear.
+        detail = ""
+        try:
+            err = response.json().get("error", {})
+            detail = (err.get("message") if isinstance(err, dict) else str(err)) or ""
+        except (ValueError, AttributeError):
+            pass
+        raise AIProviderError(provider, f"HTTP {response.status_code}" + (f": {detail[:160]}" if detail else ""),
+                              retryable=response.status_code >= 500)
 
 
 class GeminiProvider(AIProvider):
