@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -72,8 +73,16 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
   Future<void> _send() async {
     final text = _input.text.trim();
     if (text.isEmpty || _busy) return;
-    if (_symptoms == null && text.length < 3) return;
+    if (_symptoms == null && text.length < 3) {
+      setState(() => _messages.add(_Msg.bot('Please describe your symptoms in a few words, e.g. "fever and headache".')));
+      _scrollDown();
+      return;
+    }
     _input.clear();
+    // On some browsers Enter also types a new line after we clear; remove it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_input.text.trim().isEmpty) _input.clear();
+    });
     setState(() => _messages.add(_Msg.user(text)));
     _scrollDown();
 
@@ -111,6 +120,11 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       });
     } on ApiException catch (e) {
       if (mounted) setState(() => _messages.add(_Msg.bot(e.message, isError: true)));
+    } catch (e) {
+      // Any other problem must be visible too, never a silent failure.
+      if (mounted) {
+        setState(() => _messages.add(_Msg.bot('Something went wrong ($e). Please try again.', isError: true)));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
       _scrollDown();
@@ -168,13 +182,18 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
+                    child: CallbackShortcuts(
+                      bindings: {
+                        const SingleActivator(LogicalKeyboardKey.enter): _send,
+                        const SingleActivator(LogicalKeyboardKey.numpadEnter): _send,
+                      },
+                      child: TextField(
                       controller: _input,
                       enabled: !_finished,
                       minLines: 1,
                       maxLines: 4,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _send(),
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.newline,
                       decoration: InputDecoration(
                         hintText: _finished
                             ? 'Tap ↻ to start a new check'
@@ -189,6 +208,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
                             borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppColors.border)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                       ),
+                    ),
                     ),
                   ),
                   const SizedBox(width: 8),
