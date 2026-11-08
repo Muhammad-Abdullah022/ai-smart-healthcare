@@ -39,7 +39,24 @@ def register_error_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(Exception)
-    async def handle_unexpected(_: Request, __: Exception):
+    async def handle_unexpected(request: Request, exc: Exception):
+        # Full details go to the backend window and backend/logs/errors.log (never to the user).
+        import traceback
+        from datetime import datetime
+        from pathlib import Path
+
+        text = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+        try:
+            print(f"[ERROR] {request.method} {request.url.path}\n{text}")
+        except UnicodeEncodeError:
+            print(f"[ERROR] {request.method} {request.url.path} (see logs/errors.log)")
+        try:
+            log = Path(__file__).resolve().parents[2] / "logs" / "errors.log"
+            log.parent.mkdir(exist_ok=True)
+            with log.open("a", encoding="utf-8") as f:
+                f.write(f"--- {datetime.now().isoformat()} {request.method} {request.url.path}\n{text}\n")
+        except OSError:
+            pass
         # Never leak internal details (or health data) in error messages.
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -42,3 +42,4 @@ frontend/ios/Flutter/Generated.xcconfig
 Thumbs.db
 scripts/*.log
 _to_delete/
+backend/logs/

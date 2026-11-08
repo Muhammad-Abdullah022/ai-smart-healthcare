@@ -157,6 +157,7 @@ class ApiClient {
       throw ApiException(message,
           code: error['code'] as String? ?? 'error', statusCode: response.statusCode);
     }
-    throw ApiException('Something went wrong. Please try again.', statusCode: response.statusCode);
+    throw ApiException('Something went wrong (error ${response.statusCode}). Please try again.',
+        statusCode: response.statusCode);
   }
 }

@@ -62,7 +62,7 @@ class AIService:
                     return AIResult(schema.model_validate_json(_strip_fences(raw)), provider.name)
                 except AIProviderError as exc:
                     log.warning("AI provider failed: %s (attempt %s)", exc, attempt)
-                    print(f"[AI] {exc}")  # visible in the backend window
+                    _safe_print(f"[AI] {exc}")  # visible in the backend window
                     if not exc.retryable:
                         break
                 except ValidationError as exc:
@@ -80,3 +80,11 @@ def _strip_fences(text: str) -> str:
         text = text.split("\n", 1)[1] if "\n" in text else ""
         text = text.rsplit("```", 1)[0]
     return text.strip()
+
+
+def _safe_print(text: str) -> None:
+    """print() can crash on Windows consoles that cannot show some characters."""
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        print(text.encode("ascii", "replace").decode())
