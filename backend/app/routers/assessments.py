@@ -29,6 +29,42 @@ from app.models.assessment import (
 )
 from app.repositories.user_repository import UserRepository, to_object_id
 
+SELF_HARM_WORDS = ("suicide", "kill myself", "end my life", "want to die", "self harm", "khudkushi",
+                   "khud kushi", "marna chahta", "marna chahti")
+# Mental-health support lines (same source as /mental/crisis-resources: TherapyRoute, checked 2026-08).
+CRISIS_LINES = [
+    {"name": "Rozan Counseling Helpline (toll-free, Mon–Fri 9:30–5)", "number": "0800-22-444"},
+    {"name": "Taskeen helpline (Mon–Sat 11am–11pm)", "number": "+92 316 827 5336"},
+]
+# Shown without AI when an emergency sign is found, in the user's language.
+EMERGENCY_STEPS = {
+    "body": {
+        "en": ["Call 1122 now, or go to the nearest hospital emergency department.",
+               "Do not drive yourself. Ask someone to take you or wait for the ambulance.",
+               "If you are with someone, tell them how you feel right now."],
+        "ur": ["ابھی 1122 پر کال کریں یا قریبی ہسپتال کی ایمرجنسی میں جائیں۔",
+               "خود گاڑی نہ چلائیں، کسی کو ساتھ لے جائیں یا ایمبولینس کا انتظار کریں۔",
+               "اگر کوئی آپ کے پاس ہے تو اسے ابھی بتائیں کہ آپ کیسا محسوس کر رہے ہیں۔"],
+        "roman_ur": ["Abhi 1122 par call karein ya qareebi hospital ki emergency mein jayein.",
+                     "Khud gaari na chalayein, kisi ko saath le jayein ya ambulance ka intezar karein.",
+                     "Agar koi aap ke paas hai to usay abhi batayein ke aap kaisa mehsoos kar rahe hain."],
+    },
+    "self_harm": {
+        "en": ["If you might act on these thoughts now, call 1122 or go to the nearest hospital emergency department.",
+               "Please reach out to someone you trust right now. You do not have to face this alone.",
+               "You can talk to a counsellor: Rozan helpline 0800-22-444 (toll-free) or Taskeen +92 316 827 5336.",
+               "Stay with someone, and keep away from anything you could use to hurt yourself."],
+        "ur": ["اگر آپ ابھی خود کو نقصان پہنچا سکتے ہیں تو 1122 پر کال کریں یا قریبی ہسپتال کی ایمرجنسی میں جائیں۔",
+               "ابھی کسی ایسے شخص سے بات کریں جس پر آپ بھروسہ کرتے ہیں۔ آپ اکیلے نہیں ہیں۔",
+               "کونسلر سے بات کریں: روزن ہیلپ لائن 0800-22-444 (مفت) یا تسکین 03168275336۔",
+               "کسی کے ساتھ رہیں اور ایسی چیزوں سے دور رہیں جن سے آپ خود کو نقصان پہنچا سکتے ہیں۔"],
+        "roman_ur": ["Agar aap abhi khud ko nuqsan pohncha sakte hain to 1122 par call karein ya qareebi hospital ki emergency mein jayein.",
+                     "Abhi kisi aisay shakhs se baat karein jis par aap bharosa karte hain. Aap akelay nahi hain.",
+                     "Counsellor se baat karein: Rozan helpline 0800-22-444 (muft) ya Taskeen 0316 8275336.",
+                     "Kisi ke saath rahein aur aisi cheezon se door rahein jin se aap khud ko nuqsan pohncha sakte hain."],
+    },
+}
+
 router = APIRouter(prefix="/assessments", tags=["assessments"])
 
 LIMITATIONS = (
@@ -82,19 +118,14 @@ async def assess_symptoms(
 
     if red_flag:
         # 1. Emergency: answer immediately, without AI.
-        steps = [
-            "Call 1122 now, or go to the nearest hospital emergency department.",
-            "Do not drive yourself. Ask someone to take you or wait for the ambulance.",
-            "If you are with someone, tell them how you feel right now.",
-        ]
-        if any(word in red_flag.matched for word in ("suicide", "kill myself", "end my life", "want to die",
-                                                     "self harm", "khudkushi", "khud kushi")):
-            steps.insert(1, "Please reach out to someone you trust right now. You do not have to face this alone.")
+        self_harm = any(word in red_flag.matched for word in SELF_HARM_WORDS)
+        steps = list(EMERGENCY_STEPS["self_harm" if self_harm else "body"][body.language])
+        numbers = EMERGENCY_NUMBERS + (CRISIS_LINES if self_harm else [])
         doc.update(
             emergency=True,
             triage_level=red_flag.level,
             triage_reason=" ".join(red_flag.reasons),
-            emergency_numbers=EMERGENCY_NUMBERS,
+            emergency_numbers=numbers,
             next_steps=steps,
             explanation=Explanation(
                 method="Emergency safety rules (no AI used)",

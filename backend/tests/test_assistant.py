@@ -67,3 +67,11 @@ def test_speech_text_for_urdu_voice(registered):
     r = client.post("/assistant/chat", headers=h, json={"message": "garmi", "language": "roman_ur"}).json()
     assert r["speech"] == "पानी पियें।"
     assert client.post("/assistant/speech", headers=h, json={"text": "mashwara karein"}).json()["speech"] == "मशवरा करें"
+
+
+def test_self_harm_gets_helplines_in_language(registered):
+    client, tokens = registered
+    r = client.post("/assistant/chat", headers=auth_header(tokens),
+                    json={"message": "main khudkushi karna chahta hoon", "language": "roman_ur"}).json()
+    assert r["reply"]["emergency"] and "0800-22-444" in r["reply"]["text"]
+    assert any(n["number"] == "0800-22-444" for n in r["emergency_numbers"])

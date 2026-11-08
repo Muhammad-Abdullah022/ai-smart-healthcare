@@ -63,11 +63,15 @@ class AIService:
                 except AIProviderError as exc:
                     log.warning("AI provider failed: %s (attempt %s)", exc, attempt)
                     _safe_print(f"[AI] {exc}")  # visible in the backend window
+                    _log_failure(f"{provider.name}: {exc}")
                     if not exc.retryable:
                         break
                 except ValidationError as exc:
                     # The AI replied, but not in the shape we need: ask again.
                     log.warning("AI reply from %s failed validation: %s", provider.name, exc.error_count())
+                    first = exc.errors()[0] if exc.errors() else {}
+                    _log_failure(f"{provider.name}: reply did not match {schema.__name__}: "
+                                 f"{exc.error_count()} errors, first at {first.get('loc')} ({first.get('type')})")
                 if attempt < self.attempts:
                     await asyncio.sleep(self.retry_delay * attempt)
         raise AIUnavailableError()
@@ -88,3 +92,17 @@ def _safe_print(text: str) -> None:
         print(text)
     except UnicodeEncodeError:
         print(text.encode("ascii", "replace").decode())
+
+
+def _log_failure(text: str) -> None:
+    """Keep a short record of AI failures in backend/logs/ai.log (no user health text)."""
+    from datetime import datetime
+    from pathlib import Path
+
+    try:
+        path = Path(__file__).resolve().parents[2] / "logs" / "ai.log"
+        path.parent.mkdir(exist_ok=True)
+        with path.open("a", encoding="utf-8") as f:
+            f.write(f"{datetime.now().isoformat(timespec='seconds')} {text}\n")
+    except OSError:
+        pass

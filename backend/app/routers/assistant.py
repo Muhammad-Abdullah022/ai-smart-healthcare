@@ -16,7 +16,7 @@ from app.core.errors import ApiError
 from app.core.rate_limit import limit_by_user
 from app.deps import get_current_user, get_db
 from app.repositories.user_repository import to_object_id
-from app.routers.assessments import get_ai_service
+from app.routers.assessments import CRISIS_LINES, EMERGENCY_STEPS, SELF_HARM_WORDS, get_ai_service
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
@@ -109,8 +109,12 @@ async def chat(body: ChatRequest, request: Request, user: dict = Depends(get_cur
     user_msg = {"role": "user", "text": body.message, "emergency": False, "at": now}
     red = check_red_flags(body.message)
     if red:
-        reply = {"role": "assistant", "text": EMERGENCY_REPLY[body.language], "emergency": True, "at": now}
-        suggest, numbers, speech = False, EMERGENCY_NUMBERS, EMERGENCY_SPEECH.get(body.language, "")
+        self_harm = any(w in red.matched for w in SELF_HARM_WORDS)
+        text = " ".join(EMERGENCY_STEPS["self_harm"][body.language][:3]) if self_harm \
+            else EMERGENCY_REPLY[body.language]
+        reply = {"role": "assistant", "text": text, "emergency": True, "at": now}
+        suggest, numbers = False, EMERGENCY_NUMBERS + (CRISIS_LINES if self_harm else [])
+        speech = "" if self_harm else EMERGENCY_SPEECH.get(body.language, "")
     else:
         history = "\n".join(f"{m['role']}: {m['text']}" for m in convo["messages"][-10:])
         prompt = (f"Conversation so far:\n{history}\n\n" if history else "") + f"user: {body.message}"

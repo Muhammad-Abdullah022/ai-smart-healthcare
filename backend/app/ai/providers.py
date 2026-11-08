@@ -57,7 +57,13 @@ class GeminiProvider(AIProvider):
         body = {
             "systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": parts}],
-            "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2},
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "temperature": 0.2,
+                # "Thinking" made replies take 7-14 s (close to the time limit). These are short,
+                # structured answers checked by our own safety rules, so it is switched off: ~2-4 s.
+                **({"thinkingConfig": {"thinkingBudget": 0}} if "flash" in self.model else {}),
+            },
         }
         url = f"{self.base_url}/models/{self.model}:generateContent"
         data = await _post(self.name, url, body, {"x-goog-api-key": self.api_key}, self.timeout, self._client)
