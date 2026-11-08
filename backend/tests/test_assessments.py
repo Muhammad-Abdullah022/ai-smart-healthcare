@@ -112,3 +112,13 @@ def test_chat_style_request_needs_only_symptoms(registered):
     assert r.status_code == 201, r.text
     assert r.json()["explanation"]["inputs_used"] == ["symptoms"]
     assert r.json()["follow_up_questions"] == ["Do you have a rash?"]
+
+
+def test_chat_answers_are_saved_with_the_result(registered):
+    client, tokens = registered
+    _use_ai(client, json.dumps(AI_REPLY))
+    qa = [{"question": "How long?", "answer": "2 days"}]
+    created = client.post("/assessments/symptoms", headers=auth_header(tokens),
+                          json={"symptoms": "back pain", "answers": qa}).json()
+    again = client.get(f"/assessments/symptoms/{created['id']}", headers=auth_header(tokens)).json()
+    assert again["answers"] == qa

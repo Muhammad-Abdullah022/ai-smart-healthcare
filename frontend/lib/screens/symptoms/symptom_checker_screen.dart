@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -288,7 +289,7 @@ class _Typing extends StatelessWidget {
   }
 }
 
-/// Final answer shown inside the chat: triage, top causes, and a link to the full result.
+/// Final answer shown inside the chat: triage, what to do, doctor, tests and next actions.
 class _ResultBubble extends StatelessWidget {
   const _ResultBubble({required this.assessment});
   final Assessment assessment;
@@ -297,47 +298,138 @@ class _ResultBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = assessment;
     final style = TriageStyle.of(a.triageLevel);
+    final critical = a.triageLevel == 'critical';
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
-        color: style.background,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: style.color),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE9EEF4)),
+        boxShadow: const [BoxShadow(color: Color(0x0F16324F), blurRadius: 16, offset: Offset(0, 6))],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Icon(style.icon, color: style.color),
-              const SizedBox(width: 8),
-              Text('Triage: ${style.label}',
-                  style: TextStyle(color: style.color, fontWeight: FontWeight.w800, fontSize: 17)),
-            ],
+          // Coloured triage header
+          Container(
+            color: style.background,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Row(
+              children: [
+                CircleAvatar(radius: 18, backgroundColor: style.color, child: Icon(style.icon, color: Colors.white, size: 20)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(style.label, style: TextStyle(color: style.color, fontWeight: FontWeight.w800, fontSize: 17)),
+                      Text(style.advice, style: const TextStyle(fontSize: 13, color: AppColors.text)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
-          Text(style.advice, style: const TextStyle(fontWeight: FontWeight.w600)),
-          if (a.emergencyNumbers.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text('Call ${a.emergencyNumbers.map((n) => n.number).join(' or ')} now.',
-                style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.critical)),
-          ],
-          if (a.possibleCauses.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            const Text('Possible causes:', style: TextStyle(color: AppColors.textMuted)),
-            for (final c in a.possibleCauses.take(3)) Text('• ${c.name}', style: const TextStyle(height: 1.5)),
-          ],
-          const SizedBox(height: 10),
-          TextButton(
-            style: TextButton.styleFrom(padding: EdgeInsets.zero, foregroundColor: AppColors.primary),
-            onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => SymptomResultScreen(assessment: a))),
-            child: const Text('See full result and next steps',
-                style: TextStyle(fontWeight: FontWeight.w700, decoration: TextDecoration.underline)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (critical && a.emergencyNumbers.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text('Call ${a.emergencyNumbers.map((n) => n.number).join(' or ')} now.',
+                        style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.critical, fontSize: 15)),
+                  ),
+                if (a.possibleCauses.isNotEmpty) ...[
+                  const Text('It may be', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                  const SizedBox(height: 4),
+                  for (final c in a.possibleCauses.take(3))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: c.likelihood == 'high'
+                                ? AppColors.primary
+                                : c.likelihood == 'medium'
+                                    ? AppColors.accent
+                                    : const Color(0xFFB3BDC9),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                      ]),
+                    ),
+                ],
+                if (a.specialistType != null) ...[
+                  const SizedBox(height: 12),
+                  _InfoLine(icon: Icons.medical_services_outlined, label: 'Doctor to see', value: a.specialistType!),
+                ],
+                if (a.testsToDiscuss.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _InfoLine(icon: Icons.biotech_outlined, label: 'Tests to ask about', value: a.testsToDiscuss.join(', ')),
+                ],
+              ],
+            ),
+          ),
+          const Divider(height: 20, color: Color(0xFFEEF2F6)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            child: Wrap(
+              spacing: 4,
+              children: [
+                TextButton.icon(
+                  icon: const Icon(Icons.description_outlined, size: 18),
+                  label: const Text('Full result'),
+                  onPressed: () => Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (_) => SymptomResultScreen(assessment: a))),
+                ),
+                if (a.specialistType != null)
+                  TextButton.icon(
+                    icon: const Icon(Icons.event_available_outlined, size: 18),
+                    label: const Text('Book doctor'),
+                    onPressed: () => GoRouter.of(context).push('/feature/11'),
+                  ),
+                if (a.testsToDiscuss.isNotEmpty)
+                  TextButton.icon(
+                    icon: const Icon(Icons.upload_file_outlined, size: 18),
+                    label: const Text('Add report later'),
+                    onPressed: () => GoRouter.of(context).push('/feature/8'),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _InfoLine extends StatelessWidget {
+  const _InfoLine({required this.icon, required this.label, required this.value});
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: AppColors.accent),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text.rich(TextSpan(children: [
+            TextSpan(text: '$label: ', style: const TextStyle(color: AppColors.textMuted)),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          ])),
+        ),
+      ],
     );
   }
 }

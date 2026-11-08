@@ -76,6 +76,7 @@ async def assess_symptoms(
         "user_id": user["_id"],
         "created_at": datetime.now(timezone.utc),
         "symptoms": body.symptoms,
+        "answers": [a.model_dump() for a in body.answers],
         "disclaimer": DISCLAIMER,
     }
 

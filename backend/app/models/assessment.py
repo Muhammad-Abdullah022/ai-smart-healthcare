@@ -68,6 +68,7 @@ class AssessmentOut(BaseModel):
     specialist_type: str | None = None
     warning_signs: list[str] = []
     symptoms: str
+    answers: list[FollowUpAnswer] = []  # the chat: follow-up questions and the user's answers
     explanation: Explanation
     disclaimer: str
 

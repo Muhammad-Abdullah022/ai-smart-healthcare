@@ -107,7 +107,7 @@ class _SymptomResultScreenState extends State<SymptomResultScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           _TriageCard(style: style, reason: _a.triageReason),
-          if (_a.emergencyNumbers.isNotEmpty) ...[
+          if (_a.emergencyNumbers.isNotEmpty && _a.triageLevel == 'critical') ...[
             const SizedBox(height: 12),
             _EmergencyNumbers(numbers: _a.emergencyNumbers),
           ],
@@ -116,7 +116,15 @@ class _SymptomResultScreenState extends State<SymptomResultScreen> {
             const Text('These are possibilities to discuss with a doctor — not a diagnosis.',
                 style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
             const SizedBox(height: 8),
-            for (final c in _a.possibleCauses) _CauseTile(cause: c),
+            SectionCard(
+              padding: EdgeInsets.zero,
+              child: Column(children: [
+                for (var i = 0; i < _a.possibleCauses.length; i++) ...[
+                  if (i > 0) const Divider(height: 1, color: Color(0xFFEEF2F6)),
+                  _CauseTile(cause: _a.possibleCauses[i]),
+                ],
+              ]),
+            ),
           ],
           if (_a.nextSteps.isNotEmpty) ...[
             const _Heading('What to do next'),
@@ -148,6 +156,22 @@ class _SymptomResultScreenState extends State<SymptomResultScreen> {
               ),
             if (_error != null) ErrorBanner(_error!),
             AppButton(label: 'Update result', icon: Icons.refresh, loading: _updating, onPressed: _sendAnswers),
+          ],
+          if (_a.answers.isNotEmpty) ...[
+            const _Heading('Your conversation'),
+            SectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('You: ${_a.symptoms}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  for (final (q, ans) in _a.answers) ...[
+                    const SizedBox(height: 10),
+                    Text(q, style: const TextStyle(color: AppColors.textMuted)),
+                    Text('You: $ans', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ],
+                ],
+              ),
+            ),
           ],
           const _Heading('Why this result?'),
           _ExplanationCard(explanation: _a.explanation),
@@ -245,14 +269,15 @@ class _CauseTile extends StatelessWidget {
       _ => AppColors.textMuted,
     };
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: SectionCard(
-        child: Column(
+      padding: const EdgeInsets.all(16),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Expanded(child: Text(cause.name, style: const TextStyle(fontWeight: FontWeight.w700))),
+                Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                const SizedBox(width: 10),
+                Expanded(child: Text(cause.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -264,9 +289,11 @@ class _CauseTile extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            Text(cause.reason, style: const TextStyle(color: AppColors.textMuted, height: 1.4)),
+            Padding(
+              padding: const EdgeInsets.only(left: 20),
+              child: Text(cause.reason, style: const TextStyle(color: AppColors.textMuted, height: 1.45)),
+            ),
           ],
-        ),
       ),
     );
   }

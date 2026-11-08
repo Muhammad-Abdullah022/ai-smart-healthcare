@@ -98,7 +98,7 @@ void main() {
     expect(sent.last['answers'], [
       {'question': 'Do you have a rash?', 'answer': 'No'}
     ]);
-    expect(find.text('Triage: Routine'), findsOneWidget);
-    expect(find.text('• Viral fever'), findsOneWidget);
+    expect(find.text('Routine'), findsOneWidget);
+    expect(find.text('Viral fever'), findsOneWidget);
   });
 }

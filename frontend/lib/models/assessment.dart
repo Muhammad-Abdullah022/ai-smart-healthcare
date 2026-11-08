@@ -60,6 +60,7 @@ class Assessment {
     this.testsToDiscuss = const [],
     this.warningSigns = const [],
     this.specialistType,
+    this.answers = const [],
   });
 
   final String id;
@@ -77,6 +78,9 @@ class Assessment {
   final List<String> testsToDiscuss;
   final List<String> warningSigns;
   final String? specialistType;
+
+  /// The chat: follow-up questions and the user's answers.
+  final List<(String, String)> answers;
 
   factory Assessment.fromJson(Map<String, dynamic> j) => Assessment(
         id: j['id'] as String,
@@ -100,6 +104,10 @@ class Assessment {
         testsToDiscuss: _strings(j['tests_to_discuss']),
         warningSigns: _strings(j['warning_signs']),
         specialistType: j['specialist_type'] as String?,
+        answers: [
+          for (final a in (j['answers'] as List<dynamic>? ?? const []))
+            ((a as Map)['question'] as String, a['answer'] as String),
+        ],
       );
 }
 
