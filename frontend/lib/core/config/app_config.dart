@@ -1,4 +1,3 @@
-
 /// App-wide settings.
 ///
 /// The backend address is chosen automatically:

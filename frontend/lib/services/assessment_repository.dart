@@ -9,16 +9,16 @@ class AssessmentRepository {
 
   Future<Assessment> checkSymptoms({
     required String symptoms,
-    required String duration,
-    required int severity,
+    String? duration,
+    int? severity,
     int? age,
     String? sex,
     List<Map<String, String>> answers = const [],
   }) async {
     final data = await api.post('/assessments/symptoms', body: {
       'symptoms': symptoms,
-      'duration': duration,
-      'severity': severity,
+      if (duration != null) 'duration': duration,
+      if (severity != null) 'severity': severity,
       if (age != null) 'age': age,
       if (sex != null) 'sex': sex,
       'answers': answers,

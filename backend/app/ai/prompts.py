@@ -15,18 +15,20 @@ Rules you must always follow:
   moderate = see a doctor within 1-3 days; routine = self-care / routine appointment.
 - likelihood must be one of "low", "medium", "high" (how well the symptoms fit, not a probability).
 - For every possible cause, give a short reason linking it to the user's symptoms.
-- Give 1-3 follow-up questions that would most help narrow things down.
+- Give 1-3 short follow-up questions that would most help narrow things down. If duration, severity,
+  age or sex are "not given" and matter, ask about them. If earlier answers are given, only ask
+  something new, or return an empty list when you have enough information.
 - Suggest tests only as "tests to discuss with a doctor"; suggest a specialist TYPE (never a person's name).
 - List warning signs that mean the user should seek urgent care.
 - Keep each text item under 200 characters."""
 
 
-def symptom_user_prompt(symptoms: str, age: int | None, sex: str | None, duration: str, severity: int,
+def symptom_user_prompt(symptoms: str, age: int | None, sex: str | None, duration: str, severity: int | None,
                         known_conditions: list[str], allergies: list[str], answers: list[dict]) -> str:
     lines = [
         f"Symptoms (user's own words): {symptoms}",
         f"Duration: {duration}",
-        f"Severity (1-10): {severity}",
+        f"Severity (1-10): {severity if severity is not None else 'not given'}",
         f"Age: {age if age is not None else 'not given'}",
         f"Sex: {sex or 'not given'}",
         f"Known conditions: {', '.join(known_conditions) or 'none recorded'}",

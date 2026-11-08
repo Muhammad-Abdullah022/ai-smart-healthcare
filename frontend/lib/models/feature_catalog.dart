@@ -166,4 +166,7 @@ HealthFeature? featureByNumber(int number) {
 }
 
 
+/// Shown as one item ("AI Symptom Checker") because they are one chat screen.
+const Set<int> mergedIntoSymptomChecker = {2, 3, 4, 5};
+
 List<HealthFeature> get allFeatures => [for (final m in healthModules) ...m.features];

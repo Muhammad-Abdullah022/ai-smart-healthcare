@@ -30,7 +30,10 @@ class ModuleScreen extends StatelessWidget {
       tint: module.tint,
       children: [
         GroupedList(children: [
-          for (final f in module.features) FeatureTile(feature: f, color: module.color, tint: module.tint, inGroup: true),
+          for (final f in module.features)
+            // Features 2–5 (questions, prediction, triage, tests) live inside the Symptom Checker chat.
+            if (!mergedIntoSymptomChecker.contains(f.number))
+              FeatureTile(feature: f, color: module.color, tint: module.tint, inGroup: true),
         ]),
       ],
     );
@@ -57,7 +60,11 @@ class FeatureTile extends StatelessWidget {
     final row = ListRow(
       icon: feature.icon,
       title: feature.title,
-      subtitle: feature.status == FeatureStatus.prototype ? 'Prototype' : null,
+      subtitle: feature.number == 1
+          ? 'Chat: follow-up questions, risk, triage and test suggestions'
+          : feature.status == FeatureStatus.prototype
+              ? 'Prototype'
+              : null,
       color: color,
       tint: tint,
       onTap: () => context.push('/feature/${feature.number}'),

@@ -61,7 +61,7 @@ async def assess_symptoms(
 ):
     profile = await repo.get_profile(user["_id"]) or {}
     all_text = " ".join([body.symptoms] + [a.answer for a in body.answers])
-    inputs_used = ["symptoms", "duration", "severity"] + [
+    inputs_used = ["symptoms"] + [n for n, v in (("duration", body.duration != "not given"), ("severity", body.severity)) if v] + [
         name for name, value in (("age", body.age), ("sex", body.sex)) if value is not None
     ]
     if profile.get("conditions"):
@@ -120,7 +120,7 @@ async def assess_symptoms(
         # 3. Safety post-checks.
         rules = []
         level = output.triage_level
-        if body.severity >= 8 and TRIAGE_ORDER[level] < TRIAGE_ORDER["moderate"]:
+        if (body.severity or 0) >= 8 and TRIAGE_ORDER[level] < TRIAGE_ORDER["moderate"]:
             level = _raise_to(level, "moderate")
             rules.append("Severity 8 or more: triage raised to at least 'moderate'")
         next_steps = remove_dosing(output.next_steps) or ["Please see a doctor to discuss these symptoms."]

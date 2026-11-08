@@ -68,29 +68,37 @@ void main() {
     expect(find.text('Possible causes'), findsNothing);
   });
 
-  testWidgets('checker validates input, then sends request and opens result', (tester) async {
-    Map<String, dynamic>? sent;
+  testWidgets('chat: symptoms, one follow-up question, then the result', (tester) async {
+    final sent = <Map<String, dynamic>>[];
     final repo = AssessmentRepository(ApiClient(
       tokens: MemoryTokenStorage(),
       baseUrl: 'http://t',
       httpClient: MockClient((req) async {
-        sent = jsonDecode(req.body) as Map<String, dynamic>;
-        return http.Response(jsonEncode(_json()), 201);
+        final body = jsonDecode(req.body) as Map<String, dynamic>;
+        sent.add(body);
+        final reply = _json();
+        // First call asks a question; second call (with answers) gives the final result.
+        if ((body['answers'] as List).isNotEmpty) reply['follow_up_questions'] = <String>[];
+        return http.Response(jsonEncode(reply), 201);
       }),
     ));
     await tester.pumpWidget(MaterialApp(home: SymptomCheckerScreen(repository: repo)));
 
-    await tester.scrollUntilVisible(find.text('Check symptoms'), 200);
-    await tester.tap(find.text('Check symptoms'));
-    await tester.pump();
-    expect(find.text('Please describe your symptoms'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextFormField).first, 'fever and body aches');
-    await tester.scrollUntilVisible(find.text('Check symptoms'), 200);
-    await tester.tap(find.text('Check symptoms'));
+    await tester.enterText(find.byType(TextField), 'fever and body aches');
+    await tester.tap(find.byTooltip('Send'));
     await tester.pumpAndSettle();
-    expect(sent?['symptoms'], 'fever and body aches');
-    expect(sent?['severity'], 5);
+    expect(sent.single['symptoms'], 'fever and body aches');
+    expect(sent.single.containsKey('severity'), isFalse);
+    expect(find.text('Do you have a rash?'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'No');
+    await tester.tap(find.byTooltip('Send'));
+    await tester.pumpAndSettle();
+    expect(sent.length, 2);
+    expect(sent.last['answers'], [
+      {'question': 'Do you have a rash?', 'answer': 'No'}
+    ]);
     expect(find.text('Triage: Routine'), findsOneWidget);
+    expect(find.text('• Viral fever'), findsOneWidget);
   });
 }

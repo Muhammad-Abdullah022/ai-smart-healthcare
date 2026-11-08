@@ -103,3 +103,12 @@ def test_history_is_private(registered):
     other = client.get(f"/assessments/symptoms/{created['id']}", headers=auth_header(tokens_b))
     assert other.status_code == 404
     assert client.get("/assessments/symptoms/not-an-id", headers=auth_header(tokens_a)).status_code == 404
+
+
+def test_chat_style_request_needs_only_symptoms(registered):
+    client, tokens = registered
+    _use_ai(client, json.dumps(AI_REPLY))
+    r = client.post("/assessments/symptoms", headers=auth_header(tokens), json={"symptoms": "fever and body aches"})
+    assert r.status_code == 201, r.text
+    assert r.json()["explanation"]["inputs_used"] == ["symptoms"]
+    assert r.json()["follow_up_questions"] == ["Do you have a rash?"]

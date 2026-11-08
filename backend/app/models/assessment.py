@@ -15,8 +15,9 @@ class FollowUpAnswer(BaseModel):
 
 class SymptomRequest(BaseModel):
     symptoms: str = Field(min_length=3, max_length=1000, description="Symptoms in the user's own words")
-    duration: str = Field(min_length=1, max_length=60, description='e.g. "2 days"')
-    severity: int = Field(ge=1, le=10)
+    # Optional: in the chat flow the AI asks about these in its follow-up questions.
+    duration: str = Field(default="not given", min_length=1, max_length=60, description='e.g. "2 days"')
+    severity: int | None = Field(default=None, ge=1, le=10)
     age: int | None = Field(default=None, ge=0, le=120)
     sex: Literal["male", "female", "other"] | None = None
     answers: list[FollowUpAnswer] = Field(default_factory=list, max_length=10)

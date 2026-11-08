@@ -20,7 +20,9 @@ class _SearchScreenState extends State<SearchScreen> {
     final q = _query.trim().toLowerCase();
     final results = q.isEmpty
         ? <HealthFeature>[]
-        : allFeatures.where((f) => f.title.toLowerCase().contains(q)).toList();
+        : allFeatures
+            .where((f) => !mergedIntoSymptomChecker.contains(f.number) && f.title.toLowerCase().contains(q))
+            .toList();
 
     return Scaffold(
       appBar: AppBar(
