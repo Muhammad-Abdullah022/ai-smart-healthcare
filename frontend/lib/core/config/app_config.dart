@@ -12,7 +12,7 @@ class AppConfig {
 
   static const String appName = 'AI Smart Healthcare';
   static const String _override = String.fromEnvironment('API_BASE_URL');
-  static const Duration requestTimeout = Duration(seconds: 20);
+  static const Duration requestTimeout = Duration(seconds: 45);
 
   static String get apiBaseUrl {
     if (_override.isNotEmpty) return _override;

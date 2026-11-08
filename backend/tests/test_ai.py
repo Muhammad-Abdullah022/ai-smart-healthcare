@@ -106,7 +106,7 @@ def test_code_fences_are_stripped():
 
 def test_malformed_reply_retried_then_succeeds():
     fake = FakeProvider("gemini", ['{"triage_level": "maybe"}', json.dumps(GOOD)])
-    result = run(AIService([fake], retry_delay=0).generate(AISymptomOutput, "s", "p"))
+    result = run(AIService([fake], attempts_per_provider=2, retry_delay=0).generate(AISymptomOutput, "s", "p"))
     assert fake.calls == 2 and result.data.possible_causes[0].name == "Common cold"
 
 

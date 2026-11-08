@@ -91,6 +91,12 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       await _ask();
       return;
     }
+    if (_pending.isEmpty) {
+      // The first request failed earlier: treat this as the symptoms again.
+      _symptoms = text;
+      await _ask();
+      return;
+    }
     // Answer to the current follow-up question.
     _answers.add({'question': _pending.removeAt(0), 'answer': text});
     if (_pending.isNotEmpty) {
@@ -119,7 +125,9 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
         }
       });
     } on ApiException catch (e) {
-      if (mounted) setState(() => _messages.add(_Msg.bot(e.message, isError: true)));
+      if (mounted) {
+        setState(() => _messages.add(_Msg.bot('${e.message} You can send your message again.', isError: true)));
+      }
     } catch (e) {
       // Any other problem must be visible too, never a silent failure.
       if (mounted) {

@@ -33,7 +33,7 @@ class AIResult:
 
 
 class AIService:
-    def __init__(self, providers: list[AIProvider], attempts_per_provider: int = 2, retry_delay: float = 1.0):
+    def __init__(self, providers: list[AIProvider], attempts_per_provider: int = 1, retry_delay: float = 1.0):
         self.providers = providers
         self.attempts = attempts_per_provider
         self.retry_delay = retry_delay
@@ -60,6 +60,7 @@ class AIService:
                     return AIResult(schema.model_validate_json(_strip_fences(raw)), provider.name)
                 except AIProviderError as exc:
                     log.warning("AI provider failed: %s (attempt %s)", exc, attempt)
+                    print(f"[AI] {exc}")  # visible in the backend window
                     if not exc.retryable:
                         break
                 except ValidationError as exc:

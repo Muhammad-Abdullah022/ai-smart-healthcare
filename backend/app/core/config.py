@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     groq_model: str = "llama-3.3-70b-versatile"
     ai_primary: str = "gemini"      # which provider to try first
     ai_fallback: str = "groq"       # used if the first one fails
-    ai_timeout_seconds: float = 30.0
+    ai_timeout_seconds: float = 15.0
 
     @field_validator("jwt_secret")
     @classmethod
