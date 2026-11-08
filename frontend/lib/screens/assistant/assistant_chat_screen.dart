@@ -164,8 +164,16 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     });
   }
 
-  void _say(String text) {
-    if (_speak && _lang != null && text.isNotEmpty) _voice.speak(text, _lang!.code);
+  /// Read a new bot message aloud. By default it interrupts whatever is still being read,
+  /// so the voice always follows the chat; [append] reads it after the current one
+  /// (used when two messages belong together, e.g. "a few questions:" + the first question).
+  void _say(String text, {bool append = false}) {
+    if (!_speak || _lang == null || text.isEmpty) return;
+    if (append) {
+      _voice.speak(text, _lang!.code);
+    } else {
+      _voice.speakNow(text, _lang!.code);
+    }
   }
 
   void _chooseLanguage(ChatLanguage l) {
@@ -188,6 +196,8 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     });
     setState(() => _items.add(_Item.user(text)));
     _scrollDown();
+    // The user has moved on: stop reading the previous reply.
+    _voice.stopSpeaking();
 
     // Inside a symptom check: this message is the symptoms, or an answer to a question.
     if (_inCheck) {
@@ -239,9 +249,9 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     }
   }
 
-  void _botSays(String text, {bool logIt = false}) {
+  void _botSays(String text, {bool logIt = false, bool append = false}) {
     setState(() => _items.add(_Item.bot(text)));
-    _say(text);
+    _say(text, append: append);
     if (logIt) _log([ChatMessage(fromUser: false, text: text)]);
     _scrollDown();
   }
@@ -280,8 +290,9 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
         _asked = true;
         _pending.addAll(a.followUpQuestions);
         setState(() => _busy = false);
-        _botSays(_lang!.checkIntro);
-        _botSays(_pending.first, logIt: true);
+        // Follows the reply just read, so queue instead of interrupting.
+        _botSays(_lang!.checkIntro, append: true);
+        _botSays(_pending.first, logIt: true, append: true);
         return;
       }
       _inCheck = false;

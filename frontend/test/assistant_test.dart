@@ -17,6 +17,8 @@ class _SilentVoice extends VoiceService {
   @override
   Future<void> speak(String text, String locale) async => spoken.add('$locale:$text');
   @override
+  Future<void> speakNow(String text, String locale) async => spoken.add('$locale:$text');
+  @override
   Future<void> stopSpeaking() async {}
   @override
   Future<bool> listen(String locale, void Function(String, bool) onText, {void Function()? onDone}) async => false;
