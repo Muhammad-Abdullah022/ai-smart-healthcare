@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../models/assessment.dart';
 import '../../models/chat_language.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
+import '../../services/assessment_repository.dart';
 import '../../services/assistant_repository.dart';
 import '../../services/report_repository.dart';
 import '../../services/voice_service.dart';
 import '../reports/report_compare_screen.dart';
 import '../reports/report_widgets.dart';
 import '../reports/reports_screen.dart';
+import '../symptoms/symptom_checker_screen.dart';
+import '../symptoms/symptom_history_screen.dart';
 import 'chat_history_screen.dart';
 
 /// One item in the chat list.
@@ -34,13 +37,13 @@ class _Item {
         isError = false,
         report = null,
         kind = _Kind.languages;
-  _Item.symptomCheck()
+  _Item.result(Assessment this.assessment)
       : text = '',
         fromUser = false,
         emergency = false,
         isError = false,
         report = null,
-        kind = _Kind.symptomCheck;
+        kind = _Kind.result;
   _Item.report(MedicalReport this.report)
       : text = '',
         fromUser = false,
@@ -53,10 +56,11 @@ class _Item {
   final bool emergency;
   final bool isError;
   final MedicalReport? report;
+  Assessment? assessment;
   final _Kind kind;
 }
 
-enum _Kind { text, languages, symptomCheck, report }
+enum _Kind { text, languages, result, report }
 
 const _askLanguage = 'Which language would you like to talk in?\n'
     'آپ کس زبان میں بات کرنا چاہیں گے؟\n'
@@ -64,16 +68,19 @@ const _askLanguage = 'Which language would you like to talk in?\n'
 
 final _urduScript = RegExp(r'[؀-ۿ]');
 
-/// AI Health Assistant: ask any health question by text or voice, in English, Urdu or
-/// Roman Urdu; replies can be read aloud. Chats are saved. Reports can be uploaded and
-/// compared from here. The AI gives information only — no diagnosis, no medicines.
+/// AI Health Assistant (features 1–5, 8, 9, 13 in one chat): ask any health question by text
+/// or voice, in English, Urdu or Roman Urdu; replies can be read aloud. When the user describes
+/// symptoms, the symptom check runs right here (follow-up questions → triage, possible causes,
+/// doctor and tests). Reports can be uploaded and compared. Chats are saved.
+/// The AI gives information only — no diagnosis, no medicines.
 class AssistantChatScreen extends StatefulWidget {
-  const AssistantChatScreen({super.key, this.chatId, this.repository, this.reports, this.voice});
+  const AssistantChatScreen({super.key, this.chatId, this.repository, this.reports, this.assessments, this.voice});
 
   /// Open a saved chat.
   final String? chatId;
   final AssistantRepository? repository;
   final ReportRepository? reports;
+  final AssessmentRepository? assessments;
   final VoiceService? voice;
 
   @override
@@ -81,11 +88,13 @@ class AssistantChatScreen extends StatefulWidget {
 }
 
 class _AssistantChatScreenState extends State<AssistantChatScreen> {
-  late final ApiClient? _api = widget.repository == null || widget.reports == null
-      ? context.read<AuthProvider>().repository.api
-      : null;
+  late final ApiClient? _api =
+      widget.repository == null || widget.reports == null || widget.assessments == null
+          ? context.read<AuthProvider>().repository.api
+          : null;
   late final AssistantRepository _repo = widget.repository ?? AssistantRepository(_api!);
   late final ReportRepository _reports = widget.reports ?? ReportRepository(_api!);
+  late final AssessmentRepository _checks = widget.assessments ?? AssessmentRepository(_api!);
   late final VoiceService _voice = widget.voice ?? VoiceService();
 
   final _input = TextEditingController();
@@ -99,6 +108,13 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
   bool _listening = false;
   bool _speak = true;
   bool _loading = false;
+
+  // Symptom check inside the chat.
+  bool _inCheck = false;
+  String? _symptoms;
+  final List<Map<String, String>> _answers = [];
+  final List<String> _pending = [];
+  bool _asked = false;
 
   @override
   void initState() {
@@ -168,25 +184,114 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_input.text.trim().isEmpty) _input.clear();
     });
+    setState(() => _items.add(_Item.user(text)));
+    _scrollDown();
+
+    // Inside a symptom check: this message is the symptoms, or an answer to a question.
+    if (_inCheck) {
+      if (_symptoms == null) {
+        _symptoms = text;
+        _log([ChatMessage(fromUser: true, text: text)]);
+        await _runCheck();
+        return;
+      }
+      if (_pending.isNotEmpty) {
+        _answers.add({'question': _pending.removeAt(0), 'answer': text});
+        _log([ChatMessage(fromUser: true, text: text)]);
+        if (_pending.isNotEmpty) {
+          _botSays(_pending.first, logIt: true);
+        } else {
+          await _runCheck();
+        }
+        return;
+      }
+    }
+
     setState(() {
-      _items.add(_Item.user(text));
       _busy = true;
       _busyText = 'Thinking…';
     });
-    _scrollDown();
     try {
       final r = await _repo.send(message: text, language: _lang!.code, chatId: _chatId);
       if (!mounted) return;
       setState(() {
         _chatId = r.chatId;
         _items.add(_Item.bot(r.message.text, emergency: r.message.emergency));
-        if (r.suggestSymptomCheck) _items.add(_Item.symptomCheck());
       });
       _say(r.message.text);
+      if (r.suggestSymptomCheck && !r.message.emergency) {
+        // The user described symptoms: check them step by step, right here.
+        _startCheck(symptoms: text);
+        _busy = false;
+        await _runCheck();
+        return;
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _items.add(_Item.bot('${e.message} You can send it again.', isError: true)));
     } catch (e) {
       if (mounted) setState(() => _items.add(_Item.bot('Something went wrong ($e). Please try again.', isError: true)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+      _scrollDown();
+    }
+  }
+
+  void _botSays(String text, {bool logIt = false}) {
+    setState(() => _items.add(_Item.bot(text)));
+    _say(text);
+    if (logIt) _log([ChatMessage(fromUser: false, text: text)]);
+    _scrollDown();
+  }
+
+  /// Keep symptom-check messages in the saved chat too (best effort).
+  Future<void> _log(List<ChatMessage> msgs) {
+    // One at a time, so the first call's new chat id is used by the next.
+    return _logQueue = _logQueue.then((_) async {
+      try {
+        _chatId = await _repo.log(chatId: _chatId, language: _lang?.code ?? 'en', messages: msgs);
+      } catch (_) {}
+    });
+  }
+
+  Future<void> _logQueue = Future.value();
+
+  void _startCheck({String? symptoms}) {
+    _inCheck = true;
+    _symptoms = symptoms;
+    _answers.clear();
+    _pending.clear();
+    _asked = false;
+  }
+
+  Future<void> _runCheck() async {
+    setState(() {
+      _busy = true;
+      _busyText = 'Checking your symptoms…';
+    });
+    _scrollDown();
+    try {
+      final a = await _checks.checkSymptoms(
+          symptoms: _symptoms!, answers: List.of(_answers), language: _lang?.code ?? 'en');
+      if (!mounted) return;
+      if (!a.emergency && !_asked && a.followUpQuestions.isNotEmpty) {
+        _asked = true;
+        _pending.addAll(a.followUpQuestions);
+        setState(() => _busy = false);
+        _botSays(_lang!.checkIntro);
+        _botSays(_pending.first, logIt: true);
+        return;
+      }
+      _inCheck = false;
+      setState(() => _items.add(_Item.result(a)));
+      final style = '${a.triageLevel}: ${a.possibleCauses.map((c) => c.name).take(2).join(', ')}';
+      _log([ChatMessage(fromUser: false, text: 'Symptom check result — $style')]);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _items.add(_Item.bot('${e.message} You can send it again.', isError: true)));
+      // Let the user retry: their next message becomes the symptoms again.
+      if (_pending.isEmpty) _symptoms = null;
+    } catch (e) {
+      if (mounted) setState(() => _items.add(_Item.bot('Something went wrong ($e). Please try again.', isError: true)));
+      if (_pending.isEmpty) _symptoms = null;
     } finally {
       if (mounted) setState(() => _busy = false);
       _scrollDown();
@@ -286,11 +391,22 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.sick_outlined, color: AppColors.accent),
-            title: const Text('Symptom check'),
-            subtitle: const Text('Step-by-step questions, triage and tests'),
+            title: const Text('Check my symptoms'),
+            subtitle: const Text('Questions → triage, possible causes, doctor and tests'),
             onTap: () {
               Navigator.pop(ctx);
-              GoRouter.of(context).push('/feature/1');
+              if (_lang == null) return;
+              _startCheck();
+              _botSays(_lang!.describeSymptoms);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.history_edu_outlined, color: AppColors.accent),
+            title: const Text('Past symptom checks'),
+            onTap: () {
+              Navigator.pop(ctx);
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => SymptomHistoryScreen(repository: _checks)));
             },
           ),
           const SizedBox(height: 8),
@@ -304,6 +420,10 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     setState(() {
       _chatId = null;
       _lang = null;
+      _inCheck = false;
+      _symptoms = null;
+      _answers.clear();
+      _pending.clear();
       _items
         ..clear()
         ..addAll([_Item.bot(_askLanguage), _Item.languagePicker()]);
@@ -313,20 +433,10 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
   Widget _buildItem(_Item i) => switch (i.kind) {
         _Kind.languages => _LanguageChips(onPick: _chooseLanguage),
         _Kind.report => ReportAnalysisCard(report: i.report!, onCompare: () => _openCompare(i.report!.id)),
-        _Kind.symptomCheck => Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.sick_outlined, size: 18),
-                label: const Text('Start a symptom check'),
-                onPressed: () => GoRouter.of(context).push('/feature/1'),
-              ),
-            ),
-          ),
+        _Kind.result => SymptomResultBubble(assessment: i.assessment!),
         _Kind.text => _Bubble(
             item: i,
-            onSpeak: i.fromUser || i.isError || _lang == null ? null : () => _voice.speak(i.text, _lang!.ttsLocale),
+            onSpeak: i.fromUser || i.isError || _lang == null ? null : () => _voice.speakNow(i.text, _lang!.ttsLocale),
           ),
       };
 

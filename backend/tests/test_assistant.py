@@ -43,3 +43,17 @@ def test_chats_are_private(registered):
     assert client.get(f"/assistant/chats/{cid}", headers=auth_header(other)).status_code == 404
     assert client.post("/assistant/chat", headers=auth_header(other),
                        json={"message": "x", "chat_id": cid}).status_code == 404
+
+
+def test_log_symptom_check_into_chat(registered):
+    client, tokens = registered
+    h = auth_header(tokens)
+    new = client.post("/assistant/log", headers=h, json={"language": "ur", "messages": [
+        {"role": "user", "text": "bukhar"}, {"role": "assistant", "text": "Kab se?"}]}).json()
+    client.post("/assistant/log", headers=h, json={"chat_id": new["chat_id"], "messages": [
+        {"role": "user", "text": "2 din"}]})
+    full = client.get(f"/assistant/chats/{new['chat_id']}", headers=h).json()
+    assert [m["text"] for m in full["messages"]] == ["bukhar", "Kab se?", "2 din"]
+    other = client.post("/auth/register", json={**VALID_USER, "email": "q@example.com"}).json()
+    assert client.post("/assistant/log", headers=auth_header(other), json={
+        "chat_id": new["chat_id"], "messages": [{"role": "user", "text": "x"}]}).status_code == 404

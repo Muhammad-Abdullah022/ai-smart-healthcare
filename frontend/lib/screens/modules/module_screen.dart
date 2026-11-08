@@ -36,8 +36,8 @@ class ModuleScreen extends StatelessWidget {
         GroupedList(children: [
           for (final f in module.features)
             // Features 2–5 (questions, prediction, triage, tests) live inside the Symptom Checker chat.
-            // Feature 13 (the assistant) is the large card above.
-            if (!mergedIntoSymptomChecker.contains(f.number) && !(module.id == 'diagnosis' && f.number == 13))
+            // Features 1 and 13 (symptom checker + assistant) are the large card above.
+            if (!mergedIntoSymptomChecker.contains(f.number) && !(module.id == 'diagnosis' && (f.number == 13 || f.number == 1)))
               FeatureTile(feature: f, color: module.color, tint: module.tint, inGroup: true),
         ]),
       ],
@@ -78,7 +78,7 @@ class _AssistantHero extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('AI Health Assistant',
                       style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-                  Text('English · اردو · Roman Urdu', style: TextStyle(color: Color(0xFFB8C7D9), fontSize: 13)),
+                  Text('Symptoms, questions, reports · English · اردو · Roman Urdu', style: TextStyle(color: Color(0xFFB8C7D9), fontSize: 13)),
                 ]),
               ),
               const Icon(Icons.arrow_forward, color: Colors.white),
@@ -86,6 +86,7 @@ class _AssistantHero extends StatelessWidget {
             const SizedBox(height: 14),
             const Wrap(spacing: 8, runSpacing: 8, children: [
               _HeroChip(icon: Icons.chat_bubble_outline, label: 'Ask anything'),
+              _HeroChip(icon: Icons.sick_outlined, label: 'Symptom check'),
               _HeroChip(icon: Icons.mic_none, label: 'Voice message'),
               _HeroChip(icon: Icons.volume_up_outlined, label: 'Reads aloud'),
               _HeroChip(icon: Icons.upload_file_outlined, label: 'Upload report'),

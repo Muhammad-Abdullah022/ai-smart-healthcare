@@ -18,15 +18,14 @@ import '../../screens/modules/feature_screen.dart';
 import '../../screens/records/activity_screen.dart';
 import '../../screens/records/emergency_card_screen.dart';
 import '../../screens/settings/consent_screen.dart';
-import '../../screens/symptoms/symptom_checker_screen.dart';
 
 /// Which screen opens for each of the 50 features.
 Widget screenForFeature(int number) {
   switch (number) {
-    // Symptom checker covers symptoms, follow-up questions, prediction, triage,
+    // The AI Health Assistant chat covers symptoms, follow-up questions, prediction, triage,
     // test suggestions and the "Why this result?" explanation.
     case 1 || 2 || 3 || 4 || 5 || 46:
-      return const SymptomCheckerScreen();
+      return const AssistantChatScreen();
     case 8:
       return const ReportsScreen();
     case 9:

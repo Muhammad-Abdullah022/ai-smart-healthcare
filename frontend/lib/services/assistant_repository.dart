@@ -68,6 +68,18 @@ class AssistantRepository {
     );
   }
 
+  /// Save symptom-check messages into the chat. Returns the chat id.
+  Future<String> log({String? chatId, required String language, required List<ChatMessage> messages}) async {
+    final data = await api.post('/assistant/log', body: {
+      if (chatId != null) 'chat_id': chatId,
+      'language': language,
+      'messages': [
+        for (final m in messages) {'role': m.fromUser ? 'user' : 'assistant', 'text': m.text}
+      ],
+    }) as Map<String, dynamic>;
+    return data['chat_id'] as String;
+  }
+
   Future<List<ChatSummary>> chats() async {
     final data = await api.get('/assistant/chats') as List<dynamic>;
     return data.map((e) => ChatSummary.fromJson(e as Map<String, dynamic>)).toList();

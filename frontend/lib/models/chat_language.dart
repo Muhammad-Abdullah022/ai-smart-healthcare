@@ -9,6 +9,8 @@ class ChatLanguage {
     required this.hint,
     required this.listening,
     required this.reportReading,
+    required this.checkIntro,
+    required this.describeSymptoms,
     this.rtl = false,
   });
 
@@ -25,6 +27,12 @@ class ChatLanguage {
   final String hint;
   final String listening;
   final String reportReading;
+
+  /// Said before the symptom-check follow-up questions.
+  final String checkIntro;
+
+  /// Asked when the user starts a symptom check from the tools menu.
+  final String describeSymptoms;
   final bool rtl;
 
   static ChatLanguage byCode(String code) =>
@@ -42,6 +50,8 @@ const chatLanguages = [
     hint: 'Ask a health question…',
     listening: 'Listening… speak now',
     reportReading: 'Reading your report… this can take a few seconds.',
+    checkIntro: 'Let me check your symptoms. A few quick questions:',
+    describeSymptoms: 'Tell me what you are feeling, in your own words.',
   ),
   ChatLanguage(
     code: 'ur',
@@ -53,6 +63,8 @@ const chatLanguages = [
     hint: 'صحت کا سوال لکھیں…',
     listening: 'سن رہا ہوں… بولیں',
     reportReading: 'آپ کی رپورٹ پڑھ رہا ہوں… چند سیکنڈ لگ سکتے ہیں۔',
+    checkIntro: 'آپ کی علامات کو بہتر سمجھنے کے لیے چند سوال:',
+    describeSymptoms: 'اپنے الفاظ میں بتائیں کہ آپ کیا محسوس کر رہے ہیں۔',
     rtl: true,
   ),
   ChatLanguage(
@@ -66,5 +78,7 @@ const chatLanguages = [
     hint: 'Sehat ka sawal likhein…',
     listening: 'Sun raha hoon… bolein',
     reportReading: 'Aap ki report parh raha hoon… kuch second lag sakte hain.',
+    checkIntro: 'Aap ki alamaat behtar samajhne ke liye chand sawal:',
+    describeSymptoms: 'Apne alfaaz mein batayein aap kya mehsoos kar rahe hain.',
   ),
 ];

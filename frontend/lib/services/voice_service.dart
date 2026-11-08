@@ -8,21 +8,36 @@ class VoiceService {
   late final FlutterTts _tts = FlutterTts();
   late final SpeechToText _speech = SpeechToText();
   bool _speechReady = false;
+  Future<void> _queue = Future.value();
+  int _generation = 0; // bumped on stop, so queued messages are dropped
 
-  /// Speak [text] in [locale] (e.g. "ur-PK"). Falls back to English if that voice is missing.
-  Future<void> speak(String text, String locale) async {
-    try {
-      await _tts.stop();
-      final available = await _tts.isLanguageAvailable(locale);
-      await _tts.setLanguage(available == true ? locale : 'en-US');
-      await _tts.setSpeechRate(0.5);
-      await _tts.speak(text);
-    } catch (_) {
-      // No text-to-speech on this device: stay silent.
-    }
+  /// Speak [text] in [locale] (e.g. "ur-PK") after anything already being read.
+  /// Falls back to English if that voice is missing.
+  Future<void> speak(String text, String locale) {
+    final gen = _generation;
+    _queue = _queue.then((_) async {
+      if (gen != _generation) return;
+      try {
+        await _tts.awaitSpeakCompletion(true);
+        final available = await _tts.isLanguageAvailable(locale);
+        await _tts.setLanguage(available == true ? locale : 'en-US');
+        await _tts.setSpeechRate(0.5);
+        await _tts.speak(text);
+      } catch (_) {
+        // No text-to-speech on this device: stay silent.
+      }
+    });
+    return _queue;
+  }
+
+  /// Stop now and read [text] instead (the speaker button on a message).
+  Future<void> speakNow(String text, String locale) async {
+    await stopSpeaking();
+    await speak(text, locale);
   }
 
   Future<void> stopSpeaking() async {
+    _generation++;
     try {
       await _tts.stop();
     } catch (_) {}

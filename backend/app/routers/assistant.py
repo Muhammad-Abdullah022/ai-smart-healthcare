@@ -106,6 +106,36 @@ async def chat(body: ChatRequest, request: Request, user: dict = Depends(get_cur
                    emergency_numbers=numbers)
 
 
+class LogItem(BaseModel):
+    role: Literal["user", "assistant"]
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class LogRequest(BaseModel):
+    chat_id: str | None = None
+    language: Literal["en", "ur", "roman_ur"] = "en"
+    messages: list[LogItem] = Field(min_length=1, max_length=20)
+
+
+@router.post("/log")
+async def log_messages(body: LogRequest, user: dict = Depends(get_current_user), db=Depends(get_db)):
+    """Save symptom-check questions/answers that happened inside the chat, so history is complete."""
+    now = datetime.now(timezone.utc)
+    msgs = [{"role": m.role, "text": m.text, "emergency": False, "at": now} for m in body.messages]
+    if body.chat_id:
+        oid = to_object_id(body.chat_id)
+        res = await db.assistant_chats.update_one(
+            {"_id": oid, "user_id": user["_id"]},
+            {"$push": {"messages": {"$each": msgs}}, "$set": {"updated_at": now}}) if oid else None
+        if res is None or res.matched_count == 0:
+            raise ApiError(status.HTTP_404_NOT_FOUND, "not_found", "Chat not found.")
+        return {"chat_id": body.chat_id}
+    first = next((m.text for m in body.messages if m.role == "user"), body.messages[0].text)
+    doc = {"user_id": user["_id"], "title": first[:60], "language": body.language, "messages": msgs,
+           "created_at": now, "updated_at": now}
+    return {"chat_id": str((await db.assistant_chats.insert_one(doc)).inserted_id)}
+
+
 @router.get("/chats", response_model=list[ChatSummary])
 async def list_chats(user: dict = Depends(get_current_user), db=Depends(get_db)):
     cursor = db.assistant_chats.find({"user_id": user["_id"]}).sort("updated_at", -1).limit(50)

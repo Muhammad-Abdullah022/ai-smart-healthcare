@@ -174,7 +174,7 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               children: [
                 for (final m in _messages)
-                  if (m.assessment != null) _ResultBubble(assessment: m.assessment!) else _Bubble(msg: m),
+                  if (m.assessment != null) SymptomResultBubble(assessment: m.assessment!) else _Bubble(msg: m),
                 if (_busy) const _Typing(),
               ],
             ),
@@ -290,8 +290,8 @@ class _Typing extends StatelessWidget {
 }
 
 /// Final answer shown inside the chat: triage, what to do, doctor, tests and next actions.
-class _ResultBubble extends StatelessWidget {
-  const _ResultBubble({required this.assessment});
+class SymptomResultBubble extends StatelessWidget {
+  const SymptomResultBubble({required this.assessment});
   final Assessment assessment;
 
   @override

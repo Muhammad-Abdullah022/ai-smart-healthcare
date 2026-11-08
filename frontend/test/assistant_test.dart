@@ -26,6 +26,27 @@ class _SilentVoice extends VoiceService {
   void dispose() {}
 }
 
+const _assessment = {
+  'id': 'a1',
+  'created_at': '2026-11-08T10:00:00Z',
+  'emergency': false,
+  'triage_level': 'routine',
+  'triage_reason': 'No danger signs.',
+  'emergency_numbers': [],
+  'possible_causes': [],
+  'next_steps': [],
+  'follow_up_questions': ['Kab se bukhar hai?'],
+  'tests_to_discuss': [],
+  'specialist_type': null,
+  'warning_signs': [],
+  'symptoms': 'bukhar',
+  'explanation': {
+    'method': 'AI', 'inputs_used': [], 'rules_triggered': [], 'ai_provider': 'gemini',
+    'prompt_version': 'symptom-v1', 'limitations': '',
+  },
+  'disclaimer': 'Not a diagnosis.',
+};
+
 void main() {
   test('report comparison parses rows', () {
     final c = ReportComparison.fromJson({
@@ -41,10 +62,16 @@ void main() {
 
   testWidgets('asks language first, then chats in Roman Urdu and reads the reply aloud', (tester) async {
     Map<String, dynamic>? sent;
+    String? checkLanguage;
     final api = ApiClient(
       tokens: MemoryTokenStorage(),
       baseUrl: 'http://test',
       httpClient: MockClient((req) async {
+        if (req.url.path == '/assistant/log') return http.Response(jsonEncode({'chat_id': 'c1'}), 200);
+        if (req.url.path == '/assessments/symptoms') {
+          checkLanguage = (jsonDecode(req.body) as Map<String, dynamic>)['language'] as String;
+          return http.Response(jsonEncode(_assessment), 200);
+        }
         sent = jsonDecode(req.body) as Map<String, dynamic>;
         return http.Response(
             jsonEncode({
@@ -71,7 +98,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(sent!['language'], 'roman_ur');
     expect(find.text('Pani zyada piyein.'), findsOneWidget);
-    expect(find.text('Start a symptom check'), findsOneWidget);
-    expect(voice.spoken.last, 'en-IN:Pani zyada piyein.');
+    // Symptoms described -> the symptom check starts in the same chat, in the same language.
+    expect(checkLanguage, 'roman_ur');
+    expect(find.text('Kab se bukhar hai?'), findsOneWidget);
+    expect(voice.spoken, contains('en-IN:Pani zyada piyein.'));
+    expect(voice.spoken.last, 'en-IN:Kab se bukhar hai?');
   });
 }
