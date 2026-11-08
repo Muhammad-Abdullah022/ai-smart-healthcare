@@ -46,3 +46,23 @@ def test_profile_city(registered):
     client, tokens = registered
     h = auth_header(tokens)
     assert client.patch("/profile", headers=h, json={"city": "Lahore"}).json()["city"] == "Lahore"
+
+
+def test_chain_prices_apply_to_city_branches(registered):
+    client, tokens = registered
+    data = client.get("/labs/options", headers=auth_header(tokens),
+                      params={"city": "Multan", "tests": ["Complete Blood Count (CBC)", "Dengue NS1"]}).json()
+    cbc = data["tests"][0]
+    labs = [o["lab"] for o in cbc["offers"]]
+    assert "Chughtai Lab" in labs and "Excel Labs" in labs
+    chughtai = next(o for o in cbc["offers"] if o["lab"] == "Chughtai Lab")
+    assert chughtai["price_pkr"] == 800 and "branches in Multan" in chughtai["branch"]
+    assert [o["price_pkr"] for o in cbc["offers"]] == sorted(o["price_pkr"] for o in cbc["offers"])
+
+
+def test_government_rates_burewala(registered):
+    client, tokens = registered
+    data = client.get("/labs/options", headers=auth_header(tokens),
+                      params={"city": "Burewala", "tests": ["Urine complete examination", "Blood sugar"]}).json()
+    assert data["tests"][0]["offers"][0]["price_pkr"] == 10
+    assert data["tests"][1]["offers"][0]["lab"] == "THQ Hospital Burewala Laboratory"

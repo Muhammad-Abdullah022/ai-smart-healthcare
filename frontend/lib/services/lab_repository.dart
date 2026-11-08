@@ -9,6 +9,7 @@ class LabOffer {
         labType = j['lab_type'] as String? ?? '',
         publishedName = j['published_name'] as String? ?? '',
         price = (j['price_pkr'] as num?)?.toDouble(),
+        discountPrice = (j['discount_price_pkr'] as num?)?.toDouble(),
         sourceUrl = j['source_url'] as String? ?? '',
         checked = j['checked'] as String? ?? '',
         notes = j['notes'] as String? ?? '';
@@ -20,6 +21,9 @@ class LabOffer {
   final String labType;
   final String publishedName;
   final double? price;
+
+  /// Lower price some listings show for online booking (e.g. InstaCare).
+  final double? discountPrice;
   final String sourceUrl;
   final String checked;
   final String notes;

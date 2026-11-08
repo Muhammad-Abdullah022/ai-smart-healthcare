@@ -212,17 +212,24 @@ class _LabRow extends StatelessWidget {
               Text('Listed as: ${o.publishedName}', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
             if (o.address.isNotEmpty) Text(o.address, style: const TextStyle(fontSize: 13)),
             if (o.phone.isNotEmpty) SelectableText('☎ ${o.phone}', style: const TextStyle(fontSize: 13)),
+            if (o.notes.isNotEmpty && showTestName)
+              Text(o.notes, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
             if (o.sourceUrl.isNotEmpty)
               Text('Source: ${Uri.tryParse(o.sourceUrl)?.host ?? o.sourceUrl} · checked ${o.checked}',
                   style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
           ]),
         ),
         const SizedBox(width: 8),
-        Text(priceText,
-            style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 16,
-                color: o.price == null ? AppColors.textMuted : AppColors.success)),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(priceText,
+              style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: o.price == null ? AppColors.textMuted : AppColors.success)),
+          if (o.discountPrice != null)
+            Text('Rs ${o.discountPrice!.toStringAsFixed(0)} online',
+                style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        ]),
       ]),
     );
   }

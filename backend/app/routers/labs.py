@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.deps import get_current_user, get_db
 from app.labs.catalog import ENGLISH_NAME, family_of
-from app.labs.loader import _key
+from app.labs.loader import ALL_CITIES, _key
 
 router = APIRouter(prefix="/labs", tags=["labs"])
 
@@ -29,32 +29,50 @@ async def cities(user: dict = Depends(get_current_user), db=Depends(get_db)):
 @router.get("/options")
 async def lab_options(city: str, tests: list[str] = Query(default=[]), user: dict = Depends(get_current_user),
                       db=Depends(get_db)):
-    """For each suggested test: its English name and up to 5 labs in the city, cheapest published price first."""
+    """For each suggested test: its English name and up to 5 labs in the city, cheapest published price first.
+
+    A chain's branches in the city are shown once (with the branch count); chain-wide prices apply to them.
+    """
     ck = _key(city)
-    labs = {lab["lab_key"]: lab async for lab in db.labs.find({"city_key": ck})}
+    branches: dict[str, list[dict]] = {}
+    async for lab in db.labs.find({"city_key": ck}):
+        branches.setdefault(lab["lab_key"], []).append(lab)
     known_city = await db.lab_locations.find_one({"city_key": ck}) is not None
 
     def lab_info(lab_key: str, fallback_name: str) -> dict:
-        lab = labs.get(lab_key) or {}
-        return {"lab": lab.get("lab_name", fallback_name), "branch": lab.get("branch", ""),
-                "address": lab.get("address", ""), "phone": lab.get("phone", ""), "lab_type": lab.get("lab_type", "")}
+        group = branches.get(lab_key) or [{}]
+        first = group[0]
+        n = len(group)
+        return {"lab": first.get("lab_name", fallback_name),
+                "branch": f"{n} branches in {city}" if n > 1 else first.get("branch", ""),
+                "address": first.get("address", "") + (" (one of the branches)" if n > 1 else ""),
+                "phone": first.get("phone", ""), "lab_type": first.get("lab_type", ""), "branches": n}
 
     results = []
-    for asked in tests[:5]:
+    for asked in tests[:8]:
         fam = family_of(asked)
-        offers = []
+        offers, seen = [], set()
         if fam:
-            async for p in db.lab_prices.find({"city_key": ck, "family": fam}):
+            query = {"family": fam, "$or": [{"city_key": ck},
+                                            {"city_key": ALL_CITIES, "lab_key": {"$in": list(branches)}}]}
+            async for p in db.lab_prices.find(query):
                 offers.append({**lab_info(p["lab_key"], p["lab_name"]), "published_name": p["test_name"],
-                               "price_pkr": p["price_pkr"], "source_url": p["source_url"],
-                               "checked": p["checked"], "notes": p["notes"]})
+                               "price_pkr": p["price_pkr"], "discount_price_pkr": p.get("discount_price_pkr"),
+                               "source_url": p["source_url"], "checked": p["checked"], "notes": p["notes"]})
+        # One row per lab: its cheapest matching test (the user can still see the lab's own test name).
         offers.sort(key=lambda o: (o["price_pkr"] is None, o["price_pkr"] or 0))
-        results.append({"asked": asked, "family": fam, "name_en": ENGLISH_NAME.get(fam, asked), "offers": offers[:5]})
+        unique = []
+        for o in offers:
+            if o["lab"] not in seen:
+                seen.add(o["lab"])
+                unique.append(o)
+        results.append({"asked": asked, "family": fam, "name_en": ENGLISH_NAME.get(fam, asked), "offers": unique[:5]})
 
     priced_labs = {o["lab"] for r in results for o in r["offers"]}
-    other_labs = [{"lab": lab["lab_name"], "branch": lab["branch"], "address": lab["address"],
-                   "phone": lab["phone"], "lab_type": lab["lab_type"], "source_url": lab["source_url"],
-                   "checked": lab["checked"]}
-                  for lab in labs.values() if lab["lab_name"] not in priced_labs][:5]
+    other_labs = []
+    for key, group in branches.items():
+        info = lab_info(key, group[0]["lab_name"])
+        if info["lab"] not in priced_labs:
+            other_labs.append({**info, "source_url": group[0]["source_url"], "checked": group[0]["checked"]})
     return {"city": city, "known_city": known_city, "tests": results,
-            "labs_without_prices": other_labs, "note": PRICE_NOTE, "directory_url": DIRECTORY_URL}
+            "labs_without_prices": other_labs[:6], "note": PRICE_NOTE, "directory_url": DIRECTORY_URL}

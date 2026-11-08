@@ -18,7 +18,7 @@ FAMILIES: list[tuple[str, str, list[str]]] = [
     ("dlc", "Differential Leucocyte Count (DLC)", ["dlc", "differential leucocyte", "differential count"]),
     ("esr", "ESR", ["esr", "erythrocyte sedimentation"]),
     ("crp", "C-Reactive Protein (CRP)", ["crp", "c reactive protein"]),
-    ("sugar", "Blood sugar (glucose)", ["bsr", "bsf", "fbs", "rbs", "blood sugar", "glucose", "blood glucose"]),
+    ("sugar", "Blood sugar (glucose)", ["bsr", "bsf", "bsl", "fbs", "rbs", "blood sugar", "glucose", "blood glucose"]),
     ("lipid", "Lipid profile (cholesterol)", ["lipid", "cholesterol"]),
     ("lft", "Liver Function Tests (LFT)", ["lft", "lfts", "liver function"]),
     ("rft", "Renal / Kidney Function Tests (RFT)", ["rft", "rfts", "renal function", "kidney function"]),
@@ -26,7 +26,7 @@ FAMILIES: list[tuple[str, str, list[str]]] = [
     ("uric_acid", "Uric acid", ["uric acid"]),
     ("thyroid", "Thyroid tests (TSH / T3 / T4)", ["tsh", "t3", "t4", "thyroid", "free t3", "free t4"]),
     ("urine", "Urine complete examination", ["urine complete", "urine re", "urine routine", "urinalysis",
-                                              "urine analysis", "urine dr", "urine test", "urine examination"]),
+                                              "urine analysis", "urine dr", "urine test", "urine examination", "urine r e"]),
     ("hcv", "Hepatitis C test (HCV)", ["hcv", "hepatitis c"]),
     ("hbv", "Hepatitis B test (HBsAg)", ["hbv", "hbsag", "hepatitis b"]),
     ("hiv", "HIV test", ["hiv"]),
@@ -40,6 +40,11 @@ FAMILIES: list[tuple[str, str, list[str]]] = [
     ("psa", "PSA", ["psa"]),
     ("pt_inr", "Prothrombin time (PT / INR)", ["prothrombin", "inr", "pt with inr"]),
     ("prolactin", "Prolactin", ["prolactin"]),
+    ("electrolytes", "Electrolytes (sodium, potassium)", ["electrolytes", "sodium", "potassium"]),
+    ("ra_factor", "RA factor (rheumatoid)", ["ra factor", "rheumatoid"]),
+    ("urea", "Blood urea", ["urea", "bun"]),
+    ("stool", "Stool examination", ["stool routine", "stool examination", "stool re", "stool r e"]),
+    ("platelets", "Platelet count", ["platelet", "platelets", "plt"]),
     ("tb", "Tuberculosis test (TB / AFB)", ["tb", "tuberculosis", "afb"]),
 ]
 
@@ -53,6 +58,8 @@ def _norm(text: str) -> str:
 def family_of(name: str) -> str | None:
     """The test family of a test name, or None if unknown."""
     n = _norm(name)
+    if " for dengue patients " in n:
+        return None  # special government-capped rate for dengue patients only; not a normal CBC price
     for key, _, aliases in FAMILIES:
         if key == "creatinine" and " ratio " in n:
             continue  # "protein/creatinine ratio" is a different test
