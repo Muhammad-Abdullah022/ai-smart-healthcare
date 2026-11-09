@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -134,13 +135,26 @@ class _LabOptionsScreenState extends State<LabOptionsScreen> {
       children: [
         for (final t in o.tests) _TestCard(test: t, city: o.city, rs: _rs),
         if (o.otherLabs.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text('Other registered labs in ${o.city}',
+          const SizedBox(height: 4),
+          Text('More labs in ${o.city}',
               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.primary)),
-          const Text('No published price found for these tests — call the lab to ask.',
+          const SizedBox(height: 2),
+          const Text('These labs have not published a price — call to ask.',
               style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
-          const SizedBox(height: 6),
-          for (final l in o.otherLabs) _LabRow(offer: l, priceText: 'Ask lab'),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFE9EEF4))),
+            child: Column(children: [
+              for (var i = 0; i < o.otherLabs.length; i++) ...[
+                if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFEEF2F6)),
+                _LabRow(offer: o.otherLabs[i], priceText: 'Ask price'),
+              ],
+            ]),
+          ),
+          const SizedBox(height: 10),
           if (o.otherTotal > o.otherLabs.length)
             OutlinedButton.icon(
               icon: const Icon(Icons.list_alt_outlined),
@@ -159,12 +173,15 @@ class _LabOptionsScreenState extends State<LabOptionsScreen> {
             ),
           ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: AppColors.warningTint, borderRadius: BorderRadius.circular(12)),
-          child: Text('${o.note}\n* Free tests at government hospitals may apply only to some patients.',
-              style: const TextStyle(fontSize: 12, height: 1.4)),
-        ),
+        const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(Icons.info_outline, size: 16, color: AppColors.textMuted),
+          SizedBox(width: 6),
+          Expanded(
+            child: Text('Prices come from each lab\'s own published list and can change. '
+                'Please confirm with the lab before you go. Tap "Details" to see the source.',
+                style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.textMuted)),
+          ),
+        ]),
       ],
     );
   }
@@ -178,79 +195,209 @@ class _TestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final priced = test.offers.where((o) => o.price != null).toList();
+    final cheapest = priced.isEmpty ? null : priced.first.price;
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE9EEF4)),
+        boxShadow: const [BoxShadow(color: Color(0x0A16324F), blurRadius: 14, offset: Offset(0, 4))],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+        Container(
+          color: AppColors.diagnosisTint,
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
           child: Row(children: [
-            const Icon(Icons.biotech_outlined, color: AppColors.accent),
-            const SizedBox(width: 10),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+              child: const Icon(Icons.biotech_outlined, color: AppColors.diagnosis, size: 22),
+            ),
+            const SizedBox(width: 12),
             Expanded(
-              child: Text(test.nameEn,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.primary)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(test.nameEn,
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.primary)),
+                const SizedBox(height: 2),
+                Text(
+                  cheapest == null
+                      ? 'No published price in $city yet'
+                      : '${priced.length} lab${priced.length == 1 ? '' : 's'} · from ${rs(cheapest)}',
+                  style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                ),
+              ]),
             ),
           ]),
         ),
         if (test.offers.isEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-            child: Text('No published price for this test in $city yet. Ask the labs below.',
-                style: const TextStyle(color: AppColors.textMuted)),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Text('Ask the labs listed below for this test\'s price.',
+                style: TextStyle(color: AppColors.textMuted)),
           )
         else
-          for (final o in test.offers) _LabRow(offer: o, priceText: o.price == null ? 'Ask lab' : rs(o.price!), showTestName: true),
+          for (var i = 0; i < test.offers.length; i++) ...[
+            if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFEEF2F6)),
+            _LabRow(
+              offer: test.offers[i],
+              priceText: test.offers[i].price == null ? 'Ask price' : rs(test.offers[i].price!),
+              showTestName: true,
+              best: i == 0 && priced.length > 1,
+            ),
+          ],
       ]),
     );
   }
 }
 
+/// One lab: name and price first, then area and phone; source and notes behind "Details".
 class _LabRow extends StatelessWidget {
-  const _LabRow({required this.offer, required this.priceText, this.showTestName = false});
+  const _LabRow({required this.offer, required this.priceText, this.showTestName = false, this.best = false});
   final LabOffer offer;
   final String priceText;
   final bool showTestName;
+  final bool best;
+
+  static String _cleanAddress(String a) => a
+      .replaceAll(' (one of the branches)', '')
+      .replaceAll(RegExp(r'\s*\((street )?address not (listed|stated) in source\)'), '')
+      .trim();
+
+  void _copyPhone(BuildContext context) {
+    final first = offer.phone.split(',').first.trim();
+    Clipboard.setData(ClipboardData(text: first));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Number copied: $first')));
+  }
+
+  void _details(BuildContext context) {
+    final o = offer;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(o.lab, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            if (o.branch.isNotEmpty) Text(o.branch, style: const TextStyle(color: AppColors.textMuted)),
+            const SizedBox(height: 12),
+            if (o.publishedName.isNotEmpty) _kv('Lab calls this test', o.publishedName),
+            if (o.address.isNotEmpty) _kv('Address', _cleanAddress(o.address)),
+            if (o.phone.isNotEmpty) _kv('Phone', o.phone),
+            if (o.notes.isNotEmpty) _kv('Note', o.notes),
+            if (o.sourceUrl.isNotEmpty)
+              _kv('Source', '${Uri.tryParse(o.sourceUrl)?.host ?? o.sourceUrl} · checked ${o.checked}'),
+            const SizedBox(height: 6),
+            const Text('Prices can change — please confirm with the lab before you go.',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  static Widget _kv(String k, String v) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(k, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          SelectableText(v, style: const TextStyle(fontSize: 14)),
+        ]),
+      );
 
   @override
   Widget build(BuildContext context) {
     final o = offer;
+    final gov = o.labType.toLowerCase().contains('govern') || o.labType.toLowerCase().contains('public');
+    final area = _cleanAddress(o.address);
+    final initials = o.lab.trim().isEmpty ? '?' : o.lab.trim()[0].toUpperCase();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(o.branch.isEmpty ? o.lab : '${o.lab} — ${o.branch}',
-                style: const TextStyle(fontWeight: FontWeight.w700)),
-            if (showTestName && o.publishedName.isNotEmpty)
-              Text('Listed as: ${o.publishedName}', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-            if (o.address.isNotEmpty) Text(o.address, style: const TextStyle(fontSize: 13)),
-            if (o.phone.isNotEmpty) SelectableText('☎ ${o.phone}', style: const TextStyle(fontSize: 13)),
-            if (o.notes.isNotEmpty && showTestName)
-              Text(o.notes, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-            if (o.sourceUrl.isNotEmpty)
-              Text('Source: ${Uri.tryParse(o.sourceUrl)?.host ?? o.sourceUrl} · checked ${o.checked}',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: gov ? const Color(0xFFE7F6EC) : AppColors.primaryTint,
+            child: Text(initials,
+                style: TextStyle(fontWeight: FontWeight.w800, color: gov ? AppColors.success : AppColors.primary)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(o.lab, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              const SizedBox(height: 4),
+              Wrap(spacing: 6, runSpacing: 4, children: [
+                if (best) const _Tag('Lowest price', AppColors.success, Color(0xFFE7F6EC)),
+                if (o.branches > 1) _Tag('${o.branches} branches', AppColors.primary, AppColors.primaryTint),
+                if (gov) const _Tag('Government', AppColors.success, Color(0xFFE7F6EC)),
+              ]),
+            ]),
+          ),
+          const SizedBox(width: 8),
+          if (priceText.isNotEmpty)
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(priceText,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: o.price == null ? 13 : 18,
+                      color: o.price == null ? AppColors.textMuted : AppColors.success)),
+              if (o.discountPrice != null)
+                Text('Rs ${o.discountPrice!.toStringAsFixed(0)} online',
+                    style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+            ]),
+        ]),
+        if (area.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 52, top: 8),
+            child: Row(children: [
+              const Icon(Icons.place_outlined, size: 15, color: AppColors.textMuted),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(o.branches > 1 ? '$area  (+${o.branches - 1} more)' : area,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+              ),
+            ]),
+          ),
+        Padding(
+          padding: const EdgeInsets.only(left: 44, top: 2),
+          child: Row(children: [
+            if (o.phone.isNotEmpty)
+              TextButton.icon(
+                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                icon: const Icon(Icons.call_outlined, size: 16),
+                label: Text(o.phone.split(',').first.trim()),
+                onPressed: () => _copyPhone(context),
+              ),
+            TextButton.icon(
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact, foregroundColor: AppColors.textMuted),
+              icon: const Icon(Icons.info_outline, size: 16),
+              label: const Text('Details'),
+              onPressed: () => _details(context),
+            ),
           ]),
         ),
-        const SizedBox(width: 8),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(priceText,
-              style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                  color: o.price == null ? AppColors.textMuted : AppColors.success)),
-          if (o.discountPrice != null)
-            Text('Rs ${o.discountPrice!.toStringAsFixed(0)} online',
-                style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-        ]),
       ]),
     );
   }
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag(this.text, this.fg, this.bg);
+  final String text;
+  final Color fg;
+  final Color bg;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(8)),
+        child: Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg)),
+      );
 }
 
 /// Searchable list of supported cities / tehsils (labs count shown).

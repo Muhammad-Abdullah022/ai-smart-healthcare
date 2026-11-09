@@ -12,7 +12,8 @@ class LabOffer {
         discountPrice = (j['discount_price_pkr'] as num?)?.toDouble(),
         sourceUrl = j['source_url'] as String? ?? '',
         checked = j['checked'] as String? ?? '',
-        notes = j['notes'] as String? ?? '';
+        notes = j['notes'] as String? ?? '',
+        branches = j['branches'] as int? ?? 1;
 
   final String lab;
   final String branch;
@@ -27,6 +28,9 @@ class LabOffer {
   final String sourceUrl;
   final String checked;
   final String notes;
+
+  /// How many branches this lab has in the city.
+  final int branches;
 }
 
 class TestLabs {
