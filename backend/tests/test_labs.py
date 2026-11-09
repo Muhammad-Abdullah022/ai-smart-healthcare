@@ -75,3 +75,11 @@ def test_phc_registered_labs_loaded(registered):
     assert data["other_total"] > 300 and len(data["labs_without_prices"]) == data["other_total"]
     taxila = client.get("/labs/options", headers=h, params={"city": "Taxila"}).json()
     assert taxila["other_total"] >= 5
+
+
+def test_tests_list_for_city(registered):
+    client, tokens = registered
+    data = client.get("/labs/tests", headers=auth_header(tokens), params={"city": "Multan"}).json()
+    cbc = next(t for t in data if t["key"] == "cbc")
+    assert cbc["name"] == "Complete Blood Count (CBC)" and cbc["labs_with_price"] >= 2
+    assert data[0]["labs_with_price"] >= data[-1]["labs_with_price"]

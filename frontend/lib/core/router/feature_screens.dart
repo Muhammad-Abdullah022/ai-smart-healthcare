@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/feature_forms.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/assistant/assistant_chat_screen.dart';
-import '../../screens/labs/lab_options_screen.dart';
+import '../../screens/labs/lab_finder_screen.dart';
 import '../../screens/reports/report_compare_screen.dart';
 import '../../screens/reports/reports_screen.dart';
 import '../../services/report_repository.dart';
@@ -29,9 +29,9 @@ Widget screenForFeature(int number) {
     case 1 || 2 || 3 || 4 || 5 || 46:
       return const AssistantChatScreen();
     case 6 || 7:
-      // Common tests; after a symptom check the suggested tests are passed instead.
-      return const LabOptionsScreen(
-          tests: ['CBC', 'Blood sugar', 'HbA1c', 'Lipid profile', 'LFT', 'RFT', 'TSH', 'Urine complete', 'Dengue']);
+      // Ask first: find labs, or find a test and compare prices. (After a symptom check,
+      // the suggested tests open LabOptionsScreen directly.)
+      return const LabFinderScreen();
     case 8:
       return const ReportsScreen();
     case 9:

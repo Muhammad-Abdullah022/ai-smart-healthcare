@@ -5,7 +5,7 @@ Only sourced data (backend/data/labs) is shown, each price with its source and c
 from fastapi import APIRouter, Depends, Query
 
 from app.deps import get_current_user, get_db
-from app.labs.catalog import ENGLISH_NAME, family_of
+from app.labs.catalog import ENGLISH_NAME, FAMILIES, family_of
 from app.labs.loader import ALL_CITIES, _key
 
 router = APIRouter(prefix="/labs", tags=["labs"])
@@ -24,6 +24,20 @@ async def cities(user: dict = Depends(get_current_user), db=Depends(get_db)):
     out = [{"city": c["city"], "district": c["district"], "division": c["division"],
             "labs": counts.get(c["city_key"], 0)} async for c in db.lab_locations.find({})]
     return sorted(out, key=lambda c: (-c["labs"], c["city"]))
+
+
+@router.get("/tests")
+async def tests_for_city(city: str, user: dict = Depends(get_current_user), db=Depends(get_db)):
+    """All standard tests (English names), with how many labs in the city publish a price for each."""
+    ck = _key(city)
+    lab_keys = list({lab["lab_key"] async for lab in db.labs.find({"city_key": ck}, {"lab_key": 1})})
+    priced: dict[str, set[str]] = {}
+    query = {"family": {"$ne": None},
+             "$or": [{"city_key": ck}, {"city_key": ALL_CITIES, "lab_key": {"$in": lab_keys}}]}
+    async for p in db.lab_prices.find(query, {"family": 1, "lab_key": 1}):
+        priced.setdefault(p["family"], set()).add(p["lab_key"])
+    out = [{"key": key, "name": name, "labs_with_price": len(priced.get(key, ()))} for key, name, _ in FAMILIES]
+    return sorted(out, key=lambda t: (-t["labs_with_price"], t["name"]))
 
 
 @router.get("/options")

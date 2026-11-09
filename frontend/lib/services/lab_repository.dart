@@ -94,6 +94,15 @@ class LabRepository {
     return LabOptions.fromJson(await api.get('/labs/options?$q') as Map<String, dynamic>);
   }
 
+  /// Standard tests (English names) and how many labs in the city publish a price for each.
+  Future<List<({String key, String name, int labsWithPrice})>> tests(String city) async {
+    final data = await api.get('/labs/tests?city=${Uri.encodeQueryComponent(city)}') as List<dynamic>;
+    return [
+      for (final t in data.cast<Map<String, dynamic>>())
+        (key: t['key'] as String, name: t['name'] as String, labsWithPrice: t['labs_with_price'] as int? ?? 0)
+    ];
+  }
+
   Future<String?> myCity() async {
     final p = await api.get('/profile') as Map<String, dynamic>;
     final c = p['city'] as String?;

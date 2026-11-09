@@ -10,9 +10,12 @@ import '../../widgets/state_views.dart';
 /// After a symptom check: each suggested test in English, and labs in the user's city
 /// with their published prices (cheapest first). Only sourced data, with source and date.
 class LabOptionsScreen extends StatefulWidget {
-  const LabOptionsScreen({super.key, required this.tests, this.repository});
+  const LabOptionsScreen({super.key, required this.tests, this.repository, this.city});
 
   final List<String> tests;
+
+  /// Show this city instead of the one saved in the profile.
+  final String? city;
   final LabRepository? repository;
 
   @override
@@ -34,6 +37,14 @@ class _LabOptionsScreenState extends State<LabOptionsScreen> {
   }
 
   Future<void> _loadCity() async {
+    if (widget.city != null) {
+      setState(() {
+        _loadingCity = false;
+        _city = widget.city;
+        _future = _repo.options(widget.city!, widget.tests);
+      });
+      return;
+    }
     try {
       final c = await _repo.myCity();
       if (!mounted) return;
@@ -72,7 +83,7 @@ class _LabOptionsScreenState extends State<LabOptionsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tests & labs'),
+        title: Text(widget.tests.length == 1 ? 'Labs & prices' : 'Tests & labs'),
         actions: [
           if (_city != null)
             TextButton.icon(
