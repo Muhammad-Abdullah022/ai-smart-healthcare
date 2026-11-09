@@ -21,7 +21,7 @@ class _SearchScreenState extends State<SearchScreen> {
     final results = q.isEmpty
         ? <HealthFeature>[]
         : allFeatures
-            .where((f) => !mergedIntoSymptomChecker.contains(f.number) && f.title.toLowerCase().contains(q))
+            .where((f) => isListedFeature(f) && f.title.toLowerCase().contains(q))
             .toList();
 
     return Scaffold(

@@ -81,6 +81,11 @@ class _MoodCheckInScreenState extends State<MoodCheckInScreen> {
                 builder: (_) => CompanionInsightsScreen(repository: CompanionRepository(api)))),
           ),
           IconButton(
+            tooltip: 'Get help now',
+            icon: const Icon(Icons.support_agent, color: AppColors.critical),
+            onPressed: () => context.push('/feature/25'),
+          ),
+          IconButton(
             tooltip: 'Chat without check-in',
             icon: const Icon(Icons.chat_bubble_outline),
             onPressed: () => _openChat(),

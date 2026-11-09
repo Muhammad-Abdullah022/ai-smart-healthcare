@@ -33,15 +33,97 @@ class ModuleScreen extends StatelessWidget {
           const _AssistantHero(),
           const SizedBox(height: 16),
         ],
-        GroupedList(children: [
-          for (final f in module.features)
-            // Features 2–5 (questions, prediction, triage, tests) live inside the Symptom Checker chat.
-            // Features 1 and 13 (symptom checker + assistant) are the large card above.
-            if (!mergedIntoSymptomChecker.contains(f.number) && !(module.id == 'diagnosis' && (f.number == 13 || f.number == 1)))
-              FeatureTile(feature: f, color: module.color, tint: module.tint, inGroup: true),
-        ]),
+        if (module.id == 'mental')
+          // Mental Health = the MindEase module only (check-in, tips, chat, memory, insights).
+          const _MindEaseHero()
+        else
+          GroupedList(children: [
+            for (final f in module.features)
+              // Features 2–5 (questions, prediction, triage, tests) live inside the Symptom Checker chat.
+              // Features 1 and 13 (symptom checker + assistant) are the large card above.
+              if (isListedFeature(f) && !(module.id == 'diagnosis' && (f.number == 13 || f.number == 1)))
+                FeatureTile(feature: f, color: module.color, tint: module.tint, inGroup: true),
+          ]),
       ],
     );
+  }
+}
+
+/// The Mental Health section: one large entry into MindEase, plus quick help.
+class _MindEaseHero extends StatelessWidget {
+  const _MindEaseHero();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Material(
+        borderRadius: BorderRadius.circular(22),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push('/feature/17'),
+          child: Ink(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF5B4BC4), Color(0xFF7C6BD9)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(color: const Color(0x33FFFFFF), borderRadius: BorderRadius.circular(14)),
+                  child: const Icon(Icons.spa_outlined, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('MindEase', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                    Text('Your mental wellbeing companion', style: TextStyle(color: Color(0xFFE4DFFB), fontSize: 13)),
+                  ]),
+                ),
+                const Icon(Icons.arrow_forward, color: Colors.white),
+              ]),
+              const SizedBox(height: 14),
+              const Text('How are you feeling today? Check in, get a few gentle steps, and talk it through.',
+                  style: TextStyle(color: Colors.white, height: 1.4)),
+              const SizedBox(height: 12),
+              const Wrap(spacing: 8, runSpacing: 8, children: [
+                _HeroChip(icon: Icons.mood_outlined, label: 'Mood check-in'),
+                _HeroChip(icon: Icons.lightbulb_outline, label: 'Tips'),
+                _HeroChip(icon: Icons.forum_outlined, label: 'Chat'),
+                _HeroChip(icon: Icons.psychology_alt_outlined, label: 'Remembers you'),
+                _HeroChip(icon: Icons.insights_outlined, label: 'Insights'),
+              ]),
+            ]),
+          ),
+        ),
+      ),
+      const SizedBox(height: 12),
+      Row(children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+            icon: const Icon(Icons.air),
+            label: const Text('Guided breathing'),
+            onPressed: () => context.push('/feature/22'),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(46), foregroundColor: AppColors.critical),
+            icon: const Icon(Icons.support_agent),
+            label: const Text('Get help now'),
+            onPressed: () => context.push('/feature/25'),
+          ),
+        ),
+      ]),
+    ]);
   }
 }
 

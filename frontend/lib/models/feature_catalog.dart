@@ -78,7 +78,7 @@ const List<HealthModule> healthModules = [
   HealthModule(
     id: 'mental',
     title: 'Mental Health & Stress',
-    subtitle: 'Screening, mood, breathing, support',
+    subtitle: 'MindEase: mood check-in, tips, chat and insights',
     icon: Icons.self_improvement,
     color: AppColors.mind,
     tint: AppColors.mindTint,
@@ -172,5 +172,14 @@ HealthFeature? featureByNumber(int number) {
 
 /// Shown as one item ("AI Symptom Checker") because they are one chat screen.
 const Set<int> mergedIntoSymptomChecker = {2, 3, 4, 5};
+
+/// The Mental Health section now shows only the MindEase module (feature 17). These features are
+/// hidden from lists and search; breathing (22) and crisis help (25) stay reachable inside MindEase,
+/// and nothing is deleted, so any of them can be shown again by removing it from this set.
+const Set<int> hiddenMentalFeatures = {16, 18, 19, 20, 21, 22, 23, 24, 25};
+
+/// Whether a feature appears in section lists and search.
+bool isListedFeature(HealthFeature f) =>
+    !mergedIntoSymptomChecker.contains(f.number) && !hiddenMentalFeatures.contains(f.number);
 
 List<HealthFeature> get allFeatures => [for (final m in healthModules) ...m.features];
