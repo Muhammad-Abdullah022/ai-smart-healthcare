@@ -83,3 +83,17 @@ def test_tests_list_for_city(registered):
     cbc = next(t for t in data if t["key"] == "cbc")
     assert cbc["name"] == "Complete Blood Count (CBC)" and cbc["labs_with_price"] >= 2
     assert data[0]["labs_with_price"] >= data[-1]["labs_with_price"]
+
+
+def test_demo_prices_only_when_asked_and_labelled(registered):
+    client, tokens = registered
+    h = auth_header(tokens)
+    real = client.get("/labs/options", headers=h, params={"city": "Sahiwal", "tests": ["CBC"]}).json()
+    assert all(not o["demo"] for o in real["tests"][0]["offers"])
+    demo = client.get("/labs/options", headers=h, params={"city": "Sahiwal", "tests": ["CBC"], "demo": True}).json()
+    offers = demo["tests"][0]["offers"]
+    assert any(o["demo"] for o in offers) and all("not a real price" in o["notes"] for o in offers if o["demo"])
+    flags = [o["demo"] for o in offers]
+    assert flags == sorted(flags)  # real prices listed before demo prices
+    tests = client.get("/labs/tests", headers=h, params={"city": "Okara", "demo": True}).json()
+    assert next(t for t in tests if t["key"] == "cbc")["labs_with_price"] > 10

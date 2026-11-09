@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/config/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/lab_repository.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/section_card.dart';
 
@@ -83,6 +84,8 @@ class SettingsScreen extends StatelessWidget {
               tint: AppColors.medicineTint,
             ),
           ]),
+          const SectionTitle('Demo'),
+          const GroupedList(children: [_DemoPricesRow()]),
           const SizedBox(height: 24),
           GroupedList(children: [
             ListRow(
@@ -100,6 +103,45 @@ class SettingsScreen extends StatelessWidget {
                 style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// Switch for made-up lab prices used in demos (Okara and Sahiwal). Off by default.
+class _DemoPricesRow extends StatefulWidget {
+  const _DemoPricesRow();
+
+  @override
+  State<_DemoPricesRow> createState() => _DemoPricesRowState();
+}
+
+class _DemoPricesRowState extends State<_DemoPricesRow> {
+  bool _on = false;
+
+  @override
+  void initState() {
+    super.initState();
+    DemoPrices.enabled().then((v) {
+      if (mounted) setState(() => _on = v);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListRow(
+      icon: Icons.science_outlined,
+      title: 'Demo lab prices',
+      subtitle: 'Made-up prices for Okara and Sahiwal labs, for demos. Always marked "not real".',
+      color: const Color(0xFFC2410C),
+      tint: const Color(0xFFFFEDD5),
+      trailing: Switch(
+        value: _on,
+        onChanged: (v) {
+          setState(() => _on = v);
+          DemoPrices.set(v);
+        },
       ),
     );
   }

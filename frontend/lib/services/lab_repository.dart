@@ -1,4 +1,25 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'api_client.dart';
+
+/// "Demo prices" switch (Settings). Demo prices are made up for the app demo and always labelled.
+class DemoPrices {
+  static const _key = 'show_demo_lab_prices';
+
+  static Future<bool> enabled() async {
+    try {
+      return (await SharedPreferences.getInstance()).getBool(_key) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> set(bool on) async {
+    try {
+      await (await SharedPreferences.getInstance()).setBool(_key, on);
+    } catch (_) {}
+  }
+}
 
 class LabOffer {
   LabOffer.fromJson(Map<String, dynamic> j)
@@ -13,7 +34,8 @@ class LabOffer {
         sourceUrl = j['source_url'] as String? ?? '',
         checked = j['checked'] as String? ?? '',
         notes = j['notes'] as String? ?? '',
-        branches = j['branches'] as int? ?? 1;
+        branches = j['branches'] as int? ?? 1,
+        demo = j['demo'] as bool? ?? false;
 
   final String lab;
   final String branch;
@@ -31,6 +53,9 @@ class LabOffer {
 
   /// How many branches this lab has in the city.
   final int branches;
+
+  /// A made-up demo price (only when "Demo prices" is on). Never a real price.
+  final bool demo;
 }
 
 class TestLabs {
@@ -93,6 +118,7 @@ class LabRepository {
     final q = [
       'city=${Uri.encodeQueryComponent(city)}',
       'other_limit=$otherLimit',
+      'demo=${await DemoPrices.enabled()}',
       for (final t in tests) 'tests=${Uri.encodeQueryComponent(t)}',
     ].join('&');
     return LabOptions.fromJson(await api.get('/labs/options?$q') as Map<String, dynamic>);
@@ -100,7 +126,8 @@ class LabRepository {
 
   /// Standard tests (English names) and how many labs in the city publish a price for each.
   Future<List<({String key, String name, int labsWithPrice})>> tests(String city) async {
-    final data = await api.get('/labs/tests?city=${Uri.encodeQueryComponent(city)}') as List<dynamic>;
+    final demo = await DemoPrices.enabled();
+    final data = await api.get('/labs/tests?city=${Uri.encodeQueryComponent(city)}&demo=$demo') as List<dynamic>;
     return [
       for (final t in data.cast<Map<String, dynamic>>())
         (key: t['key'] as String, name: t['name'] as String, labsWithPrice: t['labs_with_price'] as int? ?? 0)

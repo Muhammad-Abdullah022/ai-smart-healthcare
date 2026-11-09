@@ -195,7 +195,8 @@ class _TestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priced = test.offers.where((o) => o.price != null).toList();
+    final priced = test.offers.where((o) => o.price != null && !o.demo).toList();
+    final demoCount = test.offers.where((o) => o.demo).length;
     final cheapest = priced.isEmpty ? null : priced.first.price;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -224,9 +225,11 @@ class _TestCard extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.primary)),
                 const SizedBox(height: 2),
                 Text(
-                  cheapest == null
-                      ? 'No published price in $city yet'
-                      : '${priced.length} lab${priced.length == 1 ? '' : 's'} · from ${rs(cheapest)}',
+                  [
+                    if (cheapest != null) '${priced.length} real price${priced.length == 1 ? '' : 's'} · from ${rs(cheapest)}',
+                    if (cheapest == null && demoCount == 0) 'No published price in $city yet',
+                    if (demoCount > 0) '$demoCount demo price${demoCount == 1 ? '' : 's'}',
+                  ].join(' · '),
                   style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
                 ),
               ]),
@@ -330,7 +333,8 @@ class _LabRow extends StatelessWidget {
               Text(o.lab, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 4),
               Wrap(spacing: 6, runSpacing: 4, children: [
-                if (best) const _Tag('Lowest price', AppColors.success, Color(0xFFE7F6EC)),
+                if (o.demo) const _Tag('Demo price — not real', Color(0xFFC2410C), Color(0xFFFFEDD5)),
+                if (best && !o.demo) const _Tag('Lowest price', AppColors.success, Color(0xFFE7F6EC)),
                 if (o.branches > 1) _Tag('${o.branches} branches', AppColors.primary, AppColors.primaryTint),
                 if (gov) const _Tag('Government', AppColors.success, Color(0xFFE7F6EC)),
               ]),
@@ -343,7 +347,9 @@ class _LabRow extends StatelessWidget {
                   style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: o.price == null ? 13 : 18,
-                      color: o.price == null ? AppColors.textMuted : AppColors.success)),
+                      color: o.price == null
+                          ? AppColors.textMuted
+                          : (o.demo ? const Color(0xFFC2410C) : AppColors.success))),
               if (o.discountPrice != null)
                 Text('Rs ${o.discountPrice!.toStringAsFixed(0)} online',
                     style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),

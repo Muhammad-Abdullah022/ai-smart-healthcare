@@ -18,6 +18,9 @@ EXTRA_LAB_FILES = ("added_lab_records.csv", "phc_registered_labs.csv")
 EXTRA_PRICE_FILES = ("added_test_prices.csv",)
 # A price row with city "*" is a chain-wide published rate: it applies to that lab's branches in every city.
 ALL_CITIES = "*"
+# Demo prices (made up for the FYP demo). Stored separately, shown only when the user switches on
+# "Demo prices", and always labelled "Demo price — not real".
+DEMO_FILE = "demo_prices.csv"
 
 
 def _rows(name: str) -> list[dict]:
@@ -39,7 +42,7 @@ def _key(text: str) -> str:
 async def ensure_lab_data(db) -> None:
     if not all((DATA_DIR / f).exists() for f in FILES):
         return
-    present = [f for f in FILES + EXTRA_LAB_FILES + EXTRA_PRICE_FILES if (DATA_DIR / f).exists()]
+    present = [f for f in FILES + EXTRA_LAB_FILES + EXTRA_PRICE_FILES + (DEMO_FILE,) if (DATA_DIR / f).exists()]
     digest = hashlib.sha256(b"".join((DATA_DIR / f).read_bytes() for f in present)).hexdigest()
     meta = await db.meta.find_one({"_id": "lab_data"})
     if meta and meta.get("sha256") == digest:
@@ -74,11 +77,20 @@ async def ensure_lab_data(db) -> None:
             "checked": r["source_checked_date"], "notes": r["notes"],
         })
 
-    for coll, docs in (("lab_locations", locations), ("labs", labs), ("lab_prices", prices)):
+    demo = [{
+        "city_key": _key(r["city"]), "lab_key": _key(r["lab_name"]), "lab_name": r["lab_name"],
+        "test_name": r["test_name"], "family": family_of(r["test_name"]), "price_pkr": _num(r["price_pkr"]),
+        "category": r.get("category", ""),
+    } for r in (_rows(DEMO_FILE) if (DATA_DIR / DEMO_FILE).exists() else [])]
+
+    for coll, docs in (("lab_locations", locations), ("labs", labs), ("lab_prices", prices),
+                       ("lab_demo_prices", demo)):
         await db[coll].delete_many({})
         if docs:
             await db[coll].insert_many(docs)
     await db.meta.update_one({"_id": "lab_data"}, {"$set": {"sha256": digest, "imported_at": now,
-                             "counts": {"locations": len(locations), "labs": len(labs), "prices": len(prices)}}},
+                             "counts": {"locations": len(locations), "labs": len(labs), "prices": len(prices),
+                                        "demo_prices": len(demo)}}},
                              upsert=True)
-    print(f"[labs] imported {len(locations)} cities, {len(labs)} labs, {len(prices)} prices")
+    print(f"[labs] imported {len(locations)} cities, {len(labs)} labs, {len(prices)} prices, "
+          f"{len(demo)} demo prices")
