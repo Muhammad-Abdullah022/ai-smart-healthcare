@@ -12,6 +12,7 @@ import '../../screens/emergency/sos_screen.dart';
 import '../../screens/medicines/medicines_screen.dart';
 import '../../screens/mental/breathing_screen.dart';
 import '../../screens/mental/crisis_screen.dart';
+import '../../screens/mental/companion/mood_checkin_screen.dart';
 import '../../screens/mental/mood_screen.dart';
 import '../../screens/mental/screening_screen.dart';
 import '../../screens/modules/feature_form_screen.dart';
@@ -45,6 +46,9 @@ Widget screenForFeature(int number) {
       return const ScreeningScreen();
     case 18:
       return const ScreeningScreen(initialInstrument: 'gad7');
+    case 17 || 19:
+      // MindEase flow: mood check-in -> affirmation & tips -> companion chat.
+      return const MoodCheckInScreen();
     case 22:
       return const BreathingScreen();
     case 24:

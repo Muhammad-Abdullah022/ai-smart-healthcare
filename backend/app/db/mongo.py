@@ -33,4 +33,8 @@ async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     await db.labs.create_index([("city_key", ASCENDING)])
     await db.lab_prices.create_index([("city_key", ASCENDING), ("family", ASCENDING)])
     await db.lab_locations.create_index([("city_key", ASCENDING)])
+    await db.companion_chats.create_index([("user_id", ASCENDING), ("updated_at", DESCENDING)])
+    await db.companion_turns.create_index([("user_id", ASCENDING), ("at", DESCENDING)])
+    await db.companion_turns.create_index([("chat_id", ASCENDING), ("at", ASCENDING)])
+    await db.companion_memory.create_index([("user_id", ASCENDING)], unique=True)
     await db.audit_events.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])

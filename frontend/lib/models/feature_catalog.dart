@@ -84,9 +84,9 @@ const List<HealthModule> healthModules = [
     tint: AppColors.mindTint,
     features: [
       HealthFeature(16, 'Mental Health Screening', Icons.psychology_outlined, status: FeatureStatus.available),
-      HealthFeature(17, 'Mental Health Chatbot', Icons.chat_bubble_outline),
+      HealthFeature(17, 'MindEase Companion Chat', Icons.chat_bubble_outline, status: FeatureStatus.available),
       HealthFeature(18, 'Stress, Anxiety & Mood Assessment', Icons.mood_outlined, status: FeatureStatus.available),
-      HealthFeature(19, 'Personalized Stress Relief', Icons.spa_outlined),
+      HealthFeature(19, 'Personalized Stress Relief', Icons.spa_outlined, status: FeatureStatus.available),
       HealthFeature(20, 'Camera Exercise Monitoring', Icons.fitness_center,
           status: FeatureStatus.prototype, note: 'On-device prototype; accuracy depends on phone and lighting.'),
       HealthFeature(21, 'Posture Detection & Correction', Icons.accessibility_new,

@@ -14,7 +14,7 @@ from app.core.errors import register_error_handlers
 from app.db.mongo import create_client, ensure_indexes
 from app.labs.loader import ensure_lab_data
 from app.core.rate_limit import RateLimiter
-from app.routers import admin, assessments, assistant, auth, consents, entries, labs, medicines, mental, notifications, profile, reports, sos
+from app.routers import admin, assessments, assistant, auth, companion, consents, entries, labs, medicines, mental, notifications, profile, reports, sos
 
 
 @asynccontextmanager
@@ -68,10 +68,11 @@ def create_app() -> FastAPI:
     app.include_router(reports.router)
     app.include_router(assistant.router)
     app.include_router(labs.router)
+    app.include_router(companion.router)
 
     @app.get("/health", tags=["system"])
     async def health():
-        return {"status": "ok", "version": "2026-11-08f"}
+        return {"status": "ok", "version": "2026-11-09a"}
 
     return app
 
