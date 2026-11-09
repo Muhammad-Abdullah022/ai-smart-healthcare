@@ -43,6 +43,15 @@ CRISIS_PHRASES = (
     "khud ko nuqsan", "khatam kar doon", "مرنا چاہتا", "مرنا چاہتی", "خودکشی", "جینا نہیں چاہتا",
 )
 
+# Softer warning signs (hopelessness, passive wishes to disappear): the AI reply is kept, but the
+# helplines are always added — better one helpline too many than one too few.
+WARNING_PHRASES = (
+    "sab khatam ho jaye", "sab khatam ho jaaye", "khatam ho jaun", "khatam ho jaon", "gayab ho jaun",
+    "kuch matlab nahi", "koi faida nahi", "no point", "pointless", "disappear", "can't take it anymore",
+    "cant take it anymore", "give up on everything", "sab chhor doon", "bardasht nahi hota",
+    "سب ختم ہو جائے", "غائب ہو جاؤں", "برداشت نہیں ہوتا",
+)
+
 CRISIS_LINES = [
     {"name": "Umang Pakistan (24/7, free)", "number": "0317-4288665",
      "note": "24/7 per umang.com.pk; number as listed by MindEase — please confirm"},
@@ -79,6 +88,8 @@ Then write "reply" in the style that fits:
 - general: friendly and short, using what you remember about them.
 Write flowing, natural sentences like a caring friend who understands psychology: no lists, no headers.
 Use the person's name if the memory has it. Do not repeat the same advice you gave recently.
+In Urdu and Roman Urdu, speak about yourself with masculine verb forms ("main samajh sakta hoon") so the voice
+matches the rest of the app. Hopelessness or wishing everything would end counts as at least "medium" crisis_risk.
 "coping_tip": one short, practical tip for right now (or "" for general chat).
 "speech": if the reply language is Urdu or Roman Urdu, the same reply in Devanagari (Hindi) script keeping
 the Urdu words (it is only read aloud by a Hindi voice); otherwise ""."""
@@ -119,10 +130,20 @@ class CompanionRequest(BaseModel):
     mood: str | None = Field(default=None, max_length=30)
 
 
+HELP_NOTE = {
+    "en": "If these thoughts get heavy, you can talk to someone any time: Umang Pakistan 0317-4288665 (24/7, free).",
+    "ur": "اگر یہ خیالات بھاری ہو جائیں تو آپ کسی بھی وقت بات کر سکتے ہیں: اُمنگ پاکستان 0317-4288665 (24 گھنٹے، مفت)۔",
+    "roman_ur": "Agar yeh khayalat bhaari ho jayein to aap kisi bhi waqt baat kar sakte hain: Umang Pakistan "
+                "0317-4288665 (24 ghante, muft).",
+}
+
+
 class CompanionReply(BaseModel):
     chat_id: str
     reply: str
     crisis: bool
+    # True when helplines are shown with a normal reply (warning signs, not an emergency).
+    support_lines: bool = False
     crisis_lines: list[dict] = []
     message_type: str
     tone: str
@@ -193,6 +214,7 @@ async def companion_chat(body: CompanionRequest, request: Request, background: B
     state = {"message_type": "emotional", "mental_state": "self_harm", "severity": "crisis",
              "crisis_risk": "immediate", "emotional_tone": "hopeless", "key_concern": "", "coping_tip": "",
              "speech": ""}
+    warning = False
     if _is_crisis_text(body.message):
         reply, crisis = _crisis_reply(body.language), True
     else:
@@ -208,6 +230,9 @@ async def companion_chat(body: CompanionRequest, request: Request, background: B
         out = result.data
         state = out.model_dump(exclude={"reply"})
         crisis = out.crisis_risk in ("high", "immediate") or out.severity == "crisis"
+        low = body.message.lower()
+        warning = not crisis and (out.crisis_risk == "medium" or any(p in low for p in WARNING_PHRASES)
+                                  or (out.emotional_tone == "hopeless" and out.severity == "severe"))
         if crisis:
             reply = _crisis_reply(body.language)
             state["speech"] = ""
@@ -216,10 +241,13 @@ async def companion_chat(body: CompanionRequest, request: Request, background: B
             if reply != out.reply.strip():
                 state["speech"] = ""
             state["coping_tip"] = remove_medicine_sentences(out.coping_tip)
+            if warning:
+                reply = f"{reply} {HELP_NOTE[body.language]}"
+                state["speech"] = ""
 
     await db.companion_turns.insert_one({
         "user_id": user["_id"], "chat_id": chat["_id"], "user_message": body.message, "reply": reply,
-        "crisis": crisis, "message_type": state["message_type"], "mental_state": state["mental_state"],
+        "crisis": crisis, "warning": warning, "message_type": state["message_type"], "mental_state": state["mental_state"],
         "severity": state["severity"], "crisis_risk": state["crisis_risk"], "tone": state["emotional_tone"],
         "key_concern": state["key_concern"], "coping_tip": state["coping_tip"], "language": body.language,
         "at": now, "day": now.date().isoformat(),
@@ -229,8 +257,8 @@ async def companion_chat(body: CompanionRequest, request: Request, background: B
         await db.audit_events.insert_one({"user_id": user["_id"], "action": "companion.crisis_shown",
                                           "details": {}, "created_at": now})
     background.add_task(_compress_memory, ai, db, user["_id"])
-    return CompanionReply(chat_id=str(chat["_id"]), reply=reply, crisis=crisis,
-                          crisis_lines=CRISIS_LINES if crisis else [], message_type=state["message_type"],
+    return CompanionReply(chat_id=str(chat["_id"]), reply=reply, crisis=crisis, support_lines=warning,
+                          crisis_lines=CRISIS_LINES if crisis or warning else [], message_type=state["message_type"],
                           tone=state["emotional_tone"], severity=state["severity"],
                           coping_tip=state["coping_tip"], speech=state["speech"])
 

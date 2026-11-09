@@ -96,3 +96,14 @@ def test_chats_private(registered):
     cid = client.post("/mental/companion/chat", headers=auth_header(tokens), json={"message": "hi"}).json()["chat_id"]
     other = client.post("/auth/register", json={**VALID_USER, "email": "z@example.com"}).json()
     assert client.get(f"/mental/companion/chats/{cid}", headers=auth_header(other)).status_code == 404
+
+
+def test_warning_signs_keep_reply_but_add_helpline(registered):
+    client, tokens = registered
+    _consent(client, tokens)
+    _ai(client, _out("That sounds really heavy, Ali.", crisis_risk="low", emotional_tone="hopeless"))
+    r = client.post("/mental/companion/chat", headers=auth_header(tokens),
+                    json={"message": "kabhi lagta hai sab khatam ho jaye", "language": "roman_ur"}).json()
+    assert not r["crisis"] and r["support_lines"]
+    assert r["reply"].startswith("That sounds really heavy") and "0317-4288665" in r["reply"]
+    assert r["crisis_lines"]
