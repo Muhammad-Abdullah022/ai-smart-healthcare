@@ -107,28 +107,78 @@ class _LabFinderScreenState extends State<LabFinderScreen> {
   }
 }
 
-/// "Find a test" step: search the standard tests; each shows how many labs in the city have a price.
+/// "Find a test & prices": choose the city and the test, then see every lab's price for it.
+/// Used by Lab Test Price Comparison (feature 7) and by "Find a test" in the lab finder.
 class TestPickerScreen extends StatefulWidget {
-  const TestPickerScreen({super.key, required this.repository, required this.city});
-  final LabRepository repository;
-  final String city;
+  const TestPickerScreen({super.key, this.repository, this.city});
+  final LabRepository? repository;
+  final String? city;
 
   @override
   State<TestPickerScreen> createState() => _TestPickerScreenState();
 }
 
 class _TestPickerScreenState extends State<TestPickerScreen> {
-  late Future<List<({String key, String name, int labsWithPrice})>> _tests = widget.repository.tests(widget.city);
+  late final LabRepository _repo =
+      widget.repository ?? LabRepository(context.read<AuthProvider>().repository.api);
+  String? _cityValue;
+  Future<List<({String key, String name, int labsWithPrice})>>? _tests;
   String _q = '';
 
-  LabRepository get _repo => widget.repository;
-  String get _city => widget.city;
+  String get _city => _cityValue ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.city != null) {
+      _setCity(widget.city!);
+    } else {
+      _repo.myCity().then((c) {
+        if (!mounted) return;
+        if (c == null) {
+          _chooseCity();
+        } else {
+          _setCity(c);
+        }
+      }).catchError((_) => _chooseCity());
+    }
+  }
+
+  void _setCity(String c) => setState(() {
+        _cityValue = c;
+        _tests = _repo.tests(c);
+      });
+
+  Future<void> _chooseCity() async {
+    final c = await Navigator.of(context)
+        .push<String>(MaterialPageRoute(builder: (_) => CityPickerScreen(repository: _repo)));
+    if (c == null || !mounted) return;
+    _repo.saveCity(c).catchError((_) {});
+    _setCity(c);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Choose a test · $_city')),
-      body: _testList(),
+      appBar: AppBar(
+        title: const Text('Compare test prices'),
+        actions: [
+          TextButton.icon(
+            onPressed: _chooseCity,
+            icon: const Icon(Icons.location_on_outlined, size: 18),
+            label: Text(_cityValue ?? 'Choose city'),
+          ),
+        ],
+      ),
+      body: _tests == null
+          ? EmptyView(
+              icon: Icons.location_city_outlined,
+              title: 'Choose your city',
+              message: 'Then pick a test to see every lab\'s price.',
+              actionLabel: 'Choose city',
+              onAction: _chooseCity,
+            )
+          : _testList(),
     );
   }
 

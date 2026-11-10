@@ -8,7 +8,7 @@ import '../../models/assessment.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../services/assessment_repository.dart';
-import '../labs/booking_sheet.dart';
+import '../doctors/doctors_screens.dart';
 import '../labs/lab_options_screen.dart';
 import 'symptom_history_screen.dart';
 import 'symptom_result_screen.dart';
@@ -391,19 +391,6 @@ class SymptomResultBubble extends StatelessWidget {
                   onPressed: () => Navigator.of(context)
                       .push(MaterialPageRoute(builder: (_) => SymptomResultScreen(assessment: a))),
                 ),
-                if (a.specialistType != null)
-                  TextButton.icon(
-                    icon: const Icon(Icons.event_available_outlined, size: 18),
-                    label: Text('Book ${a.specialistType}'),
-                    onPressed: () => showBookingSheet(
-                      context,
-                      specialty: a.specialistType!,
-                      reason: [
-                        a.symptoms,
-                        if (a.possibleCauses.isNotEmpty) 'Possible: ${a.possibleCauses.first.name}',
-                      ].join(' — '),
-                    ),
-                  ),
                 if (a.testsToDiscuss.isNotEmpty)
                   TextButton.icon(
                     icon: const Icon(Icons.biotech_outlined, size: 18),
@@ -420,8 +407,61 @@ class SymptomResultBubble extends StatelessWidget {
               ],
             ),
           ),
+          if (a.specialistType != null && !a.emergency)
+            _BookPrompt(
+              specialty: a.specialistType!,
+              reason: [
+                a.symptoms,
+                if (a.possibleCauses.isNotEmpty) 'Possible: ${a.possibleCauses.first.name}',
+              ].join(' — '),
+            ),
         ],
       ),
+    );
+  }
+}
+
+/// When a doctor visit is advised: "Book an appointment?" Yes -> choose a doctor -> request is emailed.
+class _BookPrompt extends StatefulWidget {
+  const _BookPrompt({required this.specialty, required this.reason});
+  final String specialty;
+  final String reason;
+
+  @override
+  State<_BookPrompt> createState() => _BookPromptState();
+}
+
+class _BookPromptState extends State<_BookPrompt> {
+  bool _dismissed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: AppColors.accentTint, borderRadius: BorderRadius.circular(16)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.event_available_outlined, color: AppColors.accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('A visit to a ${widget.specialty} is advised. Book an appointment?',
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => DoctorListScreen(specialty: widget.specialty, reason: widget.reason, fromChat: true),
+            )),
+            child: const Text('Yes, book'),
+          ),
+          const SizedBox(width: 8),
+          TextButton(onPressed: () => setState(() => _dismissed = true), child: const Text('Not now')),
+        ]),
+      ]),
     );
   }
 }

@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.5-flash"
     xai_api_key: str = ""   # xAI Grok (keys start with "xai-")
+    # Email for appointment requests (e.g. Gmail: smtp.gmail.com, port 587, an App Password).
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+
     groq_api_key: str = ""  # Groq (keys start with "gsk_")
     groq_model: str = "llama-3.3-70b-versatile"
     ai_primary: str = "gemini"      # which provider to try first

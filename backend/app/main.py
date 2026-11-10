@@ -13,8 +13,9 @@ from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.db.mongo import create_client, ensure_indexes
 from app.labs.loader import ensure_lab_data
+from app.doctors import ensure_doctor_data
 from app.core.rate_limit import RateLimiter
-from app.routers import admin, assessments, assistant, auth, companion, consents, entries, labs, medicines, mental, notifications, profile, reports, sos
+from app.routers import admin, assessments, assistant, auth, companion, consents, doctors, entries, labs, medicines, mental, notifications, profile, reports, sos
 
 
 @asynccontextmanager
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI):
             app.state.db = client[settings.mongodb_db]
     await ensure_indexes(app.state.db)
     await ensure_lab_data(app.state.db)
+    await ensure_doctor_data(app.state.db)
     yield
     if client is not None:
         client.close()
@@ -69,10 +71,11 @@ def create_app() -> FastAPI:
     app.include_router(assistant.router)
     app.include_router(labs.router)
     app.include_router(companion.router)
+    app.include_router(doctors.router)
 
     @app.get("/health", tags=["system"])
     async def health():
-        return {"status": "ok", "version": "2026-11-09c"}
+        return {"status": "ok", "version": "2026-11-10a"}
 
     return app
 

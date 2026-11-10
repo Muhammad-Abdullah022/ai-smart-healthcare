@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/feature_forms.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/assistant/assistant_chat_screen.dart';
+import '../../screens/doctors/doctors_screens.dart';
 import '../../screens/labs/lab_finder_screen.dart';
 import '../../screens/reports/report_compare_screen.dart';
 import '../../screens/reports/reports_screen.dart';
@@ -28,7 +29,12 @@ Widget screenForFeature(int number) {
     // test suggestions and the "Why this result?" explanation.
     case 1 || 2 || 3 || 4 || 5 || 46:
       return const AssistantChatScreen();
-    case 6 || 7:
+    case 7:
+      // Ask city and test, then show every lab's price for that test.
+      return const TestPickerScreen();
+    case 10:
+      return const DoctorsIntroScreen();
+    case 6:
       // Ask first: find labs, or find a test and compare prices. (After a symptom check,
       // the suggested tests open LabOptionsScreen directly.)
       return const LabFinderScreen();

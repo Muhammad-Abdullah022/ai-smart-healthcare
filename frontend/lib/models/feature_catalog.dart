@@ -64,7 +64,8 @@ const List<HealthModule> healthModules = [
           status: FeatureStatus.available),
       HealthFeature(9, 'Report Comparison (Previous vs Current)', Icons.compare_arrows,
           status: FeatureStatus.available),
-      HealthFeature(10, 'Doctor & Specialist Recommendation', Icons.person_search_outlined),
+      HealthFeature(10, 'Doctor & Specialist Recommendation', Icons.person_search_outlined,
+          status: FeatureStatus.available),
       HealthFeature(11, 'Appointment Booking & Email', Icons.event_available_outlined,
           status: FeatureStatus.prototype,
           note: 'Uses doctors added and verified by an admin; no live clinic availability.'),
@@ -179,7 +180,12 @@ const Set<int> mergedIntoSymptomChecker = {2, 3, 4, 5};
 const Set<int> hiddenMentalFeatures = {16, 18, 19, 20, 21, 22, 23, 24, 25};
 
 /// Whether a feature appears in section lists and search.
+/// Appointment booking (11) now happens from the chat result and the doctor list, so it has no row.
+const Set<int> hiddenOtherFeatures = {11};
+
 bool isListedFeature(HealthFeature f) =>
-    !mergedIntoSymptomChecker.contains(f.number) && !hiddenMentalFeatures.contains(f.number);
+    !mergedIntoSymptomChecker.contains(f.number) &&
+    !hiddenMentalFeatures.contains(f.number) &&
+    !hiddenOtherFeatures.contains(f.number);
 
 List<HealthFeature> get allFeatures => [for (final m in healthModules) ...m.features];
