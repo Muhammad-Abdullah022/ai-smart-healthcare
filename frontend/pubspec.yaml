@@ -16,6 +16,8 @@ dependencies:
   # Talking to the FastAPI backend
   http: ^1.2.2
   http_parser: ^4.0.2
+  # Open Marham / oladoc doctor search pages
+  url_launcher: ^6.3.1
   # Secure place to keep login tokens (Android Keystore / iOS Keychain)
   flutter_secure_storage: ^9.2.2
   # Small non-secret settings (e.g. "onboarding already seen")

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
@@ -11,6 +12,62 @@ import '../../widgets/state_views.dart';
 import '../labs/lab_options_screen.dart' show CityPickerScreen;
 
 const _lime = Color(0xFFD9F35B);
+
+String _slug(String text) => text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-|-$'), '');
+
+/// Search pages on Marham and oladoc for a city and specialty. The app only links to them
+/// (nothing is copied), so the user always sees their current doctors, fees and booking.
+List<({String site, Uri url})> externalDoctorSearch(String? city, String? specialty) {
+  final c = city == null ? 'lahore' : _slug(city);
+  final sp = specialty == null ? 'general-physician' : _slug(specialty);
+  return [
+    (site: 'Marham', url: Uri.parse('https://www.marham.pk/doctors/$c/$sp')),
+    (site: 'oladoc', url: Uri.parse('https://oladoc.com/pakistan/$c/$sp')),
+  ];
+}
+
+Future<void> openExternal(BuildContext context, Uri url) async {
+  try {
+    if (await launchUrl(url, mode: LaunchMode.externalApplication)) return;
+  } catch (_) {}
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open $url')));
+  }
+}
+
+/// "More doctors" card: opens the same city + specialty on Marham or oladoc.
+class ExternalDoctorsCard extends StatelessWidget {
+  const ExternalDoctorsCard({super.key, required this.city, required this.specialty});
+  final String? city;
+  final String? specialty;
+
+  @override
+  Widget build(BuildContext context) {
+    final what = '${specialty ?? 'doctors'}${city == null ? '' : ' in $city'}';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: const Color(0xFFF7FBE6), borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: _lime)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('See all $what', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _ink)),
+        const SizedBox(height: 4),
+        const Text('Current doctors, fees and online booking on these Pakistani doctor websites.',
+            style: TextStyle(color: AppColors.textMuted, height: 1.35)),
+        const SizedBox(height: 12),
+        Wrap(spacing: 10, runSpacing: 8, children: [
+          for (final l in externalDoctorSearch(city, specialty))
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: _ink, shape: const StadiumBorder()),
+              icon: const Icon(Icons.open_in_new, size: 18),
+              label: Text('Open ${l.site}'),
+              onPressed: () => openExternal(context, l.url),
+            ),
+        ]),
+      ]),
+    );
+  }
+}
 const _ink = Color(0xFF111827);
 
 /// Feature 10 entry: a friendly intro card, then the doctor directory.
@@ -224,25 +281,23 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                 return ErrorView(message: e is ApiException ? e.message : 'Could not load doctors.', onRetry: _reload);
               }
               final list = snap.data!;
-              if (list.isEmpty) {
-                return EmptyView(
-                  icon: Icons.person_search_outlined,
-                  title: 'No doctors listed yet',
-                  message: [
-                    if (_specialty != null) 'No $_specialty',
-                    if (_city != null) 'in $_city',
-                    'in our directory yet. Try another city or "All".',
-                  ].join(' '),
-                );
-              }
-              return ListView.builder(
+              return ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                itemCount: list.length,
-                itemBuilder: (_, i) => DoctorCard(
-                  doctor: list[i],
-                  onBook: () => showDoctorBookingSheet(context,
-                      repository: _repo, doctor: list[i], reason: widget.reason, fromChat: widget.fromChat),
-                ),
+                children: [
+                  for (final d in list)
+                    DoctorCard(
+                      doctor: d,
+                      onBook: () => showDoctorBookingSheet(context,
+                          repository: _repo, doctor: d, reason: widget.reason, fromChat: widget.fromChat),
+                    ),
+                  if (list.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(4, 8, 4, 14),
+                      child: Text('No doctors in the app\'s own list here yet — see all doctors below.',
+                          style: TextStyle(color: AppColors.textMuted)),
+                    ),
+                  ExternalDoctorsCard(city: _city, specialty: _specialty),
+                ],
               );
             },
           ),
