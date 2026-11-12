@@ -37,13 +37,19 @@ Future<void> openExternal(BuildContext context, Uri url) async {
 
 /// "More doctors" card: opens the same city + specialty on Marham or oladoc.
 class ExternalDoctorsCard extends StatelessWidget {
-  const ExternalDoctorsCard({super.key, required this.city, required this.specialty});
+  const ExternalDoctorsCard({super.key, required this.city, required this.specialty, this.district});
   final String? city;
   final String? specialty;
 
+  /// The city's district. Doctor websites list doctors by district city, not by small tehsil,
+  /// so e.g. Pir Mahal opens Toba Tek Singh.
+  final String? district;
+
   @override
   Widget build(BuildContext context) {
-    final what = '${specialty ?? 'doctors'}${city == null ? '' : ' in $city'}';
+    final linkCity = district ?? city;
+    final nearby = district != null && city != null && district!.toLowerCase() != city!.toLowerCase();
+    final what = '${specialty ?? 'doctors'}${linkCity == null ? '' : ' in $linkCity'}';
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
@@ -52,11 +58,14 @@ class ExternalDoctorsCard extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('See all $what', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _ink)),
         const SizedBox(height: 4),
-        const Text('Current doctors, fees and online booking on these Pakistani doctor websites.',
-            style: TextStyle(color: AppColors.textMuted, height: 1.35)),
+        Text(
+            nearby
+                ? 'Nearest listings for $city are in $district district: current doctors, fees and online booking.'
+                : 'Current doctors, fees and online booking on these Pakistani doctor websites.',
+            style: const TextStyle(color: AppColors.textMuted, height: 1.35)),
         const SizedBox(height: 12),
         Wrap(spacing: 10, runSpacing: 8, children: [
-          for (final l in externalDoctorSearch(city, specialty))
+          for (final l in externalDoctorSearch(linkCity, specialty))
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: _ink, shape: const StadiumBorder()),
               icon: const Icon(Icons.open_in_new, size: 18),
@@ -201,11 +210,15 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   String _q = '';
   Future<List<Doctor>>? _future;
   Future<List<({String name, int doctors})>>? _specs;
+  Map<String, String> _districtOf = {};
 
   @override
   void initState() {
     super.initState();
     _specialty = widget.specialty;
+    _labs.cities().then((list) {
+      if (mounted) setState(() => _districtOf = {for (final c in list) c.city.toLowerCase(): c.district});
+    }).catchError((_) {});
     _labs.myCity().then((c) {
       if (!mounted) return;
       setState(() => _city = c);
@@ -296,7 +309,8 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                       child: Text('No doctors in the app\'s own list here yet — see all doctors below.',
                           style: TextStyle(color: AppColors.textMuted)),
                     ),
-                  ExternalDoctorsCard(city: _city, specialty: _specialty),
+                  ExternalDoctorsCard(
+                      city: _city, specialty: _specialty, district: _districtOf[_city?.toLowerCase()]),
                 ],
               );
             },
