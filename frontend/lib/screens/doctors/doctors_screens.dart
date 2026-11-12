@@ -377,7 +377,15 @@ class DoctorCard extends StatelessWidget {
               Text('Rs ${d.fee!.toStringAsFixed(0)}',
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _ink)),
               const Text('check-up fee', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-            ]),
+            ])
+          else if (d.qualification.contains('Govt'))
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: const Color(0xFFE7F6EC), borderRadius: BorderRadius.circular(10)),
+              child: const Text('Govt hospital\nOPD',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.success)),
+            ),
         ]),
         const SizedBox(height: 12),
         if (d.clinic.isNotEmpty) _line(Icons.local_hospital_outlined, d.clinic),

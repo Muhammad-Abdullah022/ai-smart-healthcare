@@ -16,6 +16,7 @@ SPECIALTIES: dict[str, list[str]] = {
     "ENT Specialist": ["ent", "ear", "nose", "throat", "otolaryng"],
     "Gastroenterologist": ["gastro", "stomach", "liver", "hepatolog"],
     "Gynecologist": ["gyn", "obstetric", "women"],
+    "Neurosurgeon": ["neurosurg"],
     "Neurologist": ["neuro", "brain", "headache"],
     "Orthopedic Surgeon": ["ortho", "bone", "joint", "fracture"],
     "Pediatrician": ["pediatric", "paediatric", "child"],
