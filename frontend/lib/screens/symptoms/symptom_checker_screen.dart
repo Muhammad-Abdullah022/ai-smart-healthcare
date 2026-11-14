@@ -394,30 +394,30 @@ class SymptomResultBubble extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 20, color: Color(0xFFEEF2F6)),
           Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
             child: Wrap(
-              spacing: 4,
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                TextButton.icon(
-                  icon: const Icon(Icons.description_outlined, size: 18),
-                  label: const Text('Full result'),
-                  onPressed: () => Navigator.of(context)
+                _ActionPill(
+                  icon: Icons.description_outlined,
+                  label: 'Full result',
+                  onTap: () => Navigator.of(context)
                       .push(MaterialPageRoute(builder: (_) => SymptomResultScreen(assessment: a))),
                 ),
                 if (a.testsToDiscuss.isNotEmpty)
-                  TextButton.icon(
-                    icon: const Icon(Icons.biotech_outlined, size: 18),
-                    label: const Text('Labs & prices'),
-                    onPressed: () => Navigator.of(context)
+                  _ActionPill(
+                    icon: Icons.biotech_outlined,
+                    label: 'Labs & prices',
+                    onTap: () => Navigator.of(context)
                         .push(MaterialPageRoute(builder: (_) => LabOptionsScreen(tests: a.testsToDiscuss))),
                   ),
                 if (a.testsToDiscuss.isNotEmpty)
-                  TextButton.icon(
-                    icon: const Icon(Icons.upload_file_outlined, size: 18),
-                    label: const Text('Add report later'),
-                    onPressed: () => GoRouter.of(context).push('/feature/8'),
+                  _ActionPill(
+                    icon: Icons.upload_file_outlined,
+                    label: 'Add report',
+                    onTap: () => GoRouter.of(context).push('/feature/8'),
                   ),
               ],
             ),
@@ -455,31 +455,85 @@ class _BookPromptState extends State<_BookPrompt> {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColors.accentTint, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primaryDeep]),
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Icon(Icons.event_available_outlined, color: AppColors.accent),
-          const SizedBox(width: 8),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(color: const Color(0x26FFFFFF), borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.event_available_outlined, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text('A visit to a ${widget.specialty} is advised. Book an appointment?',
-                style: const TextStyle(fontWeight: FontWeight.w700)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Book an appointment?',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+              const SizedBox(height: 2),
+              Text('A visit to a ${widget.specialty} is advised.',
+                  style: const TextStyle(color: Color(0xFFCBD7E6), fontSize: 13)),
+            ]),
           ),
         ]),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Row(children: [
-          FilledButton(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => DoctorListScreen(specialty: widget.specialty, reason: widget.reason, fromChat: true),
-            )),
-            child: const Text('Yes, book'),
+          Expanded(
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.primary,
+                  shape: const StadiumBorder(),
+                  minimumSize: const Size.fromHeight(44)),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => DoctorListScreen(specialty: widget.specialty, reason: widget.reason, fromChat: true),
+              )),
+              child: const Text('Yes, book', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
           ),
-          const SizedBox(width: 8),
-          TextButton(onPressed: () => setState(() => _dismissed = true), child: const Text('Not now')),
+          const SizedBox(width: 10),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            onPressed: () => setState(() => _dismissed = true),
+            child: const Text('Not now'),
+          ),
         ]),
       ]),
     );
   }
 }
+
+/// Small rounded action button under a result.
+class _ActionPill extends StatelessWidget {
+  const _ActionPill({required this.icon, required this.label, required this.onTap});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.accentTint,
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(icon, size: 17, color: AppColors.accent),
+              const SizedBox(width: 6),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.accent, fontSize: 13.5)),
+            ]),
+          ),
+        ),
+      );
+}
+
+final _urduText = RegExp(r'[؀-ۿ]');
+const _otcInk = Color(0xFF4C3FA8);
+const _otcTint = Color(0xFFF4F2FF);
 
 /// Over-the-counter options a pharmacist could suggest. Generic names only — the pharmacist or the
 /// pack gives the dose. Shown only for mild/moderate results for adults (filtered on the backend).
@@ -490,36 +544,85 @@ class _OtcCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFFF3F0FF), borderRadius: BorderRadius.circular(14)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Row(children: [
-          Icon(Icons.medication_outlined, size: 18, color: Color(0xFF6D5BD0)),
-          SizedBox(width: 6),
-          Expanded(
-            child: Text('Medicines to ask a pharmacist about',
-                style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF4C3FA8))),
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+      decoration: BoxDecoration(color: _otcTint, borderRadius: BorderRadius.circular(18)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.local_pharmacy_outlined, size: 18, color: _otcInk),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text('Ask a pharmacist about',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _otcInk)),
           ),
         ]),
-        const SizedBox(height: 6),
-        for (final o in options)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(o.name[0].toUpperCase() + o.name.substring(1),
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
-              if (o.helpsWith.isNotEmpty) Text('For: ${o.helpsWith}', style: const TextStyle(fontSize: 13)),
-              if (o.avoidIf.isNotEmpty)
-                Text('Avoid if: ${o.avoidIf}', style: const TextStyle(fontSize: 12, color: AppColors.critical)),
-            ]),
+        const SizedBox(height: 10),
+        for (final o in options) _OtcItem(option: o),
+        const SizedBox(height: 4),
+        const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(Icons.info_outline, size: 14, color: AppColors.textMuted),
+          SizedBox(width: 6),
+          Expanded(
+            child: Text('For relief only, not a prescription. The pharmacist gives the dose. '
+                'See a doctor if you are not better in 2–3 days.',
+                style: TextStyle(fontSize: 11.5, color: AppColors.textMuted, height: 1.35)),
           ),
-        const SizedBox(height: 8),
-        const Text(
-          'Over-the-counter relief only — not a prescription. Ask the pharmacist for the right dose, read the pack, '
-          'and do not combine with your other medicines without asking. See a doctor if you are not better in 2-3 days.',
-          style: TextStyle(fontSize: 11, color: AppColors.textMuted, height: 1.35),
-        ),
+        ]),
+      ]),
+    );
+  }
+}
+
+class _OtcItem extends StatelessWidget {
+  const _OtcItem({required this.option});
+  final ({String name, String helpsWith, String avoidIf}) option;
+
+  Widget _line(IconData icon, Color color, String text) {
+    final rtl = _urduText.hasMatch(text);
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(padding: const EdgeInsets.only(top: 2), child: Icon(icon, size: 16, color: color)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text,
+                textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
+                style: TextStyle(fontSize: 13.5, height: rtl ? 1.7 : 1.4, color: AppColors.text)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final o = option;
+    final name = o.name.isEmpty ? '' : o.name[0].toUpperCase() + o.name.substring(1);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          const Icon(Icons.medication_rounded, size: 18, color: _otcInk),
+          const SizedBox(width: 8),
+          Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15))),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(color: _otcTint, borderRadius: BorderRadius.circular(8)),
+            child: const Text('OTC', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: _otcInk)),
+          ),
+        ]),
+        if (o.helpsWith.isNotEmpty) _line(Icons.check_circle_rounded, AppColors.success, o.helpsWith),
+        if (o.avoidIf.isNotEmpty) _line(Icons.warning_amber_rounded, AppColors.warning, o.avoidIf),
       ]),
     );
   }
