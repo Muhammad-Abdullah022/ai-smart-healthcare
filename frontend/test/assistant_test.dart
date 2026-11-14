@@ -38,6 +38,7 @@ const _assessment = {
   'possible_causes': [],
   'next_steps': [],
   'follow_up_questions': ['Kab se bukhar hai?'],
+  'ready': false,
   'tests_to_discuss': [],
   'specialist_type': null,
   'warning_signs': [],

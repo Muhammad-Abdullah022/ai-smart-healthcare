@@ -109,3 +109,53 @@ DISCLAIMER = (
     "This is health information, not a medical diagnosis. It has not been checked by a doctor. "
     "Please see a qualified doctor for advice. In an emergency call 1122."
 )
+
+
+# Over-the-counter medicines the symptom check may mention (generic names only, never doses).
+OTC_ALLOWED = {
+    "paracetamol": ["paracetamol", "acetaminophen"],
+    "ibuprofen": ["ibuprofen"],
+    "oral rehydration salts (ORS)": ["ors", "oral rehydration"],
+    "cetirizine": ["cetirizine"],
+    "loratadine": ["loratadine"],
+    "fexofenadine": ["fexofenadine"],
+    "antacid": ["antacid"],
+    "simethicone": ["simethicone"],
+    "saline nasal spray": ["saline nasal", "saline spray"],
+    "throat lozenges": ["lozenge"],
+    "calamine lotion": ["calamine"],
+    "clotrimazole cream": ["clotrimazole"],
+    "hydrocortisone 1% cream": ["hydrocortisone"],
+    "loperamide": ["loperamide"],
+}
+_NSAIDS = {"ibuprofen"}
+
+
+def filter_otc(options: list[dict], level: str, age: int | None, allergies: list[str], conditions: list[str],
+               text: str) -> list[dict]:
+    """Keep only allowed OTC medicines, never with doses, and only when it is safe to mention them."""
+    low = text.lower()
+    if level in ("critical", "urgent") or (age is not None and age < 12):
+        return []
+    if any(w in low for w in ("pregnan", "hamla", "حمل")):
+        return []
+    allergy_text = " ".join(allergies).lower()
+    cond_text = " ".join(conditions).lower()
+    out = []
+    for o in options:
+        name = o.get("name", "").lower()
+        generic = next((g for g, words in OTC_ALLOWED.items() if any(w in name for w in words)), None)
+        if generic is None or (allergy_text and any(w in allergy_text for w in OTC_ALLOWED[generic])):
+            continue
+        if generic in _NSAIDS and (any(w in low for w in ("dengue", "blood", "khoon", "ulcer"))
+                                  or any(w in cond_text for w in ("ulcer", "kidney", "asthma"))):
+            continue
+        if generic == "loperamide" and any(w in low for w in ("blood", "khoon", "fever", "bukhar")):
+            continue
+        helps = o.get("helps_with", "")
+        avoid = o.get("avoid_if", "")
+        if _DOSE_PATTERN.search(helps) or _DOSE_PATTERN.search(avoid):
+            helps, avoid = ("" if _DOSE_PATTERN.search(helps) else helps), ("" if _DOSE_PATTERN.search(avoid) else avoid)
+        if not any(x["name"] == generic for x in out):
+            out.append({"name": generic, "helps_with": helps, "avoid_if": avoid})
+    return out[:3]

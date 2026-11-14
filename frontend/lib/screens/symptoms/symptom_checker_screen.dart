@@ -116,11 +116,11 @@ class _SymptomCheckerScreenState extends State<SymptomCheckerScreen> {
       final a = await _repo.checkSymptoms(symptoms: _symptoms!, answers: List.of(_answers));
       if (!mounted) return;
       setState(() {
-        if (!a.emergency && !_asked && a.followUpQuestions.isNotEmpty) {
-          // First round: ask the follow-up questions one by one.
+        if (!a.emergency && !a.ready && a.followUpQuestions.isNotEmpty) {
+          // The AI is still interviewing: ask its questions one by one (several rounds if needed).
+          if (!_asked) _messages.add(_Msg.bot('Thanks. A few quick questions so I understand better:'));
           _asked = true;
           _pending.addAll(a.followUpQuestions);
-          _messages.add(_Msg.bot('Thanks. A few quick questions so I understand better:'));
           _messages.add(_Msg.bot(_pending.first));
         } else {
           _messages.add(_Msg.result(a));
@@ -376,6 +376,21 @@ class SymptomResultBubble extends StatelessWidget {
                   const SizedBox(height: 8),
                   _InfoLine(icon: Icons.biotech_outlined, label: 'Tests (English)', value: a.testsToDiscuss.join(', ')),
                 ],
+                if (!critical && a.nextSteps.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Text('What you can do now', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                  const SizedBox(height: 4),
+                  for (final step in a.nextSteps.take(3))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Icon(Icons.check_circle_outline, size: 16, color: AppColors.success),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(step, style: const TextStyle(fontSize: 14))),
+                      ]),
+                    ),
+                ],
+                if (a.otcOptions.isNotEmpty) _OtcCard(options: a.otcOptions),
               ],
             ),
           ),
@@ -461,6 +476,50 @@ class _BookPromptState extends State<_BookPrompt> {
           const SizedBox(width: 8),
           TextButton(onPressed: () => setState(() => _dismissed = true), child: const Text('Not now')),
         ]),
+      ]),
+    );
+  }
+}
+
+/// Over-the-counter options a pharmacist could suggest. Generic names only — the pharmacist or the
+/// pack gives the dose. Shown only for mild/moderate results for adults (filtered on the backend).
+class _OtcCard extends StatelessWidget {
+  const _OtcCard({required this.options});
+  final List<({String name, String helpsWith, String avoidIf})> options;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: const Color(0xFFF3F0FF), borderRadius: BorderRadius.circular(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Row(children: [
+          Icon(Icons.medication_outlined, size: 18, color: Color(0xFF6D5BD0)),
+          SizedBox(width: 6),
+          Expanded(
+            child: Text('Medicines to ask a pharmacist about',
+                style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF4C3FA8))),
+          ),
+        ]),
+        const SizedBox(height: 6),
+        for (final o in options)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(o.name[0].toUpperCase() + o.name.substring(1),
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              if (o.helpsWith.isNotEmpty) Text('For: ${o.helpsWith}', style: const TextStyle(fontSize: 13)),
+              if (o.avoidIf.isNotEmpty)
+                Text('Avoid if: ${o.avoidIf}', style: const TextStyle(fontSize: 12, color: AppColors.critical)),
+            ]),
+          ),
+        const SizedBox(height: 8),
+        const Text(
+          'Over-the-counter relief only — not a prescription. Ask the pharmacist for the right dose, read the pack, '
+          'and do not combine with your other medicines without asking. See a doctor if you are not better in 2-3 days.',
+          style: TextStyle(fontSize: 11, color: AppColors.textMuted, height: 1.35),
+        ),
       ]),
     );
   }

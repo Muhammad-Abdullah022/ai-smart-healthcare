@@ -20,7 +20,7 @@ class SymptomRequest(BaseModel):
     severity: int | None = Field(default=None, ge=1, le=10)
     age: int | None = Field(default=None, ge=0, le=120)
     sex: Literal["male", "female", "other"] | None = None
-    answers: list[FollowUpAnswer] = Field(default_factory=list, max_length=10)
+    answers: list[FollowUpAnswer] = Field(default_factory=list, max_length=14)
     language: Literal["en", "ur", "roman_ur"] = "en"
 
 
@@ -32,7 +32,15 @@ class PossibleCause(BaseModel):
     reason: str = Field(max_length=400)
 
 
+class OTCOption(BaseModel):
+    """An over-the-counter medicine a pharmacist could suggest for relief. Never a dose."""
+    name: str = Field(max_length=60)
+    helps_with: str = Field(default="", max_length=200)
+    avoid_if: str = Field(default="", max_length=240)
+
+
 class AISymptomOutput(BaseModel):
+    ready: bool = True
     possible_causes: list[PossibleCause] = Field(min_length=1, max_length=5)
     triage_level: TriageLevel
     triage_reason: str = Field(max_length=400)
@@ -41,6 +49,7 @@ class AISymptomOutput(BaseModel):
     tests_to_discuss: list[str] = Field(default_factory=list, max_length=5)
     specialist_type: str | None = Field(default=None, max_length=80)
     warning_signs: list[str] = Field(default_factory=list, max_length=6)
+    otc_options: list[OTCOption] = Field(default_factory=list, max_length=4)
 
 
 # ----- What the app receives -----
@@ -59,9 +68,12 @@ class AssessmentOut(BaseModel):
     id: str
     created_at: datetime
     emergency: bool
+    # False while the AI still needs answers to its follow-up questions.
+    ready: bool = True
     triage_level: TriageLevel
     triage_reason: str
     emergency_numbers: list[dict] = []
+    otc_options: list[OTCOption] = []
     possible_causes: list[PossibleCause] = []
     next_steps: list[str] = []
     follow_up_questions: list[str] = []

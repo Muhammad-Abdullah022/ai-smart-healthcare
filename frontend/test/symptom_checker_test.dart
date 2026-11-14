@@ -29,6 +29,7 @@ Map<String, dynamic> _json({String level = 'routine', bool emergency = false}) =
             ],
       'next_steps': ['Rest and drink fluids.'],
       'follow_up_questions': emergency ? [] : ['Do you have a rash?'],
+      'ready': emergency,
       'tests_to_discuss': [],
       'specialist_type': null,
       'warning_signs': [],
@@ -78,7 +79,10 @@ void main() {
         sent.add(body);
         final reply = _json();
         // First call asks a question; second call (with answers) gives the final result.
-        if ((body['answers'] as List).isNotEmpty) reply['follow_up_questions'] = <String>[];
+        if ((body['answers'] as List).isNotEmpty) {
+          reply['follow_up_questions'] = <String>[];
+          reply['ready'] = true;
+        }
         return http.Response(jsonEncode(reply), 201);
       }),
     ));

@@ -286,13 +286,15 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
       final a = await _checks.checkSymptoms(
           symptoms: _symptoms!, answers: List.of(_answers), language: _lang?.code ?? 'en');
       if (!mounted) return;
-      if (!a.emergency && !_asked && a.followUpQuestions.isNotEmpty) {
+      if (!a.emergency && !a.ready && a.followUpQuestions.isNotEmpty) {
+        // Still interviewing: ask the next questions (several rounds if the AI needs them).
+        final first = !_asked;
         _asked = true;
         _pending.addAll(a.followUpQuestions);
         setState(() => _busy = false);
-        // Follows the reply just read, so queue instead of interrupting.
-        _botSays(_lang!.checkIntro, append: true);
-        _botSays(_pending.first, logIt: true, append: true);
+        // The first round follows the reply just read, so queue instead of interrupting.
+        if (first) _botSays(_lang!.checkIntro, append: true);
+        _botSays(_pending.first, logIt: true, append: first);
         return;
       }
       _inCheck = false;

@@ -13,7 +13,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, Request, status
 
 from app.ai.prompts import SYMPTOM_PROMPT_VERSION, SYMPTOM_SYSTEM, language_rule, symptom_user_prompt
-from app.ai.safety import DISCLAIMER, EMERGENCY_NUMBERS, check_red_flags, remove_dosing
+from app.ai.safety import DISCLAIMER, EMERGENCY_NUMBERS, check_red_flags, filter_otc, remove_dosing
 from app.ai.service import AIService, AIUnavailableError
 from app.core.config import get_settings
 from app.core.errors import ApiError
@@ -162,14 +162,23 @@ async def assess_symptoms(
         if len(next_steps) < len(output.next_steps):
             rules.append("Removed AI text that mentioned a medicine or a dose")
 
+        # Still interviewing? (The AI decides; after 8 answers it must finish.)
+        ready = output.ready or not output.follow_up_questions or len(body.answers) >= 8
+        otc = filter_otc([o.model_dump() for o in output.otc_options], level, body.age,
+                         profile.get("allergies", []), profile.get("conditions", []), all_text) if ready else []
+        if len(otc) < len(output.otc_options) and ready:
+            rules.append("Over-the-counter suggestions limited by safety rules")
+
         doc.update(
             emergency=level == "critical",
+            ready=ready,
+            otc_options=otc,
             triage_level=level,
             triage_reason=output.triage_reason,
             emergency_numbers=EMERGENCY_NUMBERS if level in ("critical", "urgent") else [],
             possible_causes=[c.model_dump() for c in output.possible_causes],
             next_steps=next_steps,
-            follow_up_questions=output.follow_up_questions,
+            follow_up_questions=[] if ready else output.follow_up_questions,
             tests_to_discuss=remove_dosing(output.tests_to_discuss, medicines=False),
             specialist_type=output.specialist_type,
             warning_signs=remove_dosing(output.warning_signs),

@@ -39,7 +39,7 @@ def test_symptom_check_returns_validated_result(registered):
     assert body["possible_causes"][0]["name"] == "Viral fever"
     assert "not a medical diagnosis" in body["disclaimer"]
     assert body["explanation"]["ai_provider"] == "gemini"
-    assert body["explanation"]["prompt_version"] == "symptom-v1"
+    assert body["explanation"]["prompt_version"] == "symptom-v2"
 
 
 def test_dosing_advice_is_removed(registered):
@@ -107,11 +107,37 @@ def test_history_is_private(registered):
 
 def test_chat_style_request_needs_only_symptoms(registered):
     client, tokens = registered
-    _use_ai(client, json.dumps(AI_REPLY))
+    _use_ai(client, json.dumps({**AI_REPLY, "ready": False}))
     r = client.post("/assessments/symptoms", headers=auth_header(tokens), json={"symptoms": "fever and body aches"})
     assert r.status_code == 201, r.text
     assert r.json()["explanation"]["inputs_used"] == ["symptoms"]
-    assert r.json()["follow_up_questions"] == ["Do you have a rash?"]
+    assert r.json()["ready"] is False and r.json()["follow_up_questions"] == ["Do you have a rash?"]
+
+
+def test_finished_result_has_no_questions_and_safe_otc(registered):
+    client, tokens = registered
+    _use_ai(client, json.dumps({**AI_REPLY, "ready": True, "otc_options": [
+        {"name": "Paracetamol", "helps_with": "fever, aches", "avoid_if": "liver disease"},
+        {"name": "Ibuprofen", "helps_with": "pain", "avoid_if": "ulcer"},
+        {"name": "Amoxicillin", "helps_with": "infection", "avoid_if": ""},
+        {"name": "Cetirizine", "helps_with": "500 mg twice daily", "avoid_if": ""}]}))
+    r = client.post("/assessments/symptoms", headers=auth_header(tokens),
+                    json={"symptoms": "fever, maybe dengue, body aches"}).json()
+    assert r["ready"] and r["follow_up_questions"] == []
+    names = [o["name"] for o in r["otc_options"]]
+    assert names == ["paracetamol", "cetirizine"]  # no antibiotic; no ibuprofen when dengue is mentioned
+    assert r["otc_options"][1]["helps_with"] == ""   # dose text removed
+
+
+def test_no_otc_when_urgent_or_child(registered):
+    client, tokens = registered
+    otc = [{"name": "paracetamol", "helps_with": "fever", "avoid_if": ""}]
+    _use_ai(client, json.dumps({**AI_REPLY, "triage_level": "urgent", "otc_options": otc}),
+            json.dumps({**AI_REPLY, "otc_options": otc}))
+    h = auth_header(tokens)
+    assert client.post("/assessments/symptoms", headers=h, json={"symptoms": "high fever"}).json()["otc_options"] == []
+    assert client.post("/assessments/symptoms", headers=h,
+                       json={"symptoms": "fever", "age": 6}).json()["otc_options"] == []
 
 
 def test_chat_answers_are_saved_with_the_result(registered):

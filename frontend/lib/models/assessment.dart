@@ -57,6 +57,8 @@ class Assessment {
     this.possibleCauses = const [],
     this.nextSteps = const [],
     this.followUpQuestions = const [],
+    this.ready = true,
+    this.otcOptions = const [],
     this.testsToDiscuss = const [],
     this.warningSigns = const [],
     this.specialistType,
@@ -75,6 +77,12 @@ class Assessment {
   final List<PossibleCause> possibleCauses;
   final List<String> nextSteps;
   final List<String> followUpQuestions;
+
+  /// False while the AI still needs answers to [followUpQuestions].
+  final bool ready;
+
+  /// Over-the-counter medicines a pharmacist could suggest (generic names, never doses).
+  final List<({String name, String helpsWith, String avoidIf})> otcOptions;
   final List<String> testsToDiscuss;
   final List<String> warningSigns;
   final String? specialistType;
@@ -101,6 +109,15 @@ class Assessment {
         ],
         nextSteps: _strings(j['next_steps']),
         followUpQuestions: _strings(j['follow_up_questions']),
+        ready: j['ready'] as bool? ?? true,
+        otcOptions: [
+          for (final o in (j['otc_options'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>())
+            (
+              name: o['name'] as String? ?? '',
+              helpsWith: o['helps_with'] as String? ?? '',
+              avoidIf: o['avoid_if'] as String? ?? '',
+            )
+        ],
         testsToDiscuss: _strings(j['tests_to_discuss']),
         warningSigns: _strings(j['warning_signs']),
         specialistType: j['specialist_type'] as String?,
