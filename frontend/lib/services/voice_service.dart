@@ -1,9 +1,16 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'dart:convert';
+
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+
+import 'api_client.dart';
 
 final _urduScript = RegExp(r'[؀-ۿ]');
 final _devanagariScript = RegExp(r'[ऀ-ॿ]');
@@ -24,6 +31,12 @@ class VoiceService {
   bool _speechReady = false;
   Future<void> _queue = Future.value();
   int _generation = 0; // bumped on stop, so queued messages are dropped
+
+  /// Natural Urdu voice (Uplift AI via the backend): returns MP3 bytes for Urdu / Roman Urdu text.
+  /// Set by the chat screens. If it fails, the device voice is used instead.
+  Future<List<int>> Function(String text, String languageCode)? urduAudio;
+  bool _urduAudioWorks = true;
+  AudioPlayer? _player;
 
   /// Turns Urdu / Roman Urdu text into Devanagari for a Hindi voice (set by the chat screen).
   Future<String?> Function(String text)? toDevanagari;
@@ -184,6 +197,12 @@ class VoiceService {
       if (gen != _generation) return;
       try {
         await _loadPrefs();
+        // 1) Natural Urdu voice for Urdu and Roman Urdu chats.
+        if (languageCode != 'en' && urduAudio != null && _urduAudioWorks && await _playUrdu(text, languageCode, gen)) {
+          return;
+        }
+        if (gen != _generation) return;
+        // 2) Device voice (Urdu, or Hindi with Devanagari, or English).
         final (say, voice, locale) = await _plan(text, languageCode);
         if (gen != _generation) return;
         await _prepare(voice, locale);
@@ -196,6 +215,35 @@ class VoiceService {
       }
     });
     return _queue;
+  }
+
+  /// Play the natural Urdu voice. Returns false (so the device voice is used) if it is not available.
+  Future<bool> _playUrdu(String text, String languageCode, int gen) async {
+    try {
+      final bytes = await urduAudio!(text, languageCode).timeout(const Duration(seconds: 25));
+      if (gen != _generation || bytes.isEmpty) return gen != _generation;
+      final player = _player ??= AudioPlayer();
+      final done = Completer<void>();
+      _current = done;
+      final sub = player.onPlayerComplete.listen((_) {
+        if (!done.isCompleted) done.complete();
+      });
+      try {
+        final source = kIsWeb
+            ? UrlSource('data:audio/mpeg;base64,${base64Encode(bytes)}')
+            : BytesSource(Uint8List.fromList(bytes));
+        await player.play(source);
+        // Long replies: wait up to ~1 s per 8 characters, plus a margin.
+        await done.future.timeout(Duration(seconds: 8 + text.length ~/ 8), onTimeout: () {});
+      } finally {
+        await sub.cancel();
+      }
+      return true;
+    } catch (e) {
+      // "not set up" or a network problem: stop trying for this session and use the device voice.
+      if (e is ApiException && (e.code == 'voice_not_configured' || e.code == 'offline')) _urduAudioWorks = false;
+      return gen != _generation;
+    }
   }
 
   bool _handlersSet = false;
@@ -257,6 +305,9 @@ class VoiceService {
     final c = _current;
     if (c != null && !c.isCompleted) c.complete();
     try {
+      await _player?.stop();
+    } catch (_) {}
+    try {
       await _tts.stop();
     } catch (_) {}
   }
@@ -295,6 +346,7 @@ class VoiceService {
 
   void dispose() {
     stopSpeaking();
+    _player?.dispose();
     stopListening();
   }
 }

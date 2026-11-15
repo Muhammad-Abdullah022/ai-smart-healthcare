@@ -26,6 +26,8 @@ dependencies:
   qr_flutter: ^4.1.0
   # AI assistant: read replies aloud, voice messages, report upload
   flutter_tts: ^4.2.0
+  # Plays the natural Urdu voice (MP3 from the backend)
+  audioplayers: ^6.1.0
   speech_to_text: ^7.0.0
   file_picker: ^8.1.2
   image_picker: ^1.1.2

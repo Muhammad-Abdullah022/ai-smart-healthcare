@@ -79,7 +79,9 @@ class _CompanionChatScreenState extends State<CompanionChatScreen> {
     _input.addListener(() => setState(() {}));
     if (widget.voice == null) {
       try {
-        _voice.toDevanagari = AssistantRepository(context.read<AuthProvider>().repository.api).speech;
+        final api = context.read<AuthProvider>().repository.api;
+        _voice.toDevanagari = AssistantRepository(api).speech;
+        _voice.urduAudio = (text, lang) => api.postForBytes('/voice/tts', {'text': text, 'language': lang});
       } catch (_) {}
     }
     if (widget.chatId != null) {

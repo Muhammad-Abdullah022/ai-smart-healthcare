@@ -122,6 +122,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
     super.initState();
     _input.addListener(() => setState(() {}));
     _voice.toDevanagari = _repo.speech;
+    _voice.urduAudio = (text, lang) => _repo.api.postForBytes('/voice/tts', {'text': text, 'language': lang});
     if (widget.chatId != null) {
       _loadChat(widget.chatId!);
     } else {

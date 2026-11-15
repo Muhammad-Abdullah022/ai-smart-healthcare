@@ -117,6 +117,28 @@ class ApiClient {
     return _decode(response);
   }
 
+  /// POST JSON and get raw bytes back (e.g. MP3 audio). Throws ApiException on errors.
+  Future<List<int>> postForBytes(String path, Object body, {bool retried = false}) async {
+    final token = await tokens.readAccessToken();
+    final request = http.Request('POST', Uri.parse('$baseUrl$path'))
+      ..headers.addAll({'Content-Type': 'application/json', if (token != null) 'Authorization': 'Bearer $token'})
+      ..body = jsonEncode(body);
+    http.Response response;
+    try {
+      final streamed = await _http.send(request).timeout(AppConfig.requestTimeout);
+      response = await http.Response.fromStream(streamed);
+    } on TimeoutException {
+      throw ApiException('The server is taking too long. Please try again.', code: 'timeout');
+    } on http.ClientException {
+      throw ApiException('Cannot reach the server. Is the backend running?', code: 'offline');
+    }
+    if (response.statusCode == 401 && !retried && await _refreshTokens()) {
+      return postForBytes(path, body, retried: true);
+    }
+    if (response.statusCode >= 400) _decode(response); // throws with the server's message
+    return response.bodyBytes;
+  }
+
   Future<bool> _refreshTokens() async {
     final refresh = await tokens.readRefreshToken();
     if (refresh == null) return false;

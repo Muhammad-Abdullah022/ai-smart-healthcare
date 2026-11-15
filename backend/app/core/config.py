@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = ""
 
+    # Uplift AI (natural Urdu text-to-speech). Keys start with "sk_api_".
+    upliftai_api_key: str = ""
+    upliftai_voice_id: str = "v_8eelc901"
+
     groq_api_key: str = ""  # Groq (keys start with "gsk_")
     groq_model: str = "llama-3.3-70b-versatile"
     ai_primary: str = "gemini"      # which provider to try first
