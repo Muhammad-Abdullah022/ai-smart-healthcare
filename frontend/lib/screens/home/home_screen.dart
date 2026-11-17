@@ -8,6 +8,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/medicine_repository.dart';
 import '../../widgets/pulse_line.dart';
 import '../../widgets/section_card.dart';
+import '../admin/admin_panel_screen.dart';
+import '../consult/doctor_panel_screens.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,6 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
+    // Three panels from one login: admin, doctor, patient.
+    if (user?.isAdmin ?? false) return const AdminPanelScreen();
+    if (user?.isDoctor ?? false) return const DoctorPanelScreen();
     return Scaffold(
       body: ListView(
         padding: EdgeInsets.zero,
@@ -54,14 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 14),
-                if (user?.roles.contains('doctor') ?? false)
-                  _BannerCard(
-                    icon: Icons.medical_services_outlined,
-                    title: 'Doctor panel',
-                    subtitle: 'Requests, payments and prescriptions — live',
-                    dark: true,
-                    onTap: () => context.push('/doctor-panel'),
-                  ),
                 _BannerCard(
                   icon: Icons.forum_outlined,
                   title: 'Online consultations',
@@ -82,14 +79,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         tint: m.tint,
                         onTap: () => context.push('/module/${m.id}'),
                       ),
-                    ),
-                  ),
-                if (!(user?.roles.contains('doctor') ?? false))
-                  Center(
-                    child: TextButton.icon(
-                      onPressed: () => context.push('/doctor-panel'),
-                      icon: const Icon(Icons.medical_services_outlined, size: 18),
-                      label: const Text('Are you a doctor? Join the doctor panel'),
                     ),
                   ),
                 const SizedBox(height: 16),

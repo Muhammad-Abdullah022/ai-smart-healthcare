@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../services/consultation_repository.dart';
 import '../../services/doctor_repository.dart';
+import '../../widgets/change_password_dialog.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/state_views.dart';
 import 'consultation_screen.dart';
@@ -265,12 +266,19 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
   DoctorPanelData? _data;
   Object? _error;
   bool _notDoctor = false;
+  bool _askedPassword = false;
   StreamSubscription? _sub;
 
   @override
   void initState() {
     super.initState();
     _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_askedPassword && mounted && (context.read<AuthProvider>().user?.mustChangePassword ?? false)) {
+        _askedPassword = true;
+        showChangePasswordDialog(context, forced: true);
+      }
+    });
     LiveEvents.instance.ensureConnected(_api);
     _sub = LiveEvents.instance.events.listen((e) {
       if (e['type'] == 'message') {
@@ -337,13 +345,11 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
     if (_notDoctor) {
       return Scaffold(
         appBar: AppBar(title: const Text('Doctor panel')),
-        body: EmptyView(
+        body: const EmptyView(
           icon: Icons.medical_services_outlined,
-          title: 'Join as a doctor',
-          message: 'Create your doctor profile to receive consultation requests from patients, '
-              'chat live, confirm payments and send prescriptions.',
-          actionLabel: 'Create doctor profile',
-          onAction: _editProfile,
+          title: 'Not a doctor account',
+          message: 'Doctor accounts are created by the administrator. Ask the admin to create your account, '
+              'then log in with the email and temporary password they give you.',
         ),
       );
     }
@@ -367,7 +373,19 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
               backgroundColor: AppColors.deep,
               foregroundColor: Colors.white,
               title: const Text('Doctor panel'),
-              actions: [IconButton(onPressed: _editProfile, icon: const Icon(Icons.edit_outlined), tooltip: 'Edit profile')],
+              actions: [
+                IconButton(onPressed: _editProfile, icon: const Icon(Icons.edit_outlined), tooltip: 'Edit profile'),
+                PopupMenuButton<String>(
+                  onSelected: (v) {
+                    if (v == 'password') showChangePasswordDialog(context);
+                    if (v == 'logout') context.read<AuthProvider>().logout();
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'password', child: Text('Change password')),
+                    PopupMenuItem(value: 'logout', child: Text('Log out')),
+                  ],
+                ),
+              ],
               flexibleSpace: FlexibleSpaceBar(background: _header(d)),
               bottom: TabBar(
                 labelColor: Colors.white,
@@ -442,10 +460,14 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
 }
 
 /// Doctor profile form: specialty, clinic, fee and the account patients pay into.
+/// Doctor profile form. Used by the doctor (edit own profile) and by the admin
+/// ([onSubmit] given; [askLogin] adds email + temporary password for a new doctor account).
 class DoctorJoinScreen extends StatefulWidget {
-  const DoctorJoinScreen({super.key, this.existing});
+  const DoctorJoinScreen({super.key, this.existing, this.onSubmit, this.askLogin = false});
 
   final Map<String, dynamic>? existing;
+  final Future<void> Function(Map<String, dynamic> body)? onSubmit;
+  final bool askLogin;
 
   @override
   State<DoctorJoinScreen> createState() => _DoctorJoinScreenState();
@@ -458,6 +480,8 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
       'timings', 'fee_pkr', 'payment_title', 'payment_account', 'experience_years', 'about'])
       k: TextEditingController(text: '${widget.existing?[k] ?? ''}'.replaceAll(RegExp(r'\.0$'), '').replaceAll('null', ''))
   };
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   late String _method = '${widget.existing?['payment_method'] ?? 'JazzCash'}';
   late String _gender = '${widget.existing?['gender'] ?? ''}';
   bool _saving = false;
@@ -467,8 +491,6 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
   void initState() {
     super.initState();
     if (widget.existing == null) {
-      final u = context.read<AuthProvider>().user;
-      _c['name']!.text = u?.fullName ?? '';
       _c['qualification']!.text = 'MBBS';
     }
     DoctorRepository(context.read<AuthProvider>().repository.api).specialties().then((s) {
@@ -481,6 +503,8 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
     for (final c in _c.values) {
       c.dispose();
     }
+    _email.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -488,7 +512,7 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
     if (!_form.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
-      await ConsultationRepository(context.read<AuthProvider>().repository.api).saveDoctorProfile({
+      final body = <String, dynamic>{
         for (final e in _c.entries)
           if (e.key != 'fee_pkr' && e.key != 'experience_years') e.key: e.value.text.trim(),
         'fee_pkr': int.tryParse(_c['fee_pkr']!.text.trim()) ?? 0,
@@ -496,7 +520,14 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
         'payment_method': _method,
         'gender': _gender,
         'available': widget.existing?['available'] ?? true,
-      });
+        if (widget.askLogin) 'email': _email.text.trim(),
+        if (widget.askLogin) 'password': _password.text,
+      };
+      if (widget.onSubmit != null) {
+        await widget.onSubmit!(body);
+      } else {
+        await ConsultationRepository(context.read<AuthProvider>().repository.api).saveDoctorProfile(body);
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) showMessage(context, '$e', error: true);
@@ -528,11 +559,39 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.existing == null ? 'Join as a doctor' : 'Doctor profile')),
+      appBar: AppBar(title: Text(widget.existing == null ? 'New doctor account' : 'Doctor profile')),
       body: Form(
         key: _form,
         child: ListView(padding: const EdgeInsets.all(16), children: [
-          _heading('About you'),
+          if (widget.askLogin) ...[
+            _heading('Login'),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: TextFormField(
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Doctor email (login)', border: OutlineInputBorder()),
+                validator: (v) => RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch((v ?? '').trim()) ? null : 'Enter a valid email',
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: TextFormField(
+                controller: _password,
+                decoration: const InputDecoration(
+                    labelText: 'Temporary password',
+                    helperText: 'Give this to the doctor. They must change it at first login.',
+                    border: OutlineInputBorder()),
+                validator: (v) {
+                  final p = v ?? '';
+                  if (p.length < 8) return 'At least 8 characters';
+                  if (!RegExp(r'[A-Za-z]').hasMatch(p) || !RegExp(r'\d').hasMatch(p)) return 'Use letters and numbers';
+                  return null;
+                },
+              ),
+            ),
+          ],
+          _heading(widget.askLogin ? 'Doctor' : 'About you'),
           _field('name', 'Full name', isRequired: true, minLength: 3),
           _field('pmdc_number', 'PMDC registration number', hint: '12345-P', isRequired: true, minLength: 3),
           Autocomplete<String>(
@@ -608,7 +667,7 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
             icon: _saving
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.check),
-            label: Text(widget.existing == null ? 'Create doctor profile' : 'Save'),
+            label: Text(widget.existing == null ? 'Create doctor account' : 'Save'),
           ),
         ]),
       ),

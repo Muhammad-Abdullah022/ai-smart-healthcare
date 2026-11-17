@@ -13,7 +13,7 @@ from app.core.security import (
     verify_password,
 )
 from app.deps import get_current_user, get_repo
-from app.models.user import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse, UserOut
+from app.models.user import ChangePasswordRequest, LoginRequest, RefreshRequest, RegisterRequest, TokenResponse, UserOut
 from app.repositories.user_repository import UserRepository
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -29,6 +29,7 @@ def user_out(user: dict) -> UserOut:
         full_name=user["full_name"],
         roles=user["roles"],
         email_verified=user["email_verified"],
+        must_change_password=bool(user.get("must_change_password")),
     )
 
 
@@ -57,6 +58,9 @@ async def login(body: LoginRequest, repo: UserRepository = Depends(get_repo)):
         await repo.audit(user["_id"] if user else None, "user.login_failed")
         # Same message for unknown email and wrong password (no account enumeration).
         raise ApiError(status.HTTP_401_UNAUTHORIZED, "invalid_credentials", "Email or password is incorrect.")
+    if user.get("disabled"):
+        raise ApiError(status.HTTP_403_FORBIDDEN, "account_disabled",
+                       "This account has been disabled. Please contact the administrator.")
     await repo.mark_login(user["_id"])
     await repo.audit(user["_id"], "user.login")
     return await _issue_tokens(repo, user)
@@ -72,7 +76,7 @@ async def refresh(body: RefreshRequest, repo: UserRepository = Depends(get_repo)
     token_hash = hash_token_id(payload["jti"])
     stored = await repo.find_active_refresh_token(token_hash)
     user = await repo.find_by_id(payload["sub"])
-    if stored is None or user is None:
+    if stored is None or user is None or user.get("disabled"):
         raise invalid
     # Rotate: the old refresh token can only be used once.
     await repo.revoke_refresh_token(token_hash)
@@ -93,3 +97,14 @@ async def logout(body: RefreshRequest, repo: UserRepository = Depends(get_repo))
 @router.get("/me", response_model=UserOut)
 async def me(user: dict = Depends(get_current_user)):
     return user_out(user)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(body: ChangePasswordRequest, user: dict = Depends(get_current_user),
+                          repo: UserRepository = Depends(get_repo)):
+    """Change the password (doctors must do this after the admin gives them a temporary one)."""
+    if not verify_password(body.current_password, user["password_hash"]):
+        raise ApiError(status.HTTP_403_FORBIDDEN, "wrong_password", "Your current password is not correct.")
+    await repo.db.users.update_one({"_id": user["_id"]}, {"$set": {
+        "password_hash": hash_password(body.new_password), "must_change_password": False}})
+    await repo.audit(user["_id"], "user.change_password")

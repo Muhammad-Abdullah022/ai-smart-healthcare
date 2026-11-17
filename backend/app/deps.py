@@ -35,6 +35,8 @@ async def get_current_user(
     user = await repo.find_by_id(payload["sub"])
     if user is None:
         raise ApiError(status.HTTP_401_UNAUTHORIZED, "invalid_token", "Please log in again.")
+    if user.get("disabled"):
+        raise ApiError(status.HTTP_401_UNAUTHORIZED, "account_disabled", "This account has been disabled.")
     return user
 
 

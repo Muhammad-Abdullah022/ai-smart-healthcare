@@ -55,6 +55,7 @@ class UserOut(BaseModel):
     full_name: str
     roles: list[str]
     email_verified: bool
+    must_change_password: bool = False
 
 
 class EmergencyContact(BaseModel):
@@ -98,3 +99,15 @@ class ProfileOut(BaseModel):
     language: str = "en"
     city: str | None = None
     notification_prefs: NotificationPrefs = NotificationPrefs()
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        if not re.search(r"[A-Za-z]", value) or not re.search(r"\d", value):
+            raise ValueError("Password must contain at least one letter and one number")
+        return value

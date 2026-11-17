@@ -11,12 +11,20 @@ JOIN = {"name": "Sara Malik", "pmdc_number": "12345-P", "specialty": "General Ph
 PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 100
 
 
+def _admin(client):
+    import asyncio
+    tokens = client.post("/auth/register", json={**DOCTOR, "email": "admin@example.com", "full_name": "Admin"}).json()
+    asyncio.run(client.app.state.db.users.update_one({"email": "admin@example.com"}, {"$set": {"roles": ["admin"]}}))
+    return auth_header(tokens)
+
+
 def _doctor(client):
-    tokens = client.post("/auth/register", json=DOCTOR).json()
-    h = auth_header(tokens)
-    r = client.put("/doctor-panel/me", headers=h, json=JOIN)
-    assert r.status_code == 200 and r.json()["name"] == "Dr. Sara Malik"
-    return tokens, h, r.json()["id"]
+    admin = _admin(client)
+    r = client.post("/admin/doctors", headers=admin, json={**JOIN, "email": DOCTOR["email"], "password": "Temp1234"})
+    assert r.status_code == 201, r.text
+    assert r.json()["name"] == "Dr. Sara Malik" and r.json()["must_change_password"]
+    tokens = client.post("/auth/login", json={"email": DOCTOR["email"], "password": "Temp1234"}).json()
+    return tokens, auth_header(tokens), r.json()["id"]
 
 
 def test_full_consultation_flow_with_live_events(registered):
@@ -80,6 +88,8 @@ def test_visit_clinic_and_privacy(registered):
     assert last["kind"] == "clinic_visit" and "1122" in last["text"] and last["meta"]["address"]
 
     other = client.post("/auth/register", json={**DOCTOR, "email": "x@example.com"}).json()
+    # A normal user cannot make themselves a doctor.
+    assert client.put("/doctor-panel/me", headers=auth_header(other), json=JOIN).status_code == 403
     assert client.get(f"/consultations/{cid}", headers=auth_header(other)).status_code == 404
     assert client.get("/doctor-panel/consultations", headers=auth_header(other)).status_code == 403
 
@@ -91,3 +101,39 @@ def test_cannot_consult_offline_doctor(registered):
     oid = asyncio.run(client.app.state.db.doctors.insert_one({"name": "Dr. X", "specialty": "General Physician"})).inserted_id
     r = client.post("/consultations", headers=h, json={"doctor_id": str(oid), "reason": "Fever"})
     assert r.status_code == 409 and r.json()["error"]["code"] == "not_online"
+
+
+def test_admin_manages_doctor_accounts(registered):
+    client, tokens = registered
+    patient = auth_header(tokens)
+    assert client.post("/admin/doctors", headers=patient, json={**JOIN, "email": "d@example.com",
+                                                                 "password": "Temp1234"}).status_code == 403
+    tokens_d, doctor, doctor_id = _doctor(client)
+    admin = auth_header(client.post("/auth/login", json={"email": "admin@example.com", "password": "Secure123"}).json())
+    assert client.post("/admin/doctors", headers=admin, json={**JOIN, "email": "dup@example.com",
+                                                               "password": "Temp1234"}).status_code == 409  # same PMDC
+    me = client.get("/auth/me", headers=doctor).json()
+    assert me["roles"] == ["doctor"] and me["must_change_password"]
+    assert client.post("/auth/change-password", headers=doctor,
+                       json={"current_password": "Temp1234", "new_password": "NewPass123"}).status_code == 204
+    assert not client.get("/auth/me", headers=doctor).json()["must_change_password"]
+    # Doctor can edit own fee.
+    assert client.put("/doctor-panel/me", headers=doctor, json={**JOIN, "fee_pkr": 2000}).json()["fee_pkr"] == 2000
+
+    rows = client.get("/admin/doctors", headers=admin).json()
+    assert rows[0]["email"] == DOCTOR["email"] and rows[0]["active"]
+    assert client.get("/admin/stats", headers=admin).json()["doctors"] == 1
+
+    r = client.post(f"/admin/doctors/{doctor_id}/status", headers=admin, json={"active": False})
+    assert r.json()["active"] is False
+    assert client.post("/auth/login", json={"email": DOCTOR["email"], "password": "NewPass123"}).status_code == 403
+    assert client.get("/auth/me", headers=doctor).status_code == 401
+    listed = client.get("/doctors", headers=patient, params={"city": "Lahore"}).json()["doctors"]
+    assert not any(d["online"] for d in listed if d["id"] == doctor_id)
+
+    client.post(f"/admin/doctors/{doctor_id}/status", headers=admin, json={"active": True})
+    assert client.post(f"/admin/doctors/{doctor_id}/reset-password", headers=admin,
+                       json={"password": "Reset1234"}).status_code == 204
+    assert client.post("/auth/login", json={"email": DOCTOR["email"], "password": "Reset1234"}).status_code == 200
+    users = client.get("/admin/users", headers=admin).json()
+    assert {"ayesha@example.com", DOCTOR["email"]} <= {u["email"] for u in users}

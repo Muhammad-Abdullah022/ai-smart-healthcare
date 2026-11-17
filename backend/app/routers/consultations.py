@@ -96,32 +96,36 @@ def _panel_out(d: dict) -> dict:
 async def _my_doctor(db, user) -> dict:
     d = await db.doctors.find_one({"user_id": user["_id"]})
     if d is None:
-        raise ApiError(status.HTTP_403_FORBIDDEN, "not_doctor", "Join the doctor panel first.")
+        raise ApiError(status.HTTP_403_FORBIDDEN, "not_doctor",
+                       "This is not a doctor account. Doctor accounts are created by the administrator.")
     return d
 
 
-@router.put("/doctor-panel/me")
-async def join_or_update(body: DoctorJoin, user: dict = Depends(get_current_user), db=Depends(get_db)):
-    """Create (first time) or update the logged-in user's doctor profile. Gives the 'doctor' role."""
+async def save_doctor_profile(db, user_id, body: DoctorJoin) -> dict:
+    """Create or update the doctor profile linked to a login (used by the admin panel and the doctor)."""
     spec = normalize_specialty(body.specialty) or body.specialty.strip().title()
     name = body.name.strip()
     if not re.match(r"^(dr|prof)\.?\s", name, re.IGNORECASE):
         name = "Dr. " + name
     data = {**body.model_dump(), "name": name, "specialty": spec, "city": body.city.strip().title(),
             "city_key": _key(body.city), "fee_pkr": float(body.fee_pkr), "email": "", "source_url": "",
-            "checked": date.today().isoformat(), "demo": False, "online": True, "user_id": user["_id"],
+            "checked": date.today().isoformat(), "demo": False, "online": True, "user_id": user_id,
             "updated_at": _now()}
-    existing = await db.doctors.find_one({"user_id": user["_id"]})
+    existing = await db.doctors.find_one({"user_id": user_id})
     if existing:
         await db.doctors.update_one({"_id": existing["_id"]}, {"$set": data})
     else:
         data["joined_at"] = _now()
         await db.doctors.insert_one(data)
-    if "doctor" not in user.get("roles", []):
-        await db.users.update_one({"_id": user["_id"]}, {"$addToSet": {"roles": "doctor"}})
-        await db.audit_events.insert_one({"user_id": user["_id"], "action": "doctor.join", "details": {},
-                                          "created_at": _now()})
-    return _panel_out(await db.doctors.find_one({"user_id": user["_id"]}))
+    return await db.doctors.find_one({"user_id": user_id})
+
+
+@router.put("/doctor-panel/me")
+async def update_my_profile(body: DoctorJoin, user: dict = Depends(get_current_user), db=Depends(get_db)):
+    """A doctor edits their own profile (fee, timings, payment account, available).
+    Doctor accounts are created only by the administrator (admin panel)."""
+    await _my_doctor(db, user)
+    return _panel_out(await save_doctor_profile(db, user["_id"], body))
 
 
 @router.get("/doctor-panel/me")
