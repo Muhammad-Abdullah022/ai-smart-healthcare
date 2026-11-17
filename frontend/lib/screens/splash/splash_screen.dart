@@ -5,7 +5,7 @@ import '../../core/config/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 
-/// First screen: brand gradient, animated logo and a short loading bar.
+/// First screen: brand gradient, centred animated logo and a small loading indicator.
 /// Checks for a saved login, then the router moves on automatically.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,11 +14,13 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..forward();
-  late final Animation<double> _logo = CurvedAnimation(parent: _c, curve: const Interval(0, 0.55, curve: Curves.easeOutBack));
-  late final Animation<double> _text = CurvedAnimation(parent: _c, curve: const Interval(0.3, 0.8, curve: Curves.easeOut));
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+  late final AnimationController _intro =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..forward();
+  late final AnimationController _pulse =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
+  late final Animation<double> _logo = CurvedAnimation(parent: _intro, curve: const Interval(0, 0.7, curve: Curves.easeOutBack));
+  late final Animation<double> _text = CurvedAnimation(parent: _intro, curve: const Interval(0.35, 1, curve: Curves.easeOut));
 
   @override
   void initState() {
@@ -33,7 +35,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    _c.dispose();
+    _intro.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
@@ -42,116 +45,146 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     return Scaffold(
       body: Container(
         width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.deep, Color(0xFF0B5C55), AppColors.green],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.deep, Color(0xFF0B4F4A), AppColors.green],
+            stops: [0, 0.55, 1],
           ),
         ),
         child: Stack(children: [
-          // Soft decorative circles.
-          Positioned(top: -80, right: -60, child: _ring(220, 0.10)),
-          Positioned(top: 120, left: -70, child: _ring(150, 0.07)),
-          Positioned(bottom: -90, left: -40, child: _blob(260, 0.10)),
-          Positioned(bottom: 140, right: -50, child: _blob(120, 0.08)),
-          SafeArea(
-            child: Column(children: [
-              const Spacer(flex: 3),
-              ScaleTransition(
-                scale: _logo,
-                child: Stack(alignment: Alignment.center, children: [
-                  Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withAlpha(25)),
-                  ),
-                  Container(
-                    width: 112,
-                    height: 112,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(34),
-                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 30, offset: const Offset(0, 12))],
-                    ),
-                    child: const Stack(alignment: Alignment.center, children: [
-                      Icon(Icons.favorite_rounded, size: 70, color: AppColors.green),
-                      Padding(
-                        padding: EdgeInsets.only(bottom: 6),
-                        child: Icon(Icons.add_rounded, size: 34, color: Colors.white),
-                      ),
-                    ]),
-                  ),
-                ]),
+          // One soft glow behind the logo — keeps the screen calm and centred.
+          Positioned.fill(
+            child: Align(
+              alignment: const Alignment(0, -0.18),
+              child: Container(
+                width: 320,
+                height: 320,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(colors: [Colors.white.withAlpha(30), Colors.white.withAlpha(0)]),
+                ),
               ),
-              const SizedBox(height: 30),
-              FadeTransition(
-                opacity: _text,
-                child: SlideTransition(
-                  position: Tween(begin: const Offset(0, 0.3), end: Offset.zero).animate(_text),
-                  child: Column(children: [
-                    const Text(
-                      AppConfig.appName,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: 0.2),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Disease assessment & patient support',
-                      style: TextStyle(color: Colors.white.withAlpha(210), fontSize: 14),
-                    ),
-                    const SizedBox(height: 18),
-                    Wrap(spacing: 8, children: [
-                      for (final t in const ['AI assistant', 'Labs & doctors', 'Mental wellness'])
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            ),
+          ),
+          Positioned.fill(
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Spacer(flex: 5),
+                    ScaleTransition(
+                      scale: _logo,
+                      child: AnimatedBuilder(
+                        animation: _pulse,
+                        builder: (_, child) => Container(
+                          padding: EdgeInsets.all(10 + 6 * _pulse.value),
                           decoration: BoxDecoration(
-                            color: AppColors.mint.withAlpha(40),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.softGreen.withAlpha(110)),
+                            shape: BoxShape.circle,
+                            color: Colors.white.withAlpha((40 * (1 - _pulse.value)).round()),
                           ),
-                          child: Text(t, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                          child: child,
                         ),
-                    ]),
-                  ]),
-                ),
-              ),
-              const Spacer(flex: 4),
-              AnimatedBuilder(
-                animation: _c,
-                builder: (_, __) => Container(
-                  width: 160,
-                  height: 5,
-                  decoration: BoxDecoration(color: Colors.white.withAlpha(45), borderRadius: BorderRadius.circular(3)),
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: _c.value.clamp(0.05, 1.0),
-                    child: Container(
-                      decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(3)),
+                        child: Container(
+                          width: 112,
+                          height: 112,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withAlpha(45), blurRadius: 28, offset: const Offset(0, 12)),
+                            ],
+                          ),
+                          child: const Stack(alignment: Alignment.center, children: [
+                            Icon(Icons.favorite_rounded, size: 64, color: AppColors.green),
+                            Padding(
+                              padding: EdgeInsets.only(bottom: 6),
+                              child: Icon(Icons.add_rounded, size: 30, color: Colors.white),
+                            ),
+                          ]),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 36),
+                    FadeTransition(
+                      opacity: _text,
+                      child: SlideTransition(
+                        position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(_text),
+                        child: Column(children: [
+                          const Text(
+                            AppConfig.appName,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            width: 36,
+                            height: 3,
+                            decoration: BoxDecoration(color: AppColors.softGreen, borderRadius: BorderRadius.circular(2)),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Your AI health companion',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white.withAlpha(215), fontSize: 15),
+                          ),
+                        ]),
+                      ),
+                    ),
+                    const Spacer(flex: 6),
+                    _Dots(controller: _pulse),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Symptoms  •  Labs  •  Doctors  •  Wellness',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white.withAlpha(170), fontSize: 12, letterSpacing: 0.3),
+                    ),
+                    const SizedBox(height: 28),
+                  ],
                 ),
               ),
-              const SizedBox(height: 14),
-              Text('Safe, simple health guidance', style: TextStyle(color: Colors.white.withAlpha(190), fontSize: 12)),
-              const SizedBox(height: 28),
-            ]),
+            ),
           ),
         ]),
       ),
     );
   }
+}
 
-  static Widget _ring(double size, double alpha) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-            shape: BoxShape.circle, border: Border.all(color: Colors.white.withAlpha((alpha * 255).round()), width: 18)),
-      );
+/// Three dots that grow and fade one after another.
+class _Dots extends StatelessWidget {
+  const _Dots({required this.controller});
+  final AnimationController controller;
 
-  static Widget _blob(double size, double alpha) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.mint.withAlpha((alpha * 255).round())),
-      );
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (_, __) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < 3; i++) ...[
+            Builder(builder: (_) {
+              final t = ((controller.value - i * 0.2) % 1.0);
+              final s = t < 0.5 ? t * 2 : (1 - t) * 2; // 0 -> 1 -> 0
+              return Container(
+                width: 8 + 4 * s,
+                height: 8 + 4 * s,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withAlpha((110 + 145 * s).round()),
+                ),
+              );
+            }),
+            if (i < 2) const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
 }
