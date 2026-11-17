@@ -43,3 +43,8 @@ Thumbs.db
 scripts/*.log
 _to_delete/
 backend/logs/
+
+# ---------- Local only (not part of the repo) ----------
+Claude outputs/
+PHC_LABS/
+*.tar.gz
