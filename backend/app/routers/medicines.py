@@ -40,6 +40,8 @@ class MedicineIn(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     confirm_allergy_override: bool = False
+    # Set when the schedule comes from a prescription the user has verified (feature 34).
+    prescription_id: str | None = None
 
     @field_validator("times")
     @classmethod
@@ -140,6 +142,12 @@ def _fields(body: MedicineIn) -> dict:
 
 @router.post("", response_model=MedicineOut, status_code=status.HTTP_201_CREATED)
 async def add_medicine(body: MedicineIn, user: dict = Depends(get_current_user), db=Depends(get_db)):
+    if body.prescription_id:
+        oid = to_object_id(body.prescription_id)
+        rx = await db.prescriptions.find_one({"_id": oid, "user_id": user["_id"]}) if oid else None
+        if rx is None or rx.get("status") != "verified":
+            raise ApiError(status.HTTP_409_CONFLICT, "prescription_not_verified",
+                           "Please check and confirm the prescription before creating reminders from it.")
     warning = await _check_allergy(db, user, body)
     doc = {"user_id": user["_id"], **_fields(body), "active": True, "allergy_warning": warning,
            "created_at": datetime.now(timezone.utc)}

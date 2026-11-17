@@ -117,6 +117,26 @@ class ApiClient {
     return _decode(response);
   }
 
+  /// GET raw bytes (e.g. a saved prescription photo). Throws ApiException on errors.
+  Future<List<int>> getBytes(String path, {bool retried = false}) async {
+    final token = await tokens.readAccessToken();
+    http.Response response;
+    try {
+      response = await _http
+          .get(Uri.parse('$baseUrl$path'), headers: {if (token != null) 'Authorization': 'Bearer $token'})
+          .timeout(AppConfig.requestTimeout);
+    } on TimeoutException {
+      throw ApiException('The server is taking too long. Please try again.', code: 'timeout');
+    } on http.ClientException {
+      throw ApiException('Cannot reach the server. Is the backend running?', code: 'offline');
+    }
+    if (response.statusCode == 401 && !retried && await _refreshTokens()) {
+      return getBytes(path, retried: true);
+    }
+    if (response.statusCode >= 400) _decode(response);
+    return response.bodyBytes;
+  }
+
   /// POST JSON and get raw bytes back (e.g. MP3 audio). Throws ApiException on errors.
   Future<List<int>> postForBytes(String path, Object body, {bool retried = false}) async {
     final token = await tokens.readAccessToken();
