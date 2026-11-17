@@ -24,7 +24,7 @@ SWITCH_NOTE = ("Same salt means the same active medicine. Before switching, chec
 
 def _brand(d: dict) -> dict:
     return {"brand": d["brand"], "generic": d["generic"], "company": d.get("company", ""),
-            "forms": d.get("forms", []), "strengths": d.get("strengths", [])}
+            "forms": d.get("forms", []), "strengths": d.get("strengths", []), "source": d.get("source", "")}
 
 
 def _generic(g: dict | None) -> dict | None:

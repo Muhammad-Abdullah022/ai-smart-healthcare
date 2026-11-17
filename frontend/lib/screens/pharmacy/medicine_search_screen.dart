@@ -233,6 +233,8 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                     style: TextStyle(color: Colors.white.withAlpha(230), fontSize: 15, fontWeight: FontWeight.w600)),
                 if (m != null && m.company.isNotEmpty)
                   Text(m.company, style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 13)),
+                if (m != null && m.source.isNotEmpty)
+                  Text('Source: ${m.source}', style: TextStyle(color: Colors.white.withAlpha(170), fontSize: 11.5)),
                 const SizedBox(height: 10),
                 Wrap(spacing: 6, runSpacing: 6, children: [
                   for (final s in [...?m?.strengths, ...?m?.forms])

@@ -6,9 +6,11 @@ class DrugBrand {
         generic = j['generic'] as String? ?? '',
         company = j['company'] as String? ?? '',
         forms = ((j['forms'] as List<dynamic>?) ?? const []).cast<String>(),
-        strengths = ((j['strengths'] as List<dynamic>?) ?? const []).cast<String>();
+        strengths = ((j['strengths'] as List<dynamic>?) ?? const []).cast<String>(),
+        source = j['source'] as String? ?? '';
 
   final String brand;
+  final String source;
   final String generic;
   final String company;
   final List<String> forms;

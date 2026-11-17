@@ -1,7 +1,8 @@
 """Medicine reference data (brands -> salt) and the pharmacy directory.
 
 data/medicines/generics.csv : one row per salt (generic): class, uses, common side effects, warnings.
-data/medicines/brands.csv   : Pakistani brand names -> salt, company, forms, strengths.
+data/medicines/brands.csv   : Pakistani brand names -> salt, company, forms, strengths (the app's list).
+data/medicines/brands_drap_2021.csv : brands from DRAP's 2021 maximum retail price list (Open Data Pakistan).
 data/pharmacies/sourced_pharmacies.csv : real pharmacies found online (with the source page).
 Every supported city also gets its government hospital pharmacy (DHQ for a district city, THQ for a tehsil)
 and a few demo pharmacies (made up, flagged demo=True, shown with a "demo" label).
@@ -21,7 +22,7 @@ DATA = Path(__file__).resolve().parents[1] / "data"
 MED_DIR = DATA / "medicines"
 PHARM_DIR = DATA / "pharmacies"
 CITIES_FILE = DATA / "labs" / "all_target_cities_tehsils.csv"
-VERSION = b"pharmacy-v1"
+VERSION = b"pharmacy-v2"
 BIG_CITIES = {"Lahore", "Faisalabad", "Rawalpindi", "Multan", "Gujranwala", "Sialkot", "Bahawalpur", "Sargodha",
               "Sahiwal", "Sheikhupura"}
 DEMO_NAMES = ["Madina Medical Store", "Al-Shifa Pharmacy", "Rehman Medicos", "City Pharmacy", "Al-Noor Medical Store",
@@ -88,12 +89,16 @@ def build_medicines() -> tuple[list[dict], list[dict]]:
     for r in _rows(MED_DIR / "generics.csv"):
         generics.append({"generic": r["generic"], "generic_key": key(r["generic"]), "drug_class": r["drug_class"],
                          "uses": r["uses"], "side_effects": r["common_side_effects"], "warnings": r["warnings"]})
-    brands = []
-    for r in _rows(MED_DIR / "brands.csv"):
-        brands.append({"brand": r["brand"], "brand_key": key(r["brand"]), "generic": r["generic"],
-                       "generic_key": key(r["generic"]), "company": r.get("company", ""),
-                       "forms": _split(r["forms"]), "strengths": _split(r["strengths"])})
-    return generics, brands
+    brands: dict[str, dict] = {}
+    # brands.csv = the app's checked list; brands_*.csv = official lists (e.g. DRAP MRP list 2021), which win.
+    for path in sorted(MED_DIR.glob("brands*.csv"), key=lambda p: p.name != "brands.csv"):
+        for r in _rows(path):
+            brands[key(r["brand"])] = {
+                "brand": r["brand"], "brand_key": key(r["brand"]), "generic": r["generic"],
+                "generic_key": key(r["generic"]), "company": r.get("company", ""),
+                "forms": _split(r["forms"]), "strengths": _split(r["strengths"]),
+                "source": r.get("source", "") or "App medicine list"}
+    return generics, list(brands.values())
 
 
 async def ensure_pharmacy_data(db) -> None:

@@ -9,10 +9,10 @@ def test_search_brand_and_salt(registered):
     client, tokens = registered
     h = auth_header(tokens)
     r = client.get("/drugs/search", headers=h, params={"q": "napro"}).json()["results"]
-    assert r[0]["brand"] == "Naprosyn" or any(x["brand"] == "Naprox" for x in r)
+    assert any(x["brand"] == "Naprox" for x in r)
     by_salt = client.get("/drugs/search", headers=h, params={"q": "paracetamol"}).json()["results"]
     assert {"Panadol", "Calpol"} <= {x["brand"] for x in by_salt}
-    assert client.get("/drugs/stats", headers=h).json()["brands"] >= 300
+    assert client.get("/drugs/stats", headers=h).json()["brands"] >= 450
 
 
 def test_same_salt_alternatives(registered):
@@ -43,3 +43,10 @@ def test_pharmacies_every_city(registered):
     assert len(small) >= 3
     assert all(x["open_24h"] for x in client.get("/pharmacies", headers=h,
                                                  params={"city": "Lahore", "open_24h": True}).json()["pharmacies"])
+
+
+def test_drap_list_brands(registered):
+    client, tokens = registered
+    d = client.get("/drugs/detail", headers=auth_header(tokens), params={"name": "Sert"}).json()
+    assert d["generic"]["generic"] == "Sertraline" and d["medicine"]["source"].startswith("DRAP")
+    assert {"Zoloft", "Kasertine", "Equasert"} <= {a["brand"] for a in d["alternatives"]}
