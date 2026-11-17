@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.models.doctor import DoctorJoin
+
 BloodGroup = Literal["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"]
 
 
@@ -111,3 +113,8 @@ class ChangePasswordRequest(BaseModel):
         if not re.search(r"[A-Za-z]", value) or not re.search(r"\d", value):
             raise ValueError("Password must contain at least one letter and one number")
         return value
+
+
+class DoctorRegisterRequest(RegisterRequest):
+    """Doctor sign-up: login details + doctor profile. Needs admin approval before login."""
+    doctor: DoctorJoin

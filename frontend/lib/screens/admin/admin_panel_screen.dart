@@ -8,6 +8,7 @@ import '../../widgets/change_password_dialog.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/state_views.dart';
 import '../consult/doctor_panel_screens.dart' show DoctorJoinScreen;
+import '../consult/issues_screen.dart';
 
 /// Admin API (backend /admin/*). Admins see names, emails and counts only — never health data.
 class AdminRepository {
@@ -23,7 +24,11 @@ class AdminRepository {
           (d as Map).cast<String, dynamic>()
       ];
 
-  Future<void> createDoctor(Map<String, dynamic> body) => api.post('/admin/doctors', body: body);
+  Future<void> approveDoctor(String id) => api.post('/admin/doctors/$id/approve');
+  Future<void> rejectDoctor(String id, String reason) =>
+      api.post('/admin/doctors/$id/reject', body: {'reason': reason});
+  Future<List<Map<String, dynamic>>> issues() async =>
+      [for (final i in await api.get('/admin/issues') as List) (i as Map).cast<String, dynamic>()];
   Future<void> updateDoctor(String id, Map<String, dynamic> body) => api.put('/admin/doctors/$id', body: body);
   Future<void> setDoctorActive(String id, bool active) =>
       api.post('/admin/doctors/$id/status', body: {'active': active});
@@ -39,7 +44,7 @@ class AdminRepository {
   Future<void> setUserActive(String id, bool active) => api.post('/admin/users/$id/status', body: {'active': active});
 }
 
-/// Admin panel: overview, doctor accounts (create / edit / disable / reset password) and users.
+/// Admin panel: approve doctor sign-ups, manage all accounts, answer reported issues.
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
 
@@ -52,6 +57,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   Map<String, dynamic>? _stats;
   List<Map<String, dynamic>>? _doctors;
   List<Map<String, dynamic>>? _users;
+  List<Map<String, dynamic>>? _issues;
   Object? _error;
   String _doctorQuery = '';
   String _userQuery = '';
@@ -64,12 +70,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   Future<void> _load() async {
     try {
-      final r = await Future.wait([_repo.stats(), _repo.doctors(q: _doctorQuery), _repo.users(q: _userQuery)]);
+      final r = await Future.wait(
+          [_repo.stats(), _repo.doctors(q: _doctorQuery), _repo.users(q: _userQuery), _repo.issues()]);
       if (!mounted) return;
       setState(() {
         _stats = r[0] as Map<String, dynamic>;
         _doctors = r[1] as List<Map<String, dynamic>>;
         _users = r[2] as List<Map<String, dynamic>>;
+        _issues = r[3] as List<Map<String, dynamic>>;
         _error = null;
       });
     } catch (e) {
@@ -77,12 +85,43 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     }
   }
 
-  Future<void> _addDoctor() async {
-    final ok = await Navigator.of(context).push<bool>(MaterialPageRoute(
-        builder: (_) => DoctorJoinScreen(askLogin: true, onSubmit: _repo.createDoctor)));
-    if (ok == true) {
-      if (mounted) showMessage(context, 'Doctor account created. Share the email and temporary password with the doctor.');
+  Future<void> _approve(Map<String, dynamic> d) async {
+    try {
+      await _repo.approveDoctor('${d['id']}');
+      if (mounted) showMessage(context, '${d['name']} approved. They can log in now.');
       _load();
+    } catch (e) {
+      if (mounted) showMessage(context, '$e', error: true);
+    }
+  }
+
+  Future<void> _reject(Map<String, dynamic> d) async {
+    final ctrl = TextEditingController(text: 'PMDC registration could not be verified.');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Reject ${d['name']}?'),
+        content: TextField(
+            controller: ctrl,
+            maxLines: 3,
+            decoration: const InputDecoration(labelText: 'Reason (shown to the doctor)', border: OutlineInputBorder())),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.critical),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Reject')),
+        ],
+      ),
+    );
+    final reason = ctrl.text.trim();
+    ctrl.dispose();
+    if (ok != true) return;
+    try {
+      await _repo.rejectDoctor('${d['id']}', reason);
+      _load();
+    } catch (e) {
+      if (mounted) showMessage(context, '$e', error: true);
     }
   }
 
@@ -147,8 +186,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         body: _error != null ? ErrorView(message: '$_error', onRetry: _load) : const LoadingView(),
       );
     }
+    final pending = (_stats!['pending_doctors'] as num?) ?? 0;
+    final openIssues = (_stats!['open_issues'] as num?) ?? 0;
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
@@ -171,21 +212,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               ],
             ),
           ],
-          bottom: const TabBar(
+          bottom: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white60,
             indicatorColor: AppColors.green,
-            tabs: [Tab(text: 'Overview'), Tab(text: 'Doctors'), Tab(text: 'Users')],
+            tabs: [
+              const Tab(text: 'Overview'),
+              Tab(text: pending > 0 ? 'Doctors ($pending new)' : 'Doctors'),
+              const Tab(text: 'Users'),
+              Tab(text: openIssues > 0 ? 'Issues ($openIssues)' : 'Issues'),
+            ],
           ),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          backgroundColor: AppColors.green,
-          foregroundColor: Colors.white,
-          onPressed: _addDoctor,
-          icon: const Icon(Icons.person_add_alt_1),
-          label: const Text('Add doctor'),
-        ),
-        body: TabBarView(children: [_overview(), _doctorsTab(), _usersTab()]),
+        body: TabBarView(children: [_overview(), _doctorsTab(), _usersTab(), _issuesTab()]),
       ),
     );
   }
@@ -217,6 +258,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           crossAxisSpacing: 10,
           childAspectRatio: 1.55,
           children: [
+            _statTile('Doctors to approve', '${s['pending_doctors'] ?? 0}', Icons.how_to_reg_outlined, AppColors.medicine),
+            _statTile('Open issues', '${s['open_issues'] ?? 0}', Icons.support_agent_outlined, AppColors.critical),
             _statTile('Patients', '${s['patients']}', Icons.people_outline, AppColors.records),
             _statTile('Doctor accounts', '${s['active_doctors']} / ${s['doctors']} active', Icons.medical_services_outlined,
                 AppColors.green),
@@ -312,15 +355,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       }),
       Expanded(
         child: list.isEmpty
-            ? EmptyView(
+            ? const EmptyView(
                 icon: Icons.medical_services_outlined,
-                title: 'No doctor accounts',
-                message: 'Tap "Add doctor" to create a doctor login. The doctor can then receive online consultations.',
-                actionLabel: 'Add doctor',
-                onAction: _addDoctor)
+                title: 'No doctors yet',
+                message: 'Doctors sign up from the register screen ("I am a doctor"). They appear here for approval.')
             : RefreshIndicator(
                 onRefresh: _load,
-                child: ListView(padding: const EdgeInsets.fromLTRB(16, 6, 16, 90), children: [
+                child: ListView(padding: const EdgeInsets.fromLTRB(16, 6, 16, 30), children: [
                   for (final d in list) _doctorTile(d),
                 ]),
               ),
@@ -329,7 +370,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   Widget _doctorTile(Map<String, dynamic> d) {
-    final active = d['active'] == true;
+    final approval = '${d['approval'] ?? 'approved'}';
+    final active = d['active'] == true && approval == 'approved';
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(13),
@@ -361,20 +403,59 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             },
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'edit', child: Text('Edit profile')),
-              const PopupMenuItem(value: 'reset', child: Text('Reset password')),
-              PopupMenuItem(value: 'toggle', child: Text(active ? 'Disable account' : 'Enable account')),
+              if (approval == 'approved') ...[
+                const PopupMenuItem(value: 'reset', child: Text('Reset password')),
+                PopupMenuItem(value: 'toggle', child: Text(active ? 'Disable account' : 'Enable account')),
+              ],
             ],
           ),
         ]),
         const SizedBox(height: 8),
         Wrap(spacing: 6, runSpacing: 6, children: [
-          _chip(active ? 'Active' : 'Disabled', active ? AppColors.green : AppColors.critical),
+          if (approval == 'pending')
+            _chip('Waiting for approval', AppColors.medicine)
+          else if (approval == 'rejected')
+            _chip('Rejected', AppColors.critical)
+          else
+            _chip(active ? 'Active' : 'Disabled', active ? AppColors.green : AppColors.critical),
           _chip('PMDC ${d['pmdc_number']}', AppColors.deep),
           _chip('Rs ${(d['fee_pkr'] as num?)?.toStringAsFixed(0) ?? '0'}', AppColors.medicine),
           _chip('${d['consultations']} consultations (${d['open_consultations']} open)', AppColors.mind),
           if (d['must_change_password'] == true) _chip('Temporary password', AppColors.warning),
           if (active && d['available'] != true) _chip('Away', AppColors.textMuted),
         ]),
+        if (approval == 'rejected' && '${d['rejection_reason'] ?? ''}'.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text('Reason: ${d['rejection_reason']}', style: const TextStyle(fontSize: 12, color: AppColors.critical)),
+          ),
+        if (approval != 'approved') ...[
+          const SizedBox(height: 10),
+          Text('Check the PMDC number ${d['pmdc_number']} before approving.',
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          const SizedBox(height: 6),
+          Row(children: [
+            Expanded(
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: AppColors.green),
+                onPressed: () => _approve(d),
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Approve'),
+              ),
+            ),
+            if (approval == 'pending') ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.critical),
+                  onPressed: () => _reject(d),
+                  icon: const Icon(Icons.close, size: 18),
+                  label: const Text('Reject'),
+                ),
+              ),
+            ],
+          ]),
+        ],
       ]),
     );
   }
@@ -398,7 +479,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       Expanded(
         child: RefreshIndicator(
           onRefresh: _load,
-          child: ListView(padding: const EdgeInsets.fromLTRB(16, 6, 16, 90), children: [
+          child: ListView(padding: const EdgeInsets.fromLTRB(16, 6, 16, 30), children: [
             for (final u in list)
               Container(
                 margin: const EdgeInsets.only(bottom: 8),
@@ -415,7 +496,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         color: AppColors.green),
                   ),
                   title: Text('${u['full_name']}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text('${u['email']} · ${(u['roles'] as List).join(', ')}'),
+                  subtitle: Text('${u['email']} · ${(u['roles'] as List).join(', ')}'
+                      '${u['approval'] == 'pending' ? ' · waiting for approval' : u['approval'] == 'rejected' ? ' · rejected' : ''}'),
                   trailing: u['id'] == me
                       ? const Text('You', style: TextStyle(color: AppColors.textMuted))
                       : Switch(
@@ -436,5 +518,32 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         ),
       ),
     ]);
+  }
+
+  // ---------------------------------------------------------------- issues
+
+  Widget _issuesTab() {
+    final list = _issues ?? const [];
+    if (list.isEmpty) {
+      return const EmptyView(
+          icon: Icons.support_agent_outlined,
+          title: 'No issues',
+          message: 'Problems reported by patients and doctors (payments, consultations, app) appear here.');
+    }
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(padding: const EdgeInsets.fromLTRB(16, 14, 16, 30), children: [
+        for (final i in list)
+          IssueTile(
+            issue: i,
+            adminView: true,
+            onTap: () async {
+              await Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => IssueThreadScreen(issue: i, adminView: true)));
+              _load();
+            },
+          ),
+      ]),
+    );
   }
 }

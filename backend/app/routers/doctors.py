@@ -35,12 +35,13 @@ def _doctor_out(d: dict) -> dict:
             "about": d.get("about", ""), "demo": bool(d.get("demo")),
             "government": "govt" in d.get("qualification", "").lower(),
             # Joined the app's doctor panel: can chat, take the fee and prescribe online.
-            "online": bool(d.get("user_id")) and d.get("available", True)}
+            "online": bool(d.get("user_id")) and d.get("available", True) and d.get("approved", True)}
 
 
 @router.get("/doctors/specialties")
-async def specialties(city: str | None = None, user: dict = Depends(get_current_user), db=Depends(get_db)):
-    """All specialties, with how many doctors each has (in the city if given)."""
+async def specialties(city: str | None = None, db=Depends(get_db)):
+    """All specialties, with how many doctors each has (in the city if given).
+    Public: the doctor sign-up form uses it before login."""
     query = {"city_key": _key(city)} if city else {}
     counts: dict[str, int] = {}
     async for d in db.doctors.find(query, {"specialty": 1}):

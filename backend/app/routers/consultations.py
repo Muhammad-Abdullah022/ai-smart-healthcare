@@ -29,6 +29,7 @@ from app.core.errors import ApiError
 from app.core.rate_limit import limit_by_user
 from app.deps import get_current_user, get_db
 from app.doctors import normalize_specialty
+from app.models.doctor import DoctorJoin  # noqa: F401  (re-exported for admin)
 from app.health.record import age_of
 from app.realtime import hub
 from app.repositories.user_repository import to_object_id
@@ -62,26 +63,6 @@ def _key(text: str) -> str:
 
 
 # ---------------------------------------------------------------- doctor panel (join / profile)
-
-class DoctorJoin(BaseModel):
-    name: str = Field(min_length=3, max_length=80)
-    pmdc_number: str = Field(min_length=3, max_length=20)
-    specialty: str = Field(min_length=3, max_length=60)
-    qualification: str = Field(default="MBBS", max_length=120)
-    city: str = Field(min_length=2, max_length=40)
-    clinic: str = Field(default="", max_length=120)
-    address: str = Field(default="", max_length=200)
-    phone: str = Field(default="", max_length=20)
-    timings: str = Field(default="", max_length=80)
-    fee_pkr: int = Field(ge=0, le=50000)
-    payment_method: Literal["JazzCash", "Easypaisa", "Bank transfer"] = "JazzCash"
-    payment_title: str = Field(min_length=2, max_length=80, description="Account holder name")
-    payment_account: str = Field(min_length=5, max_length=34, description="Mobile wallet number or IBAN")
-    experience_years: int | None = Field(default=None, ge=0, le=60)
-    gender: Literal["male", "female", ""] = ""
-    about: str = Field(default="", max_length=400)
-    available: bool = True
-
 
 def _panel_out(d: dict) -> dict:
     return {"id": str(d["_id"]), "name": d["name"], "pmdc_number": d.get("pmdc_number", ""),
@@ -273,7 +254,7 @@ async def request_consultation(body: ConsultRequest, user: dict = Depends(get_cu
     doctor = await db.doctors.find_one({"_id": oid}) if oid else None
     if doctor is None:
         raise ApiError(status.HTTP_404_NOT_FOUND, "not_found", "Doctor not found.")
-    if not doctor.get("user_id"):
+    if not doctor.get("user_id") or doctor.get("approved") is False:
         raise ApiError(status.HTTP_409_CONFLICT, "not_online",
                        "This doctor is not on the app yet. Please call the clinic or send an appointment request.")
     if doctor["user_id"] == user["_id"]:

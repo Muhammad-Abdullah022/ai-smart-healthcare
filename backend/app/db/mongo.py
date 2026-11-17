@@ -112,6 +112,7 @@ async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
     await db.doctors.create_index([("city_key", ASCENDING), ("specialty", ASCENDING)])
     await db.appointments.create_index([("user_id", ASCENDING), ("created_at", DESCENDING)])
     await db.doctors.create_index("user_id", sparse=True)
+    await db.issues.create_index([("user_id", ASCENDING), ("updated_at", DESCENDING)])
     await db.consultations.create_index([("user_id", ASCENDING), ("updated_at", DESCENDING)])
     await db.consultations.create_index([("doctor_id", ASCENDING), ("updated_at", DESCENDING)])
     await db.consult_messages.create_index([("consultation_id", ASCENDING), ("created_at", ASCENDING)])

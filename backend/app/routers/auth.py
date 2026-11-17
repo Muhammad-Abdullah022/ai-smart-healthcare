@@ -13,7 +13,7 @@ from app.core.security import (
     verify_password,
 )
 from app.deps import get_current_user, get_repo
-from app.models.user import ChangePasswordRequest, LoginRequest, RefreshRequest, RegisterRequest, TokenResponse, UserOut
+from app.models.user import ChangePasswordRequest, DoctorRegisterRequest, LoginRequest, RefreshRequest, RegisterRequest, TokenResponse, UserOut
 from app.repositories.user_repository import UserRepository
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -58,6 +58,13 @@ async def login(body: LoginRequest, repo: UserRepository = Depends(get_repo)):
         await repo.audit(user["_id"] if user else None, "user.login_failed")
         # Same message for unknown email and wrong password (no account enumeration).
         raise ApiError(status.HTTP_401_UNAUTHORIZED, "invalid_credentials", "Email or password is incorrect.")
+    if user.get("approval") == "pending":
+        raise ApiError(status.HTTP_403_FORBIDDEN, "pending_approval",
+                       "Your doctor account is waiting for the administrator's approval. "
+                       "You can log in after it is approved.")
+    if user.get("approval") == "rejected":
+        reason = user.get("rejection_reason") or "Please contact the administrator."
+        raise ApiError(status.HTTP_403_FORBIDDEN, "rejected", f"Your doctor account was not approved. {reason}")
     if user.get("disabled"):
         raise ApiError(status.HTTP_403_FORBIDDEN, "account_disabled",
                        "This account has been disabled. Please contact the administrator.")
@@ -108,3 +115,30 @@ async def change_password(body: ChangePasswordRequest, user: dict = Depends(get_
     await repo.db.users.update_one({"_id": user["_id"]}, {"$set": {
         "password_hash": hash_password(body.new_password), "must_change_password": False}})
     await repo.audit(user["_id"], "user.change_password")
+
+
+@router.post("/register-doctor", status_code=status.HTTP_202_ACCEPTED,
+             dependencies=[limit_by_ip("register", 5, 600)])
+async def register_doctor(body: DoctorRegisterRequest, repo: UserRepository = Depends(get_repo)):
+    """A doctor signs up. The account stays 'pending' (cannot log in) until an admin approves it."""
+    from app.routers.consultations import save_doctor_profile
+    from app.routers.notifications import notify
+
+    db = repo.db
+    if await db.doctors.find_one({"pmdc_number": body.doctor.pmdc_number.strip(), "user_id": {"$exists": True}}):
+        raise ApiError(status.HTTP_409_CONFLICT, "pmdc_taken", "A doctor with this PMDC number is already registered.")
+    user = await repo.create_user(body.email, hash_password(body.password), body.full_name)
+    if user is None:
+        raise ApiError(status.HTTP_409_CONFLICT, "email_taken", "An account with this email already exists.")
+    await db.users.update_one({"_id": user["_id"]}, {"$set": {"roles": ["doctor"], "approval": "pending"}})
+    profile = body.doctor.model_copy(update={"available": False})
+    await save_doctor_profile(db, user["_id"], profile)
+    await db.doctors.update_one({"user_id": user["_id"]}, {"$set": {"approved": False}})
+    await repo.audit(user["_id"], "doctor.register")
+    async for admin in db.users.find({"roles": "admin"}, {"_id": 1}):
+        await notify(db, admin["_id"], "doctor_signup", "New doctor waiting for approval",
+                     f"{body.doctor.name} ({body.doctor.specialty}, {body.doctor.city}) — PMDC {body.doctor.pmdc_number}",
+                     link="/admin")
+    return {"pending": True,
+            "message": "Thank you! Your doctor account was sent to the administrator. "
+                       "You can log in after it is approved."}

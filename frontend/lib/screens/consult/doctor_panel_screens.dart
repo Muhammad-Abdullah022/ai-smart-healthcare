@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -266,19 +267,13 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
   DoctorPanelData? _data;
   Object? _error;
   bool _notDoctor = false;
-  bool _askedPassword = false;
   StreamSubscription? _sub;
 
   @override
   void initState() {
     super.initState();
     _load();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_askedPassword && mounted && (context.read<AuthProvider>().user?.mustChangePassword ?? false)) {
-        _askedPassword = true;
-        showChangePasswordDialog(context, forced: true);
-      }
-    });
+
     LiveEvents.instance.ensureConnected(_api);
     _sub = LiveEvents.instance.events.listen((e) {
       if (e['type'] == 'message') {
@@ -348,8 +343,8 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
         body: const EmptyView(
           icon: Icons.medical_services_outlined,
           title: 'Not a doctor account',
-          message: 'Doctor accounts are created by the administrator. Ask the admin to create your account, '
-              'then log in with the email and temporary password they give you.',
+          message: 'Doctors sign up from the register screen ("I am a Doctor"). '
+              'The administrator approves the account before the doctor can log in.',
         ),
       );
     }
@@ -378,9 +373,11 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
                 PopupMenuButton<String>(
                   onSelected: (v) {
                     if (v == 'password') showChangePasswordDialog(context);
+                    if (v == 'issues') context.push('/issues');
                     if (v == 'logout') context.read<AuthProvider>().logout();
                   },
                   itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'issues', child: Text('Help & issues')),
                     PopupMenuItem(value: 'password', child: Text('Change password')),
                     PopupMenuItem(value: 'logout', child: Text('Log out')),
                   ],
@@ -490,9 +487,7 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.existing == null) {
-      _c['qualification']!.text = 'MBBS';
-    }
+    if (_c['qualification']!.text.isEmpty) _c['qualification']!.text = 'MBBS';
     DoctorRepository(context.read<AuthProvider>().repository.api).specialties().then((s) {
       if (mounted) setState(() => _specialties = [for (final x in s) x.name]);
     }).catchError((_) {});
@@ -559,7 +554,7 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.existing == null ? 'New doctor account' : 'Doctor profile')),
+      appBar: AppBar(title: Text(widget.existing?['id'] == null ? 'Doctor details' : 'Doctor profile')),
       body: Form(
         key: _form,
         child: ListView(padding: const EdgeInsets.all(16), children: [
@@ -667,7 +662,7 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
             icon: _saving
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.check),
-            label: Text(widget.existing == null ? 'Create doctor account' : 'Save'),
+            label: Text(widget.existing?['id'] == null ? 'Send for approval' : 'Save'),
           ),
         ]),
       ),

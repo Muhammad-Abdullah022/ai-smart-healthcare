@@ -16,6 +16,7 @@ import '../../services/report_repository.dart' show mimeTypeFor;
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/state_views.dart';
 import '../prescriptions/prescription_result_screen.dart';
+import 'issues_screen.dart';
 import 'prescribe_sheet.dart';
 
 /// Live chat between a patient and a doctor, with the consultation steps
@@ -302,17 +303,24 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                   color: LiveEvents.instance.connected ? AppColors.green : AppColors.textMuted, size: 20),
             ),
           ),
-          if (c.summary.open && c.isDoctor && const {'paid', 'advised', 'visit_clinic'}.contains(c.status))
-            PopupMenuButton<String>(
-              onSelected: (v) async {
-                if (v == 'close' &&
-                    await showConfirmDialog(context,
-                        title: 'Close consultation?', message: 'The chat will become read-only.', confirmLabel: 'Close')) {
-                  await _run(() => _repo.complete(widget.id));
-                }
-              },
-              itemBuilder: (_) => const [PopupMenuItem(value: 'close', child: Text('Close consultation'))],
-            ),
+          PopupMenuButton<String>(
+            onSelected: (v) async {
+              if (v == 'issue') {
+                await showReportIssueSheet(context,
+                    consultationId: widget.id, category: c.status.contains('pay') ? 'payment' : 'consultation');
+              }
+              if (v == 'close' &&
+                  await showConfirmDialog(context,
+                      title: 'Close consultation?', message: 'The chat will become read-only.', confirmLabel: 'Close')) {
+                await _run(() => _repo.complete(widget.id));
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'issue', child: Text('Report a problem to admin')),
+              if (c.summary.open && c.isDoctor && const {'paid', 'advised', 'visit_clinic'}.contains(c.status))
+                const PopupMenuItem(value: 'close', child: Text('Close consultation')),
+            ],
+          ),
         ],
       ),
       body: Column(children: [

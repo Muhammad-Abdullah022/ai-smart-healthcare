@@ -6,7 +6,9 @@ import '../../providers/auth_provider.dart';
 import '../../screens/auth/forgot_password_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
+import '../../screens/admin/admin_panel_screen.dart';
 import '../../screens/consult/consultation_screen.dart';
+import '../../screens/consult/issues_screen.dart';
 import '../../screens/consult/doctor_panel_screens.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/home/main_shell.dart';
@@ -26,10 +28,14 @@ import 'feature_screens.dart';
 const _publicRoutes = {'/onboarding', '/login', '/register', '/forgot-password'};
 
 /// Decides where the user is allowed to be. Kept separate so it can be unit tested.
+/// The patient app's tabs. Doctors and admins have their own panels instead.
+const _patientTabs = {'/home', '/records', '/notifications', '/profile'};
+
 String? authRedirect({
   required AuthStatus status,
   required bool onboardingSeen,
   required String location,
+  String home = '/home',
 }) {
   if (status == AuthStatus.unknown) {
     return location == '/splash' ? null : '/splash';
@@ -40,7 +46,11 @@ String? authRedirect({
     return '/login';
   }
   // Logged in: keep the user out of splash / login / onboarding.
-  if (location == '/splash' || _publicRoutes.contains(location)) return '/home';
+  // Three panels from one login: /admin, /doctor-panel, or the patient app (/home).
+  if (location == '/splash' || _publicRoutes.contains(location)) return home;
+  if (home != '/home' && _patientTabs.contains(location)) return home;
+  if (home == '/home' && (location == '/admin' || location == '/doctor-panel')) return '/home';
+  if (home == '/doctor-panel' && location == '/admin') return home;
   return null;
 }
 
@@ -52,6 +62,11 @@ GoRouter createRouter(AuthProvider auth) {
       status: auth.status,
       onboardingSeen: auth.onboardingSeen,
       location: state.matchedLocation,
+      home: (auth.user?.isAdmin ?? false)
+          ? '/admin'
+          : (auth.user?.isDoctor ?? false)
+              ? '/doctor-panel'
+              : '/home',
     ),
     routes: [
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
@@ -78,6 +93,8 @@ GoRouter createRouter(AuthProvider auth) {
       GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
       GoRoute(path: '/consultations', builder: (_, __) => const MyConsultationsScreen()),
       GoRoute(path: '/doctor-panel', builder: (_, __) => const DoctorPanelScreen()),
+      GoRoute(path: '/admin', builder: (_, __) => const AdminPanelScreen()),
+      GoRoute(path: '/issues', builder: (_, __) => const MyIssuesScreen()),
       GoRoute(
         path: '/consultation/:id',
         builder: (_, state) => ConsultationScreen(id: state.pathParameters['id']!),

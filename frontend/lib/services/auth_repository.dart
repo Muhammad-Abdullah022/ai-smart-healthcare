@@ -23,6 +23,21 @@ class AuthRepository {
     await _saveTokens(data);
   }
 
+  /// Doctor sign-up: no login until the admin approves (backend returns 202, no tokens).
+  Future<void> registerDoctor({
+    required String fullName,
+    required String email,
+    required String password,
+    required Map<String, dynamic> doctor,
+  }) =>
+      api.post('/auth/register-doctor', auth: false, body: {
+        'full_name': fullName,
+        'email': email,
+        'password': password,
+        'accepted_terms': true,
+        'doctor': doctor,
+      });
+
   Future<void> login({required String email, required String password}) async {
     final data = await api.post('/auth/login',
         auth: false, body: {'email': email, 'password': password}) as Map<String, dynamic>;

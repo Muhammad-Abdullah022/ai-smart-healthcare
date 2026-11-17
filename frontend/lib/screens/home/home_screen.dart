@@ -8,8 +8,6 @@ import '../../providers/auth_provider.dart';
 import '../../services/medicine_repository.dart';
 import '../../widgets/pulse_line.dart';
 import '../../widgets/section_card.dart';
-import '../admin/admin_panel_screen.dart';
-import '../consult/doctor_panel_screens.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,9 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    // Three panels from one login: admin, doctor, patient.
-    if (user?.isAdmin ?? false) return const AdminPanelScreen();
-    if (user?.isDoctor ?? false) return const DoctorPanelScreen();
     return Scaffold(
       body: ListView(
         padding: EdgeInsets.zero,
@@ -64,6 +59,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: 'Online consultations',
                   subtitle: 'Chat with a doctor, pay, get your prescription',
                   onTap: () => context.push('/consultations'),
+                ),
+                _BannerCard(
+                  icon: Icons.support_agent_outlined,
+                  title: 'Help & issues',
+                  subtitle: 'Report a payment, doctor or app problem to the admin',
+                  onTap: () => context.push('/issues'),
                 ),
                 const SectionTitle('Your health areas'),
                 for (final m in healthModules)

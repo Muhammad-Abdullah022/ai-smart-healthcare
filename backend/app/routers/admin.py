@@ -1,19 +1,22 @@
-"""Admin panel (task C-11): the administrator creates and manages doctor accounts and sees app totals.
+"""Admin panel (task C-11): approves doctor sign-ups, manages all accounts, handles reported issues.
 
-Admins never see patients' health data or chats — only counts, names and emails.
+Admins never see patients' health data or chats — only counts, names, emails and the issues users send.
 The first admin is made on the PC with RUN\\MAKE_ADMIN.bat (scripts/make_admin.py).
 """
 import re
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, status
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
+from app.core.config import get_settings
 from app.core.errors import ApiError
+from app.core.mailer import MailNotConfigured, send_mail
 from app.core.security import hash_password
 from app.deps import get_db, require_roles
-from app.repositories.user_repository import UserRepository, to_object_id
+from app.repositories.user_repository import to_object_id
 from app.routers.consultations import DoctorJoin, _panel_out, save_doctor_profile
+from app.routers.notifications import notify
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 admin_only = require_roles("admin")
@@ -23,13 +26,6 @@ def _strong(value: str) -> str:
     if not re.search(r"[A-Za-z]", value) or not re.search(r"\d", value):
         raise ValueError("Password must contain at least one letter and one number")
     return value
-
-
-class DoctorAccountIn(DoctorJoin):
-    email: EmailStr
-    password: str = Field(min_length=8, max_length=128, description="Temporary password; the doctor changes it")
-
-    _check = field_validator("password")(classmethod(lambda cls, v: _strong(v)))
 
 
 class ResetPasswordIn(BaseModel):
@@ -59,6 +55,8 @@ async def stats(_: dict = Depends(admin_only), db=Depends(get_db)):
         "users": await db.users.count_documents({}),
         "patients": await db.users.count_documents({"roles": "patient"}),
         "doctors": await db.doctors.count_documents({"user_id": {"$exists": True}}),
+        "pending_doctors": await db.users.count_documents({"approval": "pending"}),
+        "open_issues": await db.issues.count_documents({"status": {"$ne": "resolved"}}),
         "active_doctors": await db.doctors.count_documents({"user_id": {"$exists": True}, "available": True}),
         "listed_doctors": await db.doctors.count_documents({"user_id": {"$exists": False}}),
         "consultations": sum(by_status.values()),
@@ -77,6 +75,8 @@ async def _doctor_row(db, d: dict) -> dict:
     active = await db.consultations.count_documents(
         {"doctor_id": d["_id"], "status": {"$nin": ["completed", "declined", "cancelled"]}})
     return {**_panel_out(d), "email": user.get("email", ""), "active": not user.get("disabled", False),
+            "approval": user.get("approval", "approved"), "rejection_reason": user.get("rejection_reason", ""),
+            "joined_at": d.get("joined_at"),
             "must_change_password": bool(user.get("must_change_password")),
             "last_login": user.get("last_login"), "consultations": total, "open_consultations": active}
 
@@ -87,25 +87,54 @@ async def list_doctors(q: str | None = None, _: dict = Depends(admin_only), db=D
     if q:
         rx = re.compile(re.escape(q.strip()), re.IGNORECASE)
         query["$or"] = [{"name": rx}, {"specialty": rx}, {"city": rx}, {"pmdc_number": rx}]
-    return [await _doctor_row(db, d) async for d in db.doctors.find(query).sort("joined_at", -1).limit(500)]
+    rows = [await _doctor_row(db, d) async for d in db.doctors.find(query).sort("joined_at", -1).limit(500)]
+    order = {"pending": 0, "approved": 1, "rejected": 2}
+    rows.sort(key=lambda r: order.get(r["approval"], 1))  # waiting for approval first
+    return rows
 
 
-@router.post("/doctors", status_code=status.HTTP_201_CREATED)
-async def create_doctor(body: DoctorAccountIn, admin: dict = Depends(admin_only), db=Depends(get_db)):
-    """Create a doctor login (email + temporary password) and the doctor's profile in one step."""
-    if await db.doctors.find_one({"pmdc_number": body.pmdc_number.strip(), "user_id": {"$exists": True}}):
-        raise ApiError(status.HTTP_409_CONFLICT, "pmdc_taken", "A doctor with this PMDC number already exists.")
-    repo = UserRepository(db)
-    name = body.name.strip()
-    user = await repo.create_user(str(body.email), hash_password(body.password), name)
-    if user is None:
-        raise ApiError(status.HTTP_409_CONFLICT, "email_taken", "An account with this email already exists.")
-    await db.users.update_one({"_id": user["_id"]}, {"$set": {
-        "roles": ["doctor"], "must_change_password": True, "created_by": admin["_id"]}})
-    profile = DoctorJoin(**body.model_dump(exclude={"email", "password"}))
-    d = await save_doctor_profile(db, user["_id"], profile)
-    await _audit(db, admin, "admin.create_doctor", {"doctor_id": str(d["_id"])})
-    return await _doctor_row(db, d)
+class RejectIn(BaseModel):
+    reason: str = Field(default="", max_length=300)
+
+
+async def _tell_doctor(db, user: dict, subject: str, text: str) -> None:
+    """Email the doctor (if email sending is set up) and leave an in-app notification."""
+    await notify(db, user["_id"], "account", subject, text)
+    try:
+        await send_mail(get_settings(), user["email"], subject, text)
+    except MailNotConfigured:
+        pass
+    except Exception as exc:  # network problem: the in-app notification is enough
+        print(f"[mail] {exc}")
+
+
+@router.post("/doctors/{doctor_id}/approve")
+async def approve_doctor(doctor_id: str, admin: dict = Depends(admin_only), db=Depends(get_db)):
+    d = await _get_doctor(db, doctor_id)
+    await db.users.update_one({"_id": d["user_id"]}, {"$set": {"approval": "approved", "disabled": False},
+                                                      "$unset": {"rejection_reason": ""}})
+    await db.doctors.update_one({"_id": d["_id"]}, {"$set": {"approved": True, "available": True,
+                                                             "approved_at": datetime.now(timezone.utc)}})
+    user = await db.users.find_one({"_id": d["user_id"]})
+    await _tell_doctor(db, user, "Your doctor account is approved",
+                       f"Dear {d['name']},\n\nYour doctor account on AI Smart Healthcare has been approved. "
+                       "You can now log in and receive online consultations.")
+    await _audit(db, admin, "admin.approve_doctor", {"doctor_id": doctor_id})
+    return await _doctor_row(db, await _get_doctor(db, doctor_id))
+
+
+@router.post("/doctors/{doctor_id}/reject")
+async def reject_doctor(doctor_id: str, body: RejectIn, admin: dict = Depends(admin_only), db=Depends(get_db)):
+    d = await _get_doctor(db, doctor_id)
+    await db.users.update_one({"_id": d["user_id"]}, {"$set": {"approval": "rejected",
+                                                               "rejection_reason": body.reason.strip()}})
+    await db.doctors.update_one({"_id": d["_id"]}, {"$set": {"approved": False, "available": False}})
+    await db.refresh_tokens.update_many({"user_id": d["user_id"]}, {"$set": {"revoked": True}})
+    user = await db.users.find_one({"_id": d["user_id"]})
+    await _tell_doctor(db, user, "Your doctor account was not approved",
+                       f"Dear {d['name']},\n\nYour doctor account was not approved. {body.reason}".strip())
+    await _audit(db, admin, "admin.reject_doctor", {"doctor_id": doctor_id})
+    return await _doctor_row(db, await _get_doctor(db, doctor_id))
 
 
 async def _get_doctor(db, doctor_id: str) -> dict:
@@ -156,7 +185,7 @@ async def list_users(q: str | None = None, limit: int = Query(200, ge=1, le=500)
         rx = re.compile(re.escape(q.strip()), re.IGNORECASE)
         query["$or"] = [{"full_name": rx}, {"email": rx}]
     return [{"id": str(u["_id"]), "full_name": u["full_name"], "email": u["email"], "roles": u.get("roles", []),
-             "active": not u.get("disabled", False), "created_at": u.get("created_at"),
+             "active": not u.get("disabled", False), "approval": u.get("approval", ""), "created_at": u.get("created_at"),
              "last_login": u.get("last_login")}
             async for u in db.users.find(query).sort("created_at", -1).limit(limit)]
 
