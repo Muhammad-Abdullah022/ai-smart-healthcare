@@ -14,6 +14,10 @@ PyJWT==2.10.1
 httpx==0.28.1
 # File uploads (medical reports)
 python-multipart==0.0.20
+# Health record PDF (locked with the user's password)
+reportlab>=4.2
+pypdf>=5.0
+cryptography>=43
 # In-memory database for quick local runs (USE_MEMORY_DB=true) and tests
 mongomock-motor==0.0.34
 

@@ -127,17 +127,18 @@ const List<HealthModule> healthModules = [
   HealthModule(
     id: 'records',
     title: 'Health Records & Patient Care',
-    subtitle: 'EHR, history, family, QR passport',
+    subtitle: 'Health record, risk, trends, smartwatch',
     icon: Icons.folder_shared_outlined,
     color: AppColors.records,
     tint: AppColors.recordsTint,
     features: [
-      HealthFeature(38, 'Electronic Health Records', Icons.folder_open_outlined),
+      HealthFeature(38, 'My Health Record (history, PDF & QR)', Icons.folder_open_outlined,
+          status: FeatureStatus.available),
       HealthFeature(39, 'Medical History', Icons.history_edu_outlined),
-      HealthFeature(40, 'Future Health Risk Prediction', Icons.trending_up),
+      HealthFeature(40, 'Future Health Risk & Recommendations', Icons.trending_up,
+          status: FeatureStatus.available),
       HealthFeature(41, 'Health Trends & Analytics', Icons.show_chart, status: FeatureStatus.available),
-      HealthFeature(42, 'Smartwatch / Wearable Monitoring', Icons.watch_outlined,
-          status: FeatureStatus.prototype, note: 'Needs Health Connect and a supported wearable.'),
+      HealthFeature(42, 'Smartwatch (Bluetooth)', Icons.watch_outlined, status: FeatureStatus.available),
       HealthFeature(43, 'Family & Caregiver Management', Icons.family_restroom),
       HealthFeature(44, 'Emergency Medical Passport (QR)', Icons.qr_code_2, status: FeatureStatus.available),
       HealthFeature(45, 'Personalized Health Recommendations', Icons.recommend_outlined),
@@ -183,7 +184,7 @@ const Set<int> hiddenMentalFeatures = {16, 18, 19, 20, 21, 22, 23, 24, 25};
 
 /// Whether a feature appears in section lists and search.
 /// Appointment booking (11) now happens from the chat result and the doctor list, so it has no row.
-const Set<int> hiddenOtherFeatures = {11, 14, 15, 27, 32, 34, 35, 36, 37};
+const Set<int> hiddenOtherFeatures = {11, 14, 15, 27, 32, 34, 35, 36, 37, 39, 43, 45, 46, 47, 49, 50};
 
 bool isListedFeature(HealthFeature f) =>
     !mergedIntoSymptomChecker.contains(f.number) &&

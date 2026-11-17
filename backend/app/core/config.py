@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     # Uplift AI (natural Urdu text-to-speech). Keys start with "sk_api_".
     upliftai_api_key: str = ""
     upliftai_voice_id: str = "v_8eelc901"
+    # Address phones use to open shared links (QR codes), e.g. http://192.168.1.5:8000. Empty = this server.
+    public_base_url: str = ""
 
     groq_api_key: str = ""  # Groq (keys start with "gsk_")
     groq_model: str = "llama-3.3-70b-versatile"

@@ -5,6 +5,10 @@ import '../../models/feature_forms.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/assistant/assistant_chat_screen.dart';
 import '../../screens/doctors/doctors_screens.dart';
+import '../../screens/health/health_record_screen.dart';
+import '../../screens/health/health_risk_screen.dart';
+import '../../screens/health/health_trends_screen.dart';
+import '../../screens/health/smartwatch_screen.dart';
 import '../../screens/labs/lab_finder_screen.dart';
 import '../../screens/reports/report_compare_screen.dart';
 import '../../screens/reports/reports_screen.dart';
@@ -73,6 +77,14 @@ Widget screenForFeature(int number) {
       return const PrescriptionReaderScreen();
     case 32 || 33 || 35 || 36:
       return const MedicinesScreen();
+    case 38 || 39 || 50:
+      return const HealthRecordScreen();
+    case 40 || 45:
+      return const HealthRiskScreen();
+    case 41:
+      return const HealthTrendsScreen();
+    case 42:
+      return const SmartwatchScreen();
     case 48:
       return const ConsentScreen();
     case 44:
