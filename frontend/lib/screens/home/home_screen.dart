@@ -53,6 +53,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     Expanded(child: _QuickAction(Icons.monitor_heart_outlined, 'Readings', 41, AppColors.records, AppColors.recordsTint)),
                   ],
                 ),
+                const SizedBox(height: 14),
+                if (user?.roles.contains('doctor') ?? false)
+                  _BannerCard(
+                    icon: Icons.medical_services_outlined,
+                    title: 'Doctor panel',
+                    subtitle: 'Requests, payments and prescriptions — live',
+                    dark: true,
+                    onTap: () => context.push('/doctor-panel'),
+                  ),
+                _BannerCard(
+                  icon: Icons.forum_outlined,
+                  title: 'Online consultations',
+                  subtitle: 'Chat with a doctor, pay, get your prescription',
+                  onTap: () => context.push('/consultations'),
+                ),
                 const SectionTitle('Your health areas'),
                 for (final m in healthModules)
                   Padding(
@@ -69,7 +84,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                const SizedBox(height: 24),
+                if (!(user?.roles.contains('doctor') ?? false))
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () => context.push('/doctor-panel'),
+                      icon: const Icon(Icons.medical_services_outlined, size: 18),
+                      label: const Text('Are you a doctor? Join the doctor panel'),
+                    ),
+                  ),
+                const SizedBox(height: 16),
                 const Text(
                   'Health information only — not a diagnosis. In an emergency call 1122.',
                   textAlign: TextAlign.center,
@@ -240,6 +263,54 @@ class _QuickAction extends StatelessWidget {
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, height: 1.25, color: AppColors.text)),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+
+class _BannerCard extends StatelessWidget {
+  const _BannerCard(
+      {required this.icon, required this.title, required this.subtitle, required this.onTap, this.dark = false});
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool dark;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = dark ? Colors.white : AppColors.deep;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: dark ? AppColors.deep : AppColors.mint,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: dark ? Colors.white12 : Colors.white, borderRadius: BorderRadius.circular(14)),
+                child: Icon(icon, color: dark ? Colors.white : AppColors.green),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5, color: fg)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: TextStyle(fontSize: 12.5, color: dark ? Colors.white70 : AppColors.textMuted)),
+                ]),
+              ),
+              Icon(Icons.chevron_right, color: fg),
+            ]),
+          ),
         ),
       ),
     );

@@ -415,8 +415,19 @@ class DoctorCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.deep)),
                     ),
-                    const Text('See details',
-                        style: TextStyle(fontSize: 11.5, color: AppColors.green, fontWeight: FontWeight.w600)),
+                    if (d.online)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: AppColors.green, borderRadius: BorderRadius.circular(20)),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.circle, size: 7, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text('Online', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w700)),
+                        ]),
+                      )
+                    else
+                      const Text('See details',
+                          style: TextStyle(fontSize: 11.5, color: AppColors.green, fontWeight: FontWeight.w600)),
                   ]),
                   const SizedBox(height: 2),
                   Text(d.specialty,

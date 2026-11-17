@@ -1,0 +1,93 @@
+import json
+
+from app.ai.service import AIService
+from tests.conftest import auth_header
+from tests.test_ai import FakeProvider
+
+DOCTOR = {"full_name": "Sara Malik", "email": "drsara@example.com", "password": "Secure123", "accepted_terms": True}
+JOIN = {"name": "Sara Malik", "pmdc_number": "12345-P", "specialty": "General Physician", "city": "Lahore",
+        "clinic": "Malik Clinic", "address": "12 Main Blvd, Gulberg", "phone": "0300-0000000", "timings": "5-9 pm",
+        "fee_pkr": 1500, "payment_method": "JazzCash", "payment_title": "Sara Malik", "payment_account": "03001234567"}
+PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 100
+
+
+def _doctor(client):
+    tokens = client.post("/auth/register", json=DOCTOR).json()
+    h = auth_header(tokens)
+    r = client.put("/doctor-panel/me", headers=h, json=JOIN)
+    assert r.status_code == 200 and r.json()["name"] == "Dr. Sara Malik"
+    return tokens, h, r.json()["id"]
+
+
+def test_full_consultation_flow_with_live_events(registered):
+    client, tokens = registered
+    patient = auth_header(tokens)
+    doc_tokens, doctor, doctor_id = _doctor(client)
+    listed = client.get("/doctors", headers=patient, params={"city": "Lahore"}).json()["doctors"]
+    assert listed[0]["id"] == doctor_id and listed[0]["online"]
+
+    with client.websocket_connect(f"/ws?token={doc_tokens['access_token']}") as ws:
+        assert ws.receive_json()["type"] == "hello"
+        c = client.post("/consultations", headers=patient, json={"doctor_id": doctor_id, "reason": "Fever for 3 days"})
+        assert c.status_code == 201
+        cid = c.json()["id"]
+        event = ws.receive_json()
+        assert event["type"] == "message" and event["message"]["text"] == "Fever for 3 days"
+
+    panel = client.get("/doctor-panel/consultations", headers=doctor).json()
+    assert panel["stats"]["new"] == 1
+    # No payment details and no prescription before the doctor accepts and is paid.
+    assert "payment" not in client.get(f"/consultations/{cid}", headers=patient).json()
+    rx = {"medicines": [{"name": "Panadol", "strength": "500 mg", "how_to_take": "1 tablet three times a day",
+                         "duration_days": 3}]}
+    assert client.post(f"/consultations/{cid}/prescribe", headers=doctor, json=rx).status_code == 409
+    assert client.post(f"/consultations/{cid}/accept", headers=patient).status_code == 403
+
+    assert client.post(f"/consultations/{cid}/accept", headers=doctor).json()["status"] == "awaiting_payment"
+    detail = client.get(f"/consultations/{cid}", headers=patient).json()
+    assert detail["payment"]["account"] == "03001234567" and detail["payment"]["amount_pkr"] == 1500
+
+    client.app.state.ai = AIService([FakeProvider("gemini", [json.dumps(
+        {"looks_like_payment": True, "app": "JazzCash", "amount_pkr": 1500, "transaction_id": "TID998877",
+         "paid_to": "Sara Malik", "date": "17 Nov 2026"})])], retry_delay=0)
+    pay = client.post(f"/consultations/{cid}/payment", headers=patient, files={"file": ("pay.png", PNG, "image/png")})
+    assert pay.status_code == 200 and pay.json()["meta"]["amount_matches"]
+    assert pay.json()["meta"]["transaction_id"] == "TID998877"
+    file_id = pay.json()["meta"]["file_id"]
+    assert client.get(f"/consultations/{cid}/files/{file_id}", headers=doctor).content == PNG
+
+    assert client.post(f"/consultations/{cid}/payment/verify", headers=doctor, json={"ok": True}).json()["status"] == "paid"
+    r = client.post(f"/consultations/{cid}/prescribe", headers=doctor, json=rx)
+    assert r.status_code == 200
+    got = client.get(f"/prescriptions/{r.json()['prescription_id']}", headers=patient).json()
+    assert got["status"] == "needs_review" and got["reading"]["medicines"][0]["name"] == "Panadol"
+
+    msgs = client.get(f"/consultations/{cid}", headers=patient).json()["messages"]
+    assert [m["kind"] for m in msgs][-1] == "prescription"
+    assert client.post(f"/consultations/{cid}/messages", headers=patient, json={"text": "Thank you"}).status_code == 201
+
+
+def test_visit_clinic_and_privacy(registered):
+    client, tokens = registered
+    patient = auth_header(tokens)
+    _, doctor, doctor_id = _doctor(client)
+    cid = client.post("/consultations", headers=patient, json={"doctor_id": doctor_id, "reason": "Chest pain",
+                                                               "share_assessment": True}).json()["id"]
+    r = client.post(f"/consultations/{cid}/visit-clinic", headers=doctor,
+                    json={"urgency": "emergency", "reason": "Chest pain needs an ECG now"})
+    assert r.json()["status"] == "visit_clinic"
+    last = client.get(f"/consultations/{cid}", headers=patient).json()["messages"][-1]
+    assert last["kind"] == "clinic_visit" and "1122" in last["text"] and last["meta"]["address"]
+
+    other = client.post("/auth/register", json={**DOCTOR, "email": "x@example.com"}).json()
+    assert client.get(f"/consultations/{cid}", headers=auth_header(other)).status_code == 404
+    assert client.get("/doctor-panel/consultations", headers=auth_header(other)).status_code == 403
+
+
+def test_cannot_consult_offline_doctor(registered):
+    client, tokens = registered
+    h = auth_header(tokens)
+    import asyncio
+    oid = asyncio.run(client.app.state.db.doctors.insert_one({"name": "Dr. X", "specialty": "General Physician"})).inserted_id
+    r = client.post("/consultations", headers=h, json={"doctor_id": str(oid), "reason": "Fever"})
+    assert r.status_code == 409 and r.json()["error"]["code"] == "not_online"

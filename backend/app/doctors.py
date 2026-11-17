@@ -78,7 +78,8 @@ async def ensure_doctor_data(db) -> None:
                     # Made-up profile for the demo (demo_doctors.csv); the app labels it "Demo profile".
                     "demo": r.get("demo", "").lower() in ("yes", "true", "1"),
                 })
-    await db.doctors.delete_many({})
+    # Keep doctors who joined through the app (they have a login); only replace the imported lists.
+    await db.doctors.delete_many({"user_id": {"$exists": False}})
     if docs:
         await db.doctors.insert_many(docs)
     await db.meta.update_one({"_id": "doctor_data"}, {"$set": {"sha256": digest, "count": len(docs),

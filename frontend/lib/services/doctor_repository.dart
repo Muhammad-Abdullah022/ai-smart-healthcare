@@ -19,7 +19,8 @@ class Doctor {
         gender = j['gender'] as String? ?? '',
         about = j['about'] as String? ?? '',
         demo = j['demo'] as bool? ?? false,
-        government = j['government'] as bool? ?? false;
+        government = j['government'] as bool? ?? false,
+        online = j['online'] as bool? ?? false;
 
   final String id;
   final String name;
@@ -43,6 +44,9 @@ class Doctor {
 
   /// From the official Punjab government consultants list.
   final bool government;
+
+  /// Joined the app's doctor panel: live chat, fee by screenshot, online prescription.
+  final bool online;
 
   String get initials {
     final parts = name.replaceAll(RegExp(r'^(Dr\.?|Prof\.?)\s+', caseSensitive: false), '').split(' ');

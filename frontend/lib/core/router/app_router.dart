@@ -6,6 +6,8 @@ import '../../providers/auth_provider.dart';
 import '../../screens/auth/forgot_password_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
+import '../../screens/consult/consultation_screen.dart';
+import '../../screens/consult/doctor_panel_screens.dart';
 import '../../screens/home/home_screen.dart';
 import '../../screens/home/main_shell.dart';
 import '../../screens/modules/module_screen.dart';
@@ -74,6 +76,12 @@ GoRouter createRouter(AuthProvider auth) {
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       GoRoute(path: '/settings/consent', builder: (_, __) => const ConsentScreen()),
       GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
+      GoRoute(path: '/consultations', builder: (_, __) => const MyConsultationsScreen()),
+      GoRoute(path: '/doctor-panel', builder: (_, __) => const DoctorPanelScreen()),
+      GoRoute(
+        path: '/consultation/:id',
+        builder: (_, state) => ConsultationScreen(id: state.pathParameters['id']!),
+      ),
       GoRoute(
         path: '/module/:id',
         builder: (_, state) => ModuleScreen(moduleId: state.pathParameters['id']!),

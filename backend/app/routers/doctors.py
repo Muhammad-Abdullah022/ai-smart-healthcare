@@ -33,7 +33,9 @@ def _doctor_out(d: dict) -> dict:
             "source_url": d["source_url"], "checked": d["checked"],
             "experience_years": d.get("experience_years"), "gender": d.get("gender", ""),
             "about": d.get("about", ""), "demo": bool(d.get("demo")),
-            "government": "govt" in d.get("qualification", "").lower()}
+            "government": "govt" in d.get("qualification", "").lower(),
+            # Joined the app's doctor panel: can chat, take the fee and prescribe online.
+            "online": bool(d.get("user_id")) and d.get("available", True)}
 
 
 @router.get("/doctors/specialties")
@@ -70,7 +72,8 @@ async def list_doctors(city: str | None = None, specialty: str | None = None, q:
         query["$or"] = [{"name": rx}, {"clinic": rx}, {"address": rx}]
     docs = [d async for d in db.doctors.find(query).limit(limit)]
     # Real (government list) doctors first, then demo profiles; within each, lower fee first.
-    docs.sort(key=lambda d: (bool(d.get("demo")), d["fee_pkr"] is None, d["fee_pkr"] or 0, d["name"]))
+    # Doctors on the app (online consultation) first, then real (government list), then demo profiles.
+    docs.sort(key=lambda d: (not d.get("user_id"), bool(d.get("demo")), d["fee_pkr"] is None, d["fee_pkr"] or 0, d["name"]))
     return {"specialty": spec, "doctors": [_doctor_out(d) for d in docs]}
 
 

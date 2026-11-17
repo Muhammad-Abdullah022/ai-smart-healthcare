@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../services/doctor_repository.dart';
+import '../consult/doctor_panel_screens.dart';
 import 'doctors_screens.dart';
 
 /// Doctor profile: large avatar on soft circles, name, fee, experience, details and "Get Appointment".
@@ -82,6 +83,7 @@ class DoctorDetailScreen extends StatelessWidget {
                     _pill(Icons.work_outline_rounded,
                         d.experienceYears != null ? '${d.experienceYears} years' : 'Consultant'),
                     if (d.government) _pill(Icons.account_balance_outlined, 'Govt. of Punjab'),
+                    if (d.online) _pill(Icons.forum_outlined, 'Online consultation'),
                     if (d.demo) _pill(Icons.info_outline, 'Demo profile', warn: true),
                   ]),
                   const SizedBox(height: 16),
@@ -137,6 +139,10 @@ class DoctorDetailScreen extends StatelessWidget {
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
                   onPressed: () async {
+                    if (d.online) {
+                      await showConsultRequestSheet(context, doctor: d, reason: reason, fromChat: fromChat);
+                      return;
+                    }
                     final booked = await showDoctorBookingSheet(context,
                         repository: repository, doctor: d, reason: reason, fromChat: fromChat);
                     // From the chat: go back to the chat (profile and list) after booking.
@@ -146,11 +152,21 @@ class DoctorDetailScreen extends StatelessWidget {
                         ..pop();
                     }
                   },
-                  child: const Text('Get Appointment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  child: Text(d.online ? 'Consult online now' : 'Get Appointment',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 ),
               ),
             ),
           ),
+          if (d.online)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: TextButton(
+                onPressed: () => showDoctorBookingSheet(context,
+                    repository: repository, doctor: d, reason: reason, fromChat: fromChat),
+                child: const Text('Or request a clinic appointment'),
+              ),
+            ),
         ]),
       ),
     );

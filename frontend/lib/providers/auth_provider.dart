@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/auth_repository.dart';
+import '../services/consultation_repository.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
@@ -76,6 +77,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    LiveEvents.instance.disconnect();
     await _repo.logout();
     user = null;
     status = AuthStatus.unauthenticated;
