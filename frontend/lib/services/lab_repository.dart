@@ -8,7 +8,7 @@ class DemoPrices {
 
   static Future<bool> enabled() async {
     try {
-      return (await SharedPreferences.getInstance()).getBool(_key) ?? false;
+      return (await SharedPreferences.getInstance()).getBool(_key) ?? true;
     } catch (_) {
       return false;
     }
@@ -35,7 +35,9 @@ class LabOffer {
         checked = j['checked'] as String? ?? '',
         notes = j['notes'] as String? ?? '',
         branches = j['branches'] as int? ?? 1,
-        demo = j['demo'] as bool? ?? false;
+        demo = j['demo'] as bool? ?? false,
+        phoneDemo = j['phone_demo'] as bool? ?? false,
+        addressDemo = j['address_demo'] as bool? ?? false;
 
   final String lab;
   final String branch;
@@ -54,8 +56,12 @@ class LabOffer {
   /// How many branches this lab has in the city.
   final int branches;
 
-  /// A made-up demo price (only when "Demo prices" is on). Never a real price.
+  /// An estimated demo price (only when "Estimated prices" is on). Never a real published price.
   final bool demo;
+
+  /// The lab did not publish a phone / street address; the app shows a demo one (flagged).
+  final bool phoneDemo;
+  final bool addressDemo;
 }
 
 class TestLabs {

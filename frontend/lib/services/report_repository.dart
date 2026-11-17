@@ -1,7 +1,16 @@
 import 'api_client.dart';
 
 class ReportValue {
-  ReportValue({required this.name, required this.value, required this.unit, required this.range, required this.flag});
+  ReportValue(
+      {required this.name,
+      required this.value,
+      required this.unit,
+      required this.range,
+      required this.flag,
+      this.flagSource = 'ai',
+      this.standardRange = '',
+      this.about = '',
+      this.critical = false});
 
   factory ReportValue.fromJson(Map<String, dynamic> j) => ReportValue(
         name: j['name'] as String? ?? '',
@@ -9,6 +18,10 @@ class ReportValue {
         unit: j['unit'] as String? ?? '',
         range: j['reference_range'] as String? ?? '',
         flag: j['flag'] as String? ?? 'unknown',
+        flagSource: j['flag_source'] as String? ?? 'ai',
+        standardRange: j['standard_range'] as String? ?? '',
+        about: j['about'] as String? ?? '',
+        critical: j['critical'] as bool? ?? false,
       );
 
   final String name;
@@ -16,6 +29,12 @@ class ReportValue {
   final String unit;
   final String range;
   final String flag; // low / normal / high / unknown
+  /// Where low/normal/high came from: "report" (range printed on the report, checked by code),
+  /// "standard" (standard adult range, checked by code) or "ai".
+  final String flagSource;
+  final String standardRange;
+  final String about;
+  final bool critical;
 
   bool get abnormal => flag == 'low' || flag == 'high';
 }

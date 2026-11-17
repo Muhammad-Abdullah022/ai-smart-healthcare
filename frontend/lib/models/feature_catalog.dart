@@ -181,7 +181,7 @@ const Set<int> hiddenMentalFeatures = {16, 18, 19, 20, 21, 22, 23, 24, 25};
 
 /// Whether a feature appears in section lists and search.
 /// Appointment booking (11) now happens from the chat result and the doctor list, so it has no row.
-const Set<int> hiddenOtherFeatures = {11};
+const Set<int> hiddenOtherFeatures = {11, 14, 15};
 
 bool isListedFeature(HealthFeature f) =>
     !mergedIntoSymptomChecker.contains(f.number) &&

@@ -109,7 +109,7 @@ class SettingsScreen extends StatelessWidget {
 }
 
 
-/// Switch for made-up lab prices used in demos (Okara and Sahiwal). Off by default.
+/// Switch for estimated (demo) lab prices for labs that do not publish prices. On by default.
 class _DemoPricesRow extends StatefulWidget {
   const _DemoPricesRow();
 
@@ -132,8 +132,8 @@ class _DemoPricesRowState extends State<_DemoPricesRow> {
   Widget build(BuildContext context) {
     return ListRow(
       icon: Icons.science_outlined,
-      title: 'Demo lab prices',
-      subtitle: 'Made-up prices for Okara and Sahiwal labs, for demos. Always marked "not real".',
+      title: 'Estimated lab prices',
+      subtitle: 'Shows an estimated (demo) price for labs that have not published prices. Always marked "demo".',
       color: const Color(0xFFC2410C),
       tint: const Color(0xFFFFEDD5),
       trailing: Switch(

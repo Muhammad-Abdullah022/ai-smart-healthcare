@@ -9,6 +9,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, Field
 
+from app.ai.diseases import reference_notes
 from app.ai.prompts import language_rule
 from app.ai.safety import EMERGENCY_NUMBERS, check_red_flags, remove_medicine_sentences
 from app.ai.service import AIUnavailableError
@@ -26,6 +27,8 @@ Rules:
 - You are NOT a doctor: never diagnose, never name a medicine to take, never give doses.
 - If the user describes their own symptoms, give general guidance and set suggest_symptom_check to true.
 - If anything sounds urgent, tell them to see a doctor today or call 1122.
+- Reference notes from the app's disease knowledge base may follow the message; use them for accurate facts
+  (symptoms, danger signs, tests, which doctor). For other diseases use general medical knowledge.
 - Reply as JSON: {"reply": "...", "suggest_symptom_check": true|false, "speech": "..."}
 - "speech": if the conversation language is Urdu or Roman Urdu, write the SAME reply in Devanagari
   (Hindi) script, keeping the Urdu words and pronunciation (e.g. "mashwara", "takleef"), because a
@@ -124,6 +127,9 @@ async def chat(body: ChatRequest, request: Request, user: dict = Depends(get_cur
     else:
         history = "\n".join(f"{m['role']}: {m['text']}" for m in convo["messages"][-10:])
         prompt = (f"Conversation so far:\n{history}\n\n" if history else "") + f"user: {body.message}"
+        notes = reference_notes(body.message, limit=3)
+        if notes:
+            prompt += "\n\n" + notes
         try:
             result = await get_ai_service(request).generate(
                 AIChatOutput, ASSISTANT_SYSTEM + language_rule(body.language), prompt)

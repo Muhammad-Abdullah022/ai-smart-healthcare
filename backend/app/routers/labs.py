@@ -26,7 +26,7 @@ async def cities(user: dict = Depends(get_current_user), db=Depends(get_db)):
     return sorted(out, key=lambda c: (-c["labs"], c["city"]))
 
 
-DEMO_NOTE = "Demo price — made up for the app demo, not a real price. Ask the lab."
+DEMO_NOTE = "Estimated price (demo) — not published by the lab. Ask the lab for the real price."
 
 
 @router.get("/tests")
@@ -66,7 +66,8 @@ async def lab_options(city: str, tests: list[str] = Query(default=[]), other_lim
         return {"lab": first.get("lab_name", fallback_name),
                 "branch": f"{n} branches in {city}" if n > 1 else first.get("branch", ""),
                 "address": first.get("address", "") + (" (one of the branches)" if n > 1 else ""),
-                "phone": first.get("phone", ""), "lab_type": first.get("lab_type", ""), "branches": n}
+                "phone": first.get("phone", ""), "lab_type": first.get("lab_type", ""), "branches": n,
+                "phone_demo": bool(first.get("phone_demo")), "address_demo": bool(first.get("address_demo"))}
 
     results = []
     for asked in tests[:8]:
@@ -93,7 +94,7 @@ async def lab_options(city: str, tests: list[str] = Query(default=[]), other_lim
                 seen.add(o["lab"])
                 unique.append(o)
         results.append({"asked": asked, "family": fam, "name_en": ENGLISH_NAME.get(fam, asked),
-                        "offers": unique[:12] if demo else unique[:5]})
+                        "offers": unique[:40] if demo else unique[:5]})
 
     priced_labs = {o["lab"] for r in results for o in r["offers"]}
     other_labs = []

@@ -4,6 +4,7 @@ Run locally with:
     uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 Then open http://localhost:8000/docs to try the API.
 """
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -18,12 +19,21 @@ from app.core.rate_limit import RateLimiter
 from app.routers import admin, assessments, assistant, auth, companion, consents, doctors, voice, entries, labs, medicines, mental, notifications, profile, reports, sos
 
 
+async def _import_data(db) -> None:
+    for step in (ensure_lab_data, ensure_doctor_data):
+        try:
+            await step(db)
+        except Exception as exc:  # keep the server running; the import is retried at the next start
+            print(f"[data import] {step.__name__} failed: {exc!r}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
     client = None
     # Tests put a fake database on app.state before starting, so we skip connecting.
-    if not hasattr(app.state, "db"):
+    testing = hasattr(app.state, "db")
+    if not testing:
         if settings.use_memory_db:
             # Development only: an in-memory database, emptied on every restart.
             from mongomock_motor import AsyncMongoMockClient
@@ -36,8 +46,13 @@ async def lifespan(app: FastAPI):
             client = create_client(settings.mongodb_uri)
             app.state.db = client[settings.mongodb_db]
     await ensure_indexes(app.state.db)
-    await ensure_lab_data(app.state.db)
-    await ensure_doctor_data(app.state.db)
+    if testing:
+        await ensure_lab_data(app.state.db)
+        await ensure_doctor_data(app.state.db)
+    else:
+        # Importing lab/doctor data can take a minute on a slow connection (only when the CSV files
+        # change), so it runs in the background and the server answers right away.
+        app.state.import_task = asyncio.create_task(_import_data(app.state.db))
     yield
     if client is not None:
         client.close()
@@ -76,7 +91,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health", tags=["system"])
     async def health():
-        return {"status": "ok", "version": "2026-11-15a"}
+        return {"status": "ok", "version": "2026-11-17a"}
 
     return app
 

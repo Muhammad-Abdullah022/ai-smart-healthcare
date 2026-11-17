@@ -625,7 +625,7 @@ class _Bubble extends StatelessWidget {
             bottomLeft: Radius.circular(user ? 18 : 4),
             bottomRight: Radius.circular(user ? 4 : 18),
           ),
-          border: user ? null : Border.all(color: item.emergency ? AppColors.critical : const Color(0xFFE9EEF4)),
+          border: user ? null : Border.all(color: item.emergency ? AppColors.critical : const Color(0xFFDDEFD9)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Flexible(

@@ -1,6 +1,7 @@
 """Features 10 and 11: doctor directory (Punjab) and appointment requests sent to the doctor by email.
 
-Only doctors from the data files (backend/data/doctors) are shown — nothing is invented.
+Doctors come from the data files (backend/data/doctors): the official Punjab government list, plus
+made-up demo profiles (demo_doctors.csv) that the app always labels "Demo profile".
 Booking needs the user's confirmation; the request email includes only what the user agreed to send.
 """
 import re
@@ -29,7 +30,10 @@ def _doctor_out(d: dict) -> dict:
     return {"id": str(d["_id"]), "name": d["name"], "specialty": d["specialty"], "qualification": d["qualification"],
             "city": d["city"], "clinic": d["clinic"], "address": d["address"], "fee_pkr": d["fee_pkr"],
             "phone": d["phone"], "timings": d["timings"], "can_email": bool(d.get("email")),
-            "source_url": d["source_url"], "checked": d["checked"]}
+            "source_url": d["source_url"], "checked": d["checked"],
+            "experience_years": d.get("experience_years"), "gender": d.get("gender", ""),
+            "about": d.get("about", ""), "demo": bool(d.get("demo")),
+            "government": "govt" in d.get("qualification", "").lower()}
 
 
 @router.get("/doctors/specialties")
@@ -65,7 +69,8 @@ async def list_doctors(city: str | None = None, specialty: str | None = None, q:
         rx = re.compile(re.escape(q.strip()), re.IGNORECASE)
         query["$or"] = [{"name": rx}, {"clinic": rx}, {"address": rx}]
     docs = [d async for d in db.doctors.find(query).limit(limit)]
-    docs.sort(key=lambda d: (d["fee_pkr"] is None, d["fee_pkr"] or 0, d["name"]))
+    # Real (government list) doctors first, then demo profiles; within each, lower fee first.
+    docs.sort(key=lambda d: (bool(d.get("demo")), d["fee_pkr"] is None, d["fee_pkr"] or 0, d["name"]))
     return {"specialty": spec, "doctors": [_doctor_out(d) for d in docs]}
 
 

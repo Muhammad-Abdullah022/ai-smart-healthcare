@@ -1,7 +1,9 @@
 """Versioned prompt templates. Change the version when the wording changes,
 so saved results record which prompt produced them."""
 
-SYMPTOM_PROMPT_VERSION = "symptom-v2"
+from app.ai.diseases import reference_notes
+
+SYMPTOM_PROMPT_VERSION = "symptom-v3"
 
 SYMPTOM_SYSTEM = """You are a careful, experienced clinical triage assistant inside a patient-support app in Pakistan.
 You are NOT a doctor and you do NOT diagnose. You work like a good doctor taking a history: you ask, you
@@ -42,7 +44,12 @@ ADVICE (when ready=true)
   NEVER give a dose or a schedule; never suggest antibiotics, steroids or any prescription medicine.
   If dengue is possible, do not suggest ibuprofen. If the user is a child or pregnant, return [].
 - warning_signs: what means "go to a doctor/emergency now".
-- Keep each text item under 200 characters."""
+- Keep each text item under 200 characters.
+
+KNOWLEDGE
+- The user message may include reference notes from the app's disease knowledge base (50 common diseases
+  in Pakistan). Use them for typical symptoms, danger signs, tests and the right specialist. For any other
+  disease, use your general medical knowledge with the same rules."""
 
 
 def symptom_user_prompt(symptoms: str, age: int | None, sex: str | None, duration: str, severity: int | None,
@@ -63,6 +70,9 @@ def symptom_user_prompt(symptoms: str, age: int | None, sex: str | None, duratio
         lines.append("You have asked enough questions: set ready=true and give your full advice now.")
     else:
         lines.append(f"Questions answered so far: {len(answers)}.")
+    notes = reference_notes(" ".join([symptoms, *known_conditions, *(a["answer"] for a in answers)]))
+    if notes:
+        lines += ["", notes]
     return "\n".join(lines)
 
 
@@ -82,12 +92,16 @@ def language_rule(language: str) -> str:
             f"\"Complete Blood Count (CBC)\", \"General physician\".")
 
 
-REPORT_PROMPT_VERSION = "report-v1"
+REPORT_PROMPT_VERSION = "report-v2"
 
 REPORT_SYSTEM = """You read medical lab reports for a patient-support app in Pakistan. You are NOT a doctor.
 Rules:
-- Extract each test you can clearly read: name, value, unit, reference range as printed, and flag
-  ("low", "normal", "high" or "unknown" if no range is printed). Never guess unreadable values.
+- Extract EVERY test you can clearly read, row by row: name (as printed, in English), value EXACTLY as printed
+  (digits and decimal point, no rounding, no unit conversion), unit exactly as printed (e.g. "g/dL",
+  "x10^9/L", "mg/dL", "U/L", "%"), reference range exactly as printed for this patient (if the report gives
+  male/female or age ranges, pick the one that applies), and flag ("low", "normal", "high", "unknown").
+- Read carefully: do not mix up columns, do not take the range as the value, keep ">" or "<" if printed.
+- Never guess unreadable values; skip them. Text results (e.g. "Negative", "Non-reactive") keep the text.
 - Explain the overall picture in short, simple sentences. Never give a diagnosis.
 - Never recommend any medicine or dose. Say which type of doctor should review it and how soon
   (urgency: "routine", "soon" or "urgent").

@@ -73,6 +73,10 @@ async def ensure_doctor_data(db) -> None:
                     "phone": r.get("phone", ""), "email": r.get("email", "").lower(),
                     "timings": r.get("timings", ""), "source_url": r.get("source_url", ""),
                     "checked": r.get("checked_date", ""), "file": f.name,
+                    "experience_years": int(r["experience_years"]) if r.get("experience_years", "").isdigit() else None,
+                    "gender": r.get("gender", ""), "about": r.get("about", ""),
+                    # Made-up profile for the demo (demo_doctors.csv); the app labels it "Demo profile".
+                    "demo": r.get("demo", "").lower() in ("yes", "true", "1"),
                 })
     await db.doctors.delete_many({})
     if docs:

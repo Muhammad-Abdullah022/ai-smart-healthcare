@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, status
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from app.ai.lab_ranges import check_values
 from app.ai.prompts import REPORT_PROMPT_VERSION, REPORT_SYSTEM, language_rule
 from app.ai.service import AIUnavailableError
 from app.core.errors import ApiError
@@ -35,6 +36,11 @@ class ReportValue(BaseModel):
     unit: str = Field(default="", max_length=30)
     reference_range: str = Field(default="", max_length=60)
     flag: Literal["low", "normal", "high", "unknown"] = "unknown"
+    # Filled in by code after the AI reads the report (see app/ai/lab_ranges.py).
+    flag_source: Literal["report", "standard", "ai"] = "ai"
+    standard_range: str = Field(default="", max_length=60)
+    about: str = Field(default="", max_length=200)
+    critical: bool = False
 
 
 class AIReportOutput(BaseModel):
@@ -89,7 +95,17 @@ async def _analyze(ai, db, doc: dict, data: bytes) -> dict:
             "Read this medical report and return the JSON.",
             images=[(doc["mime_type"], base64.b64encode(data).decode())],
         )
-        changes = {"analysis": result.data.model_dump(), "error": None,
+        analysis = result.data.model_dump()
+        profile = await db.profiles.find_one({"user_id": doc["user_id"]}, {"gender": 1}) or {}
+        sex = profile.get("gender")
+        # Low / normal / high is decided by code from the printed (or standard) range, not by the AI.
+        analysis["values"] = check_values(analysis["values"], sex)
+        critical = [v["name"] for v in analysis["values"] if v["critical"]]
+        if critical:
+            analysis["urgency"] = "urgent"
+            analysis["next_steps"] = ([f"Very abnormal result ({', '.join(critical[:3])}): please see a doctor today."]
+                                      + analysis["next_steps"])[:6]
+        changes = {"analysis": analysis, "error": None,
                    "ai_provider": result.provider, "prompt_version": REPORT_PROMPT_VERSION}
     except AIUnavailableError as exc:
         changes = {"analysis": None, "error": exc.message}

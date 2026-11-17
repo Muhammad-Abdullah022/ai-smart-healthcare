@@ -14,7 +14,12 @@ class Doctor {
         timings = j['timings'] as String? ?? '',
         canEmail = j['can_email'] as bool? ?? false,
         sourceUrl = j['source_url'] as String? ?? '',
-        checked = j['checked'] as String? ?? '';
+        checked = j['checked'] as String? ?? '',
+        experienceYears = j['experience_years'] as int?,
+        gender = j['gender'] as String? ?? '',
+        about = j['about'] as String? ?? '',
+        demo = j['demo'] as bool? ?? false,
+        government = j['government'] as bool? ?? false;
 
   final String id;
   final String name;
@@ -29,6 +34,15 @@ class Doctor {
   final bool canEmail;
   final String sourceUrl;
   final String checked;
+  final int? experienceYears;
+  final String gender;
+  final String about;
+
+  /// Made-up profile for the demo (shown with a "Demo profile" label).
+  final bool demo;
+
+  /// From the official Punjab government consultants list.
+  final bool government;
 
   String get initials {
     final parts = name.replaceAll(RegExp(r'^(Dr\.?|Prof\.?)\s+', caseSensitive: false), '').split(' ');
@@ -66,6 +80,7 @@ class DoctorRepository {
       if (city != null) 'city=${Uri.encodeQueryComponent(city)}',
       if (specialty != null) 'specialty=${Uri.encodeQueryComponent(specialty)}',
       if (search != null && search.trim().isNotEmpty) 'q=${Uri.encodeQueryComponent(search.trim())}',
+      'limit=300',
     ].join('&');
     final data = await api.get('/doctors${q.isEmpty ? '' : '?$q'}') as Map<String, dynamic>;
     return (data['doctors'] as List<dynamic>).map((d) => Doctor.fromJson(d as Map<String, dynamic>)).toList();

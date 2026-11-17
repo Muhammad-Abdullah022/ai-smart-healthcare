@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,9 +8,10 @@ import '../../services/api_client.dart';
 import '../../services/doctor_repository.dart';
 import '../../services/lab_repository.dart';
 import '../../widgets/state_views.dart';
+import 'doctor_detail_screen.dart';
 import '../labs/lab_options_screen.dart' show CityPickerScreen;
 
-const _lime = Color(0xFFD9F35B);
+const _lime = AppColors.softGreen;
 
 String _slug(String text) => text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-|-$'), '');
 
@@ -53,10 +53,10 @@ class ExternalDoctorsCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFFF7FBE6), borderRadius: BorderRadius.circular(24),
+      decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(24),
           border: Border.all(color: _lime)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('See all $what', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _ink)),
+        Text('See all $what', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.deep)),
         const SizedBox(height: 4),
         Text(
             nearby
@@ -67,7 +67,7 @@ class ExternalDoctorsCard extends StatelessWidget {
         Wrap(spacing: 10, runSpacing: 8, children: [
           for (final l in externalDoctorSearch(linkCity, specialty))
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: _ink, shape: const StadiumBorder()),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.deep, shape: const StadiumBorder()),
               icon: const Icon(Icons.open_in_new, size: 18),
               label: Text('Open ${l.site}'),
               onPressed: () => openExternal(context, l.url),
@@ -77,119 +77,23 @@ class ExternalDoctorsCard extends StatelessWidget {
     );
   }
 }
-const _ink = Color(0xFF111827);
 
-/// Feature 10 entry: a friendly intro card, then the doctor directory.
+/// Feature 10 entry: opens the doctor list for the user's city.
 class DoctorsIntroScreen extends StatelessWidget {
   const DoctorsIntroScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF1F3F6),
-      appBar: AppBar(backgroundColor: Colors.transparent),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32)),
-              clipBehavior: Clip.antiAlias,
-              child: Column(children: [
-                Expanded(
-                  flex: 6,
-                  child: Container(
-                    color: const Color(0xFFF7F8FA),
-                    child: Stack(alignment: Alignment.center, children: [
-                      Positioned(
-                        right: -30,
-                        top: -30,
-                        child: Container(
-                          width: 130,
-                          height: 130,
-                          decoration: BoxDecoration(
-                              shape: BoxShape.circle, border: Border.all(color: _lime, width: 10)),
-                        ),
-                      ),
-                      Positioned(
-                        left: -40,
-                        bottom: 30,
-                        child: Container(
-                          width: 120,
-                          height: 120,
-                          decoration: const BoxDecoration(color: _lime, shape: BoxShape.circle),
-                        ),
-                      ),
-                      Container(
-                        width: 170,
-                        height: 170,
-                        decoration: BoxDecoration(
-                          color: AppColors.accent,
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: AppColors.accent.withAlpha(70), blurRadius: 30)],
-                        ),
-                        child: const Icon(Icons.medical_services_rounded, size: 80, color: Colors.white),
-                      ),
-                    ]),
-                  ),
-                ),
-                Expanded(
-                  flex: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
-                    child: Column(children: [
-                      const Text('Find the right doctor',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: _ink)),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Specialists across Punjab with clinic address and check-up fee. '
-                        'Send an appointment request in one tap.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textMuted, height: 1.45),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Container(
-                            width: 22,
-                            height: 6,
-                            decoration: BoxDecoration(color: _lime, borderRadius: BorderRadius.circular(3))),
-                        const SizedBox(width: 5),
-                        for (var i = 0; i < 2; i++) ...[
-                          Container(
-                              width: 6,
-                              height: 6,
-                              decoration: const BoxDecoration(color: Color(0xFFD1D5DB), shape: BoxShape.circle)),
-                          const SizedBox(width: 5),
-                        ],
-                      ]),
-                      const Spacer(),
-                      SizedBox(
-                        width: 200,
-                        height: 50,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                              backgroundColor: _ink, shape: const StadiumBorder(), foregroundColor: Colors.white),
-                          onPressed: () => Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (_) => const DoctorListScreen())),
-                          child: const Text('Get Started', style: TextStyle(fontWeight: FontWeight.w700)),
-                        ),
-                      ),
-                    ]),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const DoctorListScreen();
 }
 
-/// The doctor directory: city, specialty chips, search, doctor cards.
-/// With [specialty] and [reason] (from the chat), tapping a doctor opens the booking sheet directly.
+String greeting() {
+  final h = DateTime.now().hour;
+  return h < 12 ? 'Good Morning' : (h < 17 ? 'Good Afternoon' : 'Good Evening');
+}
+
+/// The doctor directory for the user's city: greeting, search + filter, and doctor cards.
+/// Tapping a doctor opens the profile screen with "Get Appointment".
+/// With [specialty] and [reason] (from the chat), the list is pre-filtered and booking carries the reason.
 class DoctorListScreen extends StatefulWidget {
   const DoctorListScreen({super.key, this.specialty, this.reason, this.fromChat = false});
 
@@ -205,11 +109,11 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   late final ApiClient _api = context.read<AuthProvider>().repository.api;
   late final DoctorRepository _repo = DoctorRepository(_api);
   late final LabRepository _labs = LabRepository(_api);
+  final _search = TextEditingController();
   String? _city;
   String? _specialty;
-  String _q = '';
+  bool _cityLoaded = false;
   Future<List<Doctor>>? _future;
-  Future<List<({String name, int doctors})>>? _specs;
   Map<String, String> _districtOf = {};
 
   @override
@@ -221,14 +125,29 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
     }).catchError((_) {});
     _labs.myCity().then((c) {
       if (!mounted) return;
-      setState(() => _city = c);
-      _reload();
-    }).catchError((_) => _reload());
+      setState(() {
+        _city = c;
+        _cityLoaded = true;
+      });
+      if (c == null) {
+        _pickCity();
+      } else {
+        _reload();
+      }
+    }).catchError((_) {
+      if (mounted) setState(() => _cityLoaded = true);
+      _pickCity();
+    });
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
   }
 
   void _reload() => setState(() {
-        _future = _repo.doctors(city: _city, specialty: _specialty, search: _q);
-        _specs = _repo.specialties(city: _city);
+        _future = _repo.doctors(city: _city, specialty: _specialty, search: _search.text);
       });
 
   Future<void> _pickCity() async {
@@ -240,200 +159,349 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
     _reload();
   }
 
+  Future<void> _filters() async {
+    final specs = await _repo.specialties(city: _city).catchError((_) => <({String name, int doctors})>[]);
+    if (!mounted) return;
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.75),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Filter doctors', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text('Specialty${_city == null ? '' : ' in $_city'}', style: const TextStyle(color: AppColors.textMuted)),
+              const SizedBox(height: 14),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                _FilterChip(label: 'All specialists', selected: _specialty == null, onTap: () => Navigator.pop(ctx, '')),
+                for (final sp in specs.where((x) => x.doctors > 0))
+                  _FilterChip(
+                      label: '${sp.name} (${sp.doctors})',
+                      selected: _specialty == sp.name,
+                      onTap: () => Navigator.pop(ctx, sp.name)),
+              ]),
+              const SizedBox(height: 18),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.location_on_outlined),
+                label: Text(_city == null ? 'Choose city' : 'Change city ($_city)'),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _pickCity();
+                },
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+    if (picked == null) return;
+    _specialty = picked.isEmpty ? null : picked;
+    _reload();
+  }
+
+  void _open(Doctor d) => Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DoctorDetailScreen(
+          doctor: d, repository: _repo, reason: widget.reason, fromChat: widget.fromChat)));
+
   @override
   Widget build(BuildContext context) {
+    final name = context.watch<AuthProvider>().user?.fullName ?? '';
+    final first = name.trim().isEmpty ? 'there' : name.trim();
+    final initials = name.trim().isEmpty
+        ? '?'
+        : name.trim().split(RegExp(r'\s+')).take(2).map((p) => p[0].toUpperCase()).join();
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.fromChat ? 'Choose a doctor' : 'Doctors'),
-        actions: [
-          TextButton.icon(
-            onPressed: _pickCity,
-            icon: const Icon(Icons.location_on_outlined, size: 18),
-            label: Text(_city ?? 'All Punjab'),
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 10, 16, 6),
+            child: Row(children: [
+              if (Navigator.of(context).canPop())
+                IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20), onPressed: () => Navigator.pop(context))
+              else
+                const SizedBox(width: 8),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [AppColors.green, AppColors.deep]),
+                ),
+                alignment: Alignment.center,
+                child: Text(initials, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Hello, ${greeting()}!', style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                  Text(first,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.deep)),
+                ]),
+              ),
+              InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: _pickCity,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(20)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.location_on, size: 16, color: AppColors.green),
+                    const SizedBox(width: 4),
+                    Text(_city ?? 'City', style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.deep, fontSize: 13)),
+                  ]),
+                ),
+              ),
+            ]),
           ),
-        ],
-      ),
-      body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: TextField(
-            decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search doctor, clinic or area'),
-            onSubmitted: (v) {
-              _q = v;
-              _reload();
-            },
+          // Search pill with filter button (like the design).
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+            child: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.mint,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: AppColors.softGreen),
+              ),
+              child: Row(children: [
+                const SizedBox(width: 18),
+                const Icon(Icons.search, color: AppColors.deep),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _search,
+                    textInputAction: TextInputAction.search,
+                    decoration: const InputDecoration(
+                      hintText: 'Search doctor, clinic or area',
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onSubmitted: (_) => _reload(),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Filter',
+                  icon: const Icon(Icons.tune_rounded, color: AppColors.deep),
+                  onPressed: _filters,
+                ),
+                const SizedBox(width: 6),
+              ]),
+            ),
           ),
-        ),
-        SizedBox(
-          height: 44,
-          child: FutureBuilder<List<({String name, int doctors})>>(
-            future: _specs,
-            builder: (context, snap) {
-              final specs = snap.data ?? const [];
-              return ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12), children: [
-                _chip('All', _specialty == null, () {
-                  _specialty = null;
-                  _reload();
-                }),
-                for (final s in specs)
-                  _chip(s.doctors > 0 ? '${s.name} · ${s.doctors}' : s.name, _specialty == s.name, () {
-                    _specialty = s.name;
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 16, 4),
+            child: Row(children: [
+              Expanded(
+                child: Text(_specialty == null ? 'All Doctors List' : '${_specialty}s',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.deep)),
+              ),
+              if (_specialty != null)
+                TextButton.icon(
+                  onPressed: () {
+                    _specialty = null;
                     _reload();
-                  }),
-              ]);
-            },
+                  },
+                  icon: const Icon(Icons.close, size: 16),
+                  label: const Text('Clear'),
+                ),
+            ]),
           ),
-        ),
-        Expanded(
-          child: FutureBuilder<List<Doctor>>(
-            future: _future,
-            builder: (context, snap) {
-              if (_future == null || snap.connectionState != ConnectionState.done) return const LoadingView();
-              if (snap.hasError) {
-                final e = snap.error;
-                return ErrorView(message: e is ApiException ? e.message : 'Could not load doctors.', onRetry: _reload);
-              }
-              final list = snap.data!;
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                children: [
-                  for (final d in list)
-                    DoctorCard(
-                      doctor: d,
-                      onBook: () => showDoctorBookingSheet(context,
-                          repository: _repo, doctor: d, reason: widget.reason, fromChat: widget.fromChat),
-                    ),
-                  if (list.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(4, 8, 4, 14),
-                      child: Text('No doctors in the app\'s own list here yet — see all doctors below.',
-                          style: TextStyle(color: AppColors.textMuted)),
-                    ),
-                  ExternalDoctorsCard(
-                      city: _city, specialty: _specialty, district: _districtOf[_city?.toLowerCase()]),
-                ],
-              );
-            },
-          ),
-        ),
-      ]),
+          Expanded(child: _list()),
+        ]),
+      ),
     );
   }
 
-  Widget _chip(String label, bool selected, VoidCallback onTap) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: ChoiceChip(
-          label: Text(label),
-          selected: selected,
-          onSelected: (_) => onTap(),
-          selectedColor: _lime,
-          labelStyle: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: _ink),
-          shape: const StadiumBorder(),
-        ),
+  Widget _list() {
+    if (!_cityLoaded) return const LoadingView();
+    if (_city == null) {
+      return EmptyView(
+        icon: Icons.location_city_outlined,
+        title: 'Choose your city',
+        message: 'See doctors and specialists in your city with their check-up fee.',
+        actionLabel: 'Choose city',
+        onAction: _pickCity,
+      );
+    }
+    return FutureBuilder<List<Doctor>>(
+      future: _future,
+      builder: (context, snap) {
+        if (_future == null || snap.connectionState != ConnectionState.done) return const LoadingView();
+        if (snap.hasError) {
+          final e = snap.error;
+          return ErrorView(message: e is ApiException ? e.message : 'Could not load doctors.', onRetry: _reload);
+        }
+        final list = snap.data!;
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 10),
+              child: Text('${list.length} doctor${list.length == 1 ? '' : 's'} in $_city',
+                  style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+            ),
+            for (final d in list) DoctorCard(doctor: d, onTap: () => _open(d)),
+            if (list.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(4, 8, 4, 14),
+                child: Text('No doctors in the app\'s list here yet — see all doctors below.',
+                    style: TextStyle(color: AppColors.textMuted)),
+              ),
+            const SizedBox(height: 6),
+            ExternalDoctorsCard(city: _city, specialty: _specialty, district: _districtOf[_city?.toLowerCase()]),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onTap(),
+        selectedColor: AppColors.softGreen,
+        backgroundColor: Colors.white,
+        labelStyle: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: AppColors.deep),
+        shape: const StadiumBorder(),
       );
 }
 
+/// One doctor in the list: photo-style avatar, name, specialty, experience and "See details".
 class DoctorCard extends StatelessWidget {
-  const DoctorCard({super.key, required this.doctor, required this.onBook});
+  const DoctorCard({super.key, required this.doctor, required this.onTap});
   final Doctor doctor;
-  final VoidCallback onBook;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final d = doctor;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Material(
+        color: AppColors.mint,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [BoxShadow(color: Color(0x0F111827), blurRadius: 18, offset: Offset(0, 6))],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              color: AppColors.accentTint,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: _lime, width: 3),
-            ),
-            alignment: Alignment.center,
-            child: Text(d.initials,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.accent)),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(d.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _ink)),
-              const SizedBox(height: 2),
-              Text([d.specialty, if (d.qualification.isNotEmpty) d.qualification].join(' · '),
-                  style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+            child: Row(children: [
+              DoctorAvatar(doctor: d, size: 72),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(
+                      child: Text(d.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.deep)),
+                    ),
+                    const Text('See details',
+                        style: TextStyle(fontSize: 11.5, color: AppColors.green, fontWeight: FontWeight.w600)),
+                  ]),
+                  const SizedBox(height: 2),
+                  Text(d.specialty,
+                      style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w500, fontSize: 13.5)),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    const Icon(Icons.work_outline_rounded, size: 16, color: AppColors.green),
+                    const SizedBox(width: 6),
+                    Text(
+                        d.experienceYears != null
+                            ? '${d.experienceYears} years'
+                            : (d.government ? 'Govt. consultant' : 'Consultant'),
+                        style: const TextStyle(fontSize: 12.5, color: AppColors.text)),
+                    const Spacer(),
+                    Text(d.fee != null ? 'Rs ${d.fee!.toStringAsFixed(0)}' : (d.government ? 'Govt OPD' : ''),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.deep)),
+                  ]),
+                  if (d.demo)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 6),
+                      child: Text('Demo profile', style: TextStyle(fontSize: 10.5, color: Color(0xFFC2410C))),
+                    ),
+                ]),
+              ),
             ]),
           ),
-          if (d.fee != null)
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text('Rs ${d.fee!.toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _ink)),
-              const Text('check-up fee', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-            ])
-          else if (d.qualification.contains('Govt'))
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: const Color(0xFFE7F6EC), borderRadius: BorderRadius.circular(10)),
-              child: const Text('Govt hospital\nOPD',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.success)),
-            ),
-        ]),
-        const SizedBox(height: 12),
-        if (d.clinic.isNotEmpty) _line(Icons.local_hospital_outlined, d.clinic),
-        if (d.address.isNotEmpty) _line(Icons.place_outlined, d.address),
-        if (d.timings.isNotEmpty) _line(Icons.schedule, d.timings),
-        const SizedBox(height: 10),
-        Row(children: [
-          if (d.phone.isNotEmpty)
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(shape: const StadiumBorder()),
-              icon: const Icon(Icons.call_outlined, size: 18),
-              label: const Text('Copy number'),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: d.phone));
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Number copied: ${d.phone}')));
-              },
-            ),
-          const Spacer(),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(backgroundColor: _ink, shape: const StadiumBorder()),
-            icon: const Icon(Icons.event_available_outlined, size: 18),
-            label: const Text('Book'),
-            onPressed: onBook,
-          ),
-        ]),
-        if (d.sourceUrl.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text('Source: ${Uri.tryParse(d.sourceUrl)?.host ?? d.sourceUrl}'
-                '${d.checked.isNotEmpty ? ' · checked ${d.checked}' : ''}',
-                style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-          ),
-      ]),
+        ),
+      ),
     );
   }
+}
 
-  static Widget _line(IconData icon, String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 5),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 16, color: AppColors.textMuted),
-          const SizedBox(width: 6),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 13, color: AppColors.text))),
-        ]),
-      );
+/// Doctor "photo": no real photos are stored, so a clean illustrated avatar with initials.
+class DoctorAvatar extends StatelessWidget {
+  const DoctorAvatar({super.key, required this.doctor, this.size = 72});
+  final Doctor doctor;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final female = doctor.gender == 'female';
+    return Stack(clipBehavior: Clip.none, children: [
+      Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          border: Border.all(color: Colors.white, width: size * 0.05),
+          boxShadow: const [BoxShadow(color: Color(0x14013237), blurRadius: 12, offset: Offset(0, 4))],
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: female
+                  ? const [Color(0xFFC0E6BA), Color(0xFF7FC59A)]
+                  : const [Color(0xFFD5EFD0), Color(0xFF4CA771)],
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(doctor.initials,
+              style: TextStyle(fontSize: size * 0.32, fontWeight: FontWeight.w700, color: AppColors.deep)),
+        ),
+      ),
+      Positioned(
+        right: -2,
+        bottom: -2,
+        child: Container(
+          width: size * 0.36,
+          height: size * 0.36,
+          decoration: BoxDecoration(
+              color: AppColors.deep, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+          child: Icon(Icons.medical_services_rounded, size: size * 0.18, color: Colors.white),
+        ),
+      ),
+    ]);
+  }
 }
 
 /// Confirm and send an appointment request. If the doctor has an email, it is sent to them.
-Future<void> showDoctorBookingSheet(BuildContext context,
+/// Returns true when a request was sent or saved.
+Future<bool> showDoctorBookingSheet(BuildContext context,
     {required DoctorRepository repository, required Doctor doctor, String? reason, bool fromChat = false}) async {
   final tomorrow = DateTime.now().add(const Duration(days: 1));
   var date = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
@@ -501,7 +569,7 @@ Future<void> showDoctorBookingSheet(BuildContext context,
             ),
             const SizedBox(height: 14),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: _ink, minimumSize: const Size.fromHeight(50), shape: const StadiumBorder()),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.deep, minimumSize: const Size.fromHeight(50), shape: const StadiumBorder()),
               icon: sending
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.send_outlined),
@@ -537,7 +605,7 @@ Future<void> showDoctorBookingSheet(BuildContext context,
   );
   reasonCtrl.dispose();
   phoneCtrl.dispose();
-  if (result == null || !context.mounted) return;
+  if (result == null || !context.mounted) return false;
   await showDialog<void>(
     context: context,
     builder: (d) => AlertDialog(
@@ -548,5 +616,5 @@ Future<void> showDoctorBookingSheet(BuildContext context,
       actions: [FilledButton(onPressed: () => Navigator.pop(d), child: const Text('OK'))],
     ),
   );
-  if (fromChat && context.mounted) Navigator.of(context).pop();
+  return true;
 }

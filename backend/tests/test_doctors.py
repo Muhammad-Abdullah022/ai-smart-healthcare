@@ -81,4 +81,8 @@ def test_government_consultants_loaded(registered):
     client, tokens = registered
     data = client.get("/doctors", headers=auth_header(tokens), params={"city": "Okara"}).json()["doctors"]
     assert {d["specialty"] for d in data} >= {"Gynecologist", "Pulmonologist"}
-    assert all(d["source_url"].startswith("https://pshealthpunjab.gov.pk") for d in data)
+    real = [d for d in data if not d["demo"]]
+    assert real and all(d["source_url"].startswith("https://pshealthpunjab.gov.pk") for d in real)
+    demo = [d for d in data if d["demo"]]
+    assert demo and all(d["experience_years"] and d["fee_pkr"] and "Demo profile" in d["about"] for d in demo)
+    assert [d["demo"] for d in data] == sorted(d["demo"] for d in data)  # real doctors listed first

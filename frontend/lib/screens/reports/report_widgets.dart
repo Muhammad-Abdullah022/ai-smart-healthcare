@@ -160,7 +160,7 @@ class ReportAnalysisCard extends StatelessWidget {
           ),
         const Padding(
           padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Text('Read by AI. Please confirm the values and their meaning with your doctor.',
+          child: Text('Values read by AI; low / normal / high checked by the app against the reference range. Please confirm with your doctor.',
               style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
         ),
         if (onCompare != null)
@@ -188,24 +188,44 @@ class ValueRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = flagColor(value.flag);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(value.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-            if (value.range.isNotEmpty)
-              Text('Normal: ${value.range}', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-          ]),
-        ),
-        Text('${value.value} ${value.unit}'.trim(), style: TextStyle(fontWeight: FontWeight.w700, color: c)),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(color: c.withAlpha(31), borderRadius: BorderRadius.circular(10)),
-          child: Text(flagLabel(value.flag), style: TextStyle(fontSize: 11, color: c, fontWeight: FontWeight.w700)),
-        ),
+    final c = value.critical ? AppColors.critical : flagColor(value.flag);
+    final range = value.range.isNotEmpty ? value.range : value.standardRange;
+    final source = switch (value.flagSource) {
+      'report' => 'checked against the report\'s range',
+      'standard' => 'checked against the standard adult range',
+      _ => '',
+    };
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: value.critical ? AppColors.criticalTint : (value.abnormal ? c.withAlpha(18) : AppColors.background),
+        borderRadius: BorderRadius.circular(14),
+        border: Border(left: BorderSide(color: c, width: 4)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(value.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+          Text('${value.value} ${value.unit}'.trim(), style: TextStyle(fontWeight: FontWeight.w700, color: c)),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(color: c.withAlpha(31), borderRadius: BorderRadius.circular(10)),
+            child: Text(value.critical ? 'Very ${flagLabel(value.flag).toLowerCase()}' : flagLabel(value.flag),
+                style: TextStyle(fontSize: 11, color: c, fontWeight: FontWeight.w700)),
+          ),
+        ]),
+        if (range.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Text('Normal: $range${source.isEmpty ? '' : '  ·  $source'}',
+                style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+          ),
+        if (value.about.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Text(value.about, style: const TextStyle(fontSize: 12, color: AppColors.text, height: 1.3)),
+          ),
       ]),
     );
   }
@@ -221,8 +241,8 @@ class _Shell extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE9EEF4)),
-          boxShadow: const [BoxShadow(color: Color(0x0F16324F), blurRadius: 16, offset: Offset(0, 6))],
+          border: Border.all(color: const Color(0xFFDDEFD9)),
+          boxShadow: const [BoxShadow(color: Color(0x0F013237), blurRadius: 16, offset: Offset(0, 6))],
         ),
         clipBehavior: Clip.antiAlias,
         child: child,

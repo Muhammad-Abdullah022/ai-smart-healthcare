@@ -92,8 +92,25 @@ def test_demo_prices_only_when_asked_and_labelled(registered):
     assert all(not o["demo"] for o in real["tests"][0]["offers"])
     demo = client.get("/labs/options", headers=h, params={"city": "Sahiwal", "tests": ["CBC"], "demo": True}).json()
     offers = demo["tests"][0]["offers"]
-    assert any(o["demo"] for o in offers) and all("not a real price" in o["notes"] for o in offers if o["demo"])
+    assert any(o["demo"] for o in offers) and all("not published by the lab" in o["notes"] for o in offers if o["demo"])
     flags = [o["demo"] for o in offers]
     assert flags == sorted(flags)  # real prices listed before demo prices
     tests = client.get("/labs/tests", headers=h, params={"city": "Okara", "demo": True}).json()
     assert next(t for t in tests if t["key"] == "cbc")["labs_with_price"] > 10
+
+
+def test_every_lab_has_contact_and_demo_flags(registered):
+    client, tokens = registered
+    h = auth_header(tokens)
+    data = client.get("/labs/options", headers=h, params={"city": "Attock", "other_limit": 2000}).json()
+    labs = data["labs_without_prices"]
+    assert labs and all(l["phone"] and l["address"] for l in labs)
+    assert any(l["phone_demo"] for l in labs)  # PHC list has no phones: those are demo numbers, flagged
+
+
+def test_estimated_price_for_every_lab(registered):
+    client, tokens = registered
+    h = auth_header(tokens)
+    data = client.get("/labs/options", headers=h, params={"city": "Attock", "tests": ["HbA1c"], "demo": True}).json()
+    offers = data["tests"][0]["offers"]
+    assert len(offers) >= 5 and all(o["price_pkr"] for o in offers)

@@ -120,7 +120,7 @@ class _SymptomResultScreenState extends State<SymptomResultScreen> {
               padding: EdgeInsets.zero,
               child: Column(children: [
                 for (var i = 0; i < _a.possibleCauses.length; i++) ...[
-                  if (i > 0) const Divider(height: 1, color: Color(0xFFEEF2F6)),
+                  if (i > 0) const Divider(height: 1, color: Color(0xFFE3F2E0)),
                   _CauseTile(cause: _a.possibleCauses[i]),
                 ],
               ]),

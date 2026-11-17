@@ -146,10 +146,10 @@ class _LabOptionsScreenState extends State<LabOptionsScreen> {
             decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE9EEF4))),
+                border: Border.all(color: const Color(0xFFDDEFD9))),
             child: Column(children: [
               for (var i = 0; i < o.otherLabs.length; i++) ...[
-                if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFEEF2F6)),
+                if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFE3F2E0)),
                 _LabRow(offer: o.otherLabs[i], priceText: 'Ask price'),
               ],
             ]),
@@ -203,8 +203,8 @@ class _TestCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE9EEF4)),
-        boxShadow: const [BoxShadow(color: Color(0x0A16324F), blurRadius: 14, offset: Offset(0, 4))],
+        border: Border.all(color: const Color(0xFFDDEFD9)),
+        boxShadow: const [BoxShadow(color: Color(0x0A013237), blurRadius: 14, offset: Offset(0, 4))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -228,7 +228,7 @@ class _TestCard extends StatelessWidget {
                   [
                     if (cheapest != null) '${priced.length} real price${priced.length == 1 ? '' : 's'} · from ${rs(cheapest)}',
                     if (cheapest == null && demoCount == 0) 'No published price in $city yet',
-                    if (demoCount > 0) '$demoCount demo price${demoCount == 1 ? '' : 's'}',
+                    if (demoCount > 0) '$demoCount estimated price${demoCount == 1 ? '' : 's'}',
                   ].join(' · '),
                   style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
                 ),
@@ -244,7 +244,7 @@ class _TestCard extends StatelessWidget {
           )
         else
           for (var i = 0; i < test.offers.length; i++) ...[
-            if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFEEF2F6)),
+            if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFE3F2E0)),
             _LabRow(
               offer: test.offers[i],
               priceText: test.offers[i].price == null ? 'Ask price' : rs(test.offers[i].price!),
@@ -289,8 +289,8 @@ class _LabRow extends StatelessWidget {
             if (o.branch.isNotEmpty) Text(o.branch, style: const TextStyle(color: AppColors.textMuted)),
             const SizedBox(height: 12),
             if (o.publishedName.isNotEmpty) _kv('Lab calls this test', o.publishedName),
-            if (o.address.isNotEmpty) _kv('Address', _cleanAddress(o.address)),
-            if (o.phone.isNotEmpty) _kv('Phone', o.phone),
+            if (o.address.isNotEmpty) _kv(o.addressDemo ? 'Address (demo)' : 'Address', _cleanAddress(o.address)),
+            if (o.phone.isNotEmpty) _kv(o.phoneDemo ? 'Phone (demo)' : 'Phone', o.phone),
             if (o.notes.isNotEmpty) _kv('Note', o.notes),
             if (o.sourceUrl.isNotEmpty)
               _kv('Source', '${Uri.tryParse(o.sourceUrl)?.host ?? o.sourceUrl} · checked ${o.checked}'),
@@ -333,7 +333,7 @@ class _LabRow extends StatelessWidget {
               Text(o.lab, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 4),
               Wrap(spacing: 6, runSpacing: 4, children: [
-                if (o.demo) const _Tag('Demo price — not real', Color(0xFFC2410C), Color(0xFFFFEDD5)),
+                if (o.demo) const _Tag('Estimated price (demo)', Color(0xFFC2410C), Color(0xFFFFEDD5)),
                 if (best && !o.demo) const _Tag('Lowest price', AppColors.success, Color(0xFFE7F6EC)),
                 if (o.branches > 1) _Tag('${o.branches} branches', AppColors.primary, AppColors.primaryTint),
                 if (gov) const _Tag('Government', AppColors.success, Color(0xFFE7F6EC)),
@@ -362,7 +362,7 @@ class _LabRow extends StatelessWidget {
               const Icon(Icons.place_outlined, size: 15, color: AppColors.textMuted),
               const SizedBox(width: 4),
               Expanded(
-                child: Text(o.branches > 1 ? '$area  (+${o.branches - 1} more)' : area,
+                child: Text((o.branches > 1 ? '$area  (+${o.branches - 1} more)' : area) + (o.addressDemo ? '  · demo' : ''),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
@@ -376,7 +376,7 @@ class _LabRow extends StatelessWidget {
               TextButton.icon(
                 style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                 icon: const Icon(Icons.call_outlined, size: 16),
-                label: Text(o.phone.split(',').first.trim()),
+                label: Text(o.phone.split(',').first.trim() + (o.phoneDemo ? '  · demo' : '')),
                 onPressed: () => _copyPhone(context),
               ),
             TextButton.icon(
@@ -465,9 +465,12 @@ class _CityPickerScreenState extends State<CityPickerScreen> {
 
 /// Every registered lab in a city (PHC list and others), searchable by name or area.
 class AllLabsScreen extends StatefulWidget {
-  const AllLabsScreen({super.key, required this.repository, required this.city});
+  const AllLabsScreen({super.key, required this.repository, required this.city, this.onChangeCity});
   final LabRepository repository;
   final String city;
+
+  /// Shows a "change city" button in the app bar (used by the Nearby Laboratory Finder).
+  final VoidCallback? onChangeCity;
 
   @override
   State<AllLabsScreen> createState() => _AllLabsScreenState();
@@ -480,7 +483,17 @@ class _AllLabsScreenState extends State<AllLabsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Labs in ${widget.city}')),
+      appBar: AppBar(
+        title: Text('Labs in ${widget.city}'),
+        actions: [
+          if (widget.onChangeCity != null)
+            TextButton.icon(
+              onPressed: widget.onChangeCity,
+              icon: const Icon(Icons.location_on_outlined, size: 18),
+              label: const Text('Change city'),
+            ),
+        ],
+      ),
       body: FutureBuilder<LabOptions>(
         future: _future,
         builder: (context, snap) {
@@ -501,14 +514,15 @@ class _AllLabsScreenState extends State<AllLabsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               child: Text('${list.length} labs · registered with the Punjab Healthcare Commission and other sources. '
-                  'Prices are not published by most labs — please call or visit to ask.',
+                  'Where a lab has not published a phone or street address, a demo one is shown (marked "demo"). '
+                  'To compare test prices, use Lab Test Price Comparison.',
                   style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
             ),
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.only(bottom: 24),
                 itemCount: list.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEEF2F6)),
+                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE3F2E0)),
                 itemBuilder: (_, i) => _LabRow(offer: list[i], priceText: ''),
               ),
             ),

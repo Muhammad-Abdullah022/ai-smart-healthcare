@@ -260,7 +260,7 @@ class _Bubble extends StatelessWidget {
             bottomLeft: Radius.circular(user ? 18 : 4),
             bottomRight: Radius.circular(user ? 4 : 18),
           ),
-          border: user ? null : Border.all(color: const Color(0xFFE9EEF4)),
+          border: user ? null : Border.all(color: const Color(0xFFDDEFD9)),
         ),
         child: Text(msg.text,
             style: TextStyle(color: user ? Colors.white : AppColors.text, height: 1.4, fontSize: 15)),
@@ -306,8 +306,8 @@ class SymptomResultBubble extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE9EEF4)),
-        boxShadow: const [BoxShadow(color: Color(0x0F16324F), blurRadius: 16, offset: Offset(0, 6))],
+        border: Border.all(color: const Color(0xFFDDEFD9)),
+        boxShadow: const [BoxShadow(color: Color(0x0F013237), blurRadius: 16, offset: Offset(0, 6))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -360,7 +360,7 @@ class SymptomResultBubble extends StatelessWidget {
                                 ? AppColors.primary
                                 : c.likelihood == 'medium'
                                     ? AppColors.accent
-                                    : const Color(0xFFB3BDC9),
+                                    : const Color(0xFFA3BDB3),
                           ),
                         ),
                         const SizedBox(width: 8),
