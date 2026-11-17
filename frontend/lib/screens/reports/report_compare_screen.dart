@@ -132,7 +132,7 @@ class _CompareTable extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFDDEFD9)),
+        border: Border.all(color: const Color(0xFFE2E8EC)),
       ),
       child: Column(children: [
         const Padding(
@@ -144,7 +144,7 @@ class _CompareTable extends StatelessWidget {
           ]),
         ),
         for (final r in rows) ...[
-          const Divider(height: 1, color: Color(0xFFE3F2E0)),
+          const Divider(height: 1, color: Color(0xFFEDF1F4)),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
             child: Row(children: [

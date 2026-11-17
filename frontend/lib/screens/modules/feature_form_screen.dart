@@ -275,7 +275,7 @@ class _FeatureFormScreenState extends State<FeatureFormScreen> {
                   subtitle: [_entrySubtitle(e), when(e.createdAt)].where((s) => s.isNotEmpty).join('\n'),
                   trailing: IconButton(
                     tooltip: 'Remove',
-                    icon: const Icon(Icons.close, size: 18, color: Color(0xFFA3BDB3)),
+                    icon: const Icon(Icons.close, size: 18, color: Color(0xFFB3BDC9)),
                     onPressed: () => _remove(e),
                   ),
                 ),

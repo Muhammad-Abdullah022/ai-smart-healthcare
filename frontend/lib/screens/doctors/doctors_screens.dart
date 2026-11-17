@@ -466,7 +466,7 @@ class DoctorAvatar extends StatelessWidget {
           shape: BoxShape.circle,
           color: Colors.white,
           border: Border.all(color: Colors.white, width: size * 0.05),
-          boxShadow: const [BoxShadow(color: Color(0x14013237), blurRadius: 12, offset: Offset(0, 4))],
+          boxShadow: const [BoxShadow(color: Color(0x140B2B3C), blurRadius: 12, offset: Offset(0, 4))],
         ),
         child: Container(
           decoration: BoxDecoration(
@@ -475,8 +475,8 @@ class DoctorAvatar extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: female
-                  ? const [Color(0xFFC0E6BA), Color(0xFF7FC59A)]
-                  : const [Color(0xFFD5EFD0), Color(0xFF4CA771)],
+                  ? const [Color(0xFFBFE3D5), Color(0xFF6CC5A2)]
+                  : const [Color(0xFFD3EDE3), Color(0xFF0E9F6E)],
             ),
           ),
           alignment: Alignment.center,

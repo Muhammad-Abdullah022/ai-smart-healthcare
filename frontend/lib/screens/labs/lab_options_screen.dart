@@ -146,10 +146,10 @@ class _LabOptionsScreenState extends State<LabOptionsScreen> {
             decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFDDEFD9))),
+                border: Border.all(color: const Color(0xFFE2E8EC))),
             child: Column(children: [
               for (var i = 0; i < o.otherLabs.length; i++) ...[
-                if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFE3F2E0)),
+                if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFEDF1F4)),
                 _LabRow(offer: o.otherLabs[i], priceText: 'Ask price'),
               ],
             ]),
@@ -203,8 +203,8 @@ class _TestCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFDDEFD9)),
-        boxShadow: const [BoxShadow(color: Color(0x0A013237), blurRadius: 14, offset: Offset(0, 4))],
+        border: Border.all(color: const Color(0xFFE2E8EC)),
+        boxShadow: const [BoxShadow(color: Color(0x0A0B2B3C), blurRadius: 14, offset: Offset(0, 4))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -244,7 +244,7 @@ class _TestCard extends StatelessWidget {
           )
         else
           for (var i = 0; i < test.offers.length; i++) ...[
-            if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFE3F2E0)),
+            if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16, color: Color(0xFFEDF1F4)),
             _LabRow(
               offer: test.offers[i],
               priceText: test.offers[i].price == null ? 'Ask price' : rs(test.offers[i].price!),
@@ -323,7 +323,7 @@ class _LabRow extends StatelessWidget {
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: gov ? const Color(0xFFE7F6EC) : AppColors.primaryTint,
+            backgroundColor: gov ? const Color(0xFFE6F4EF) : AppColors.primaryTint,
             child: Text(initials,
                 style: TextStyle(fontWeight: FontWeight.w800, color: gov ? AppColors.success : AppColors.primary)),
           ),
@@ -333,10 +333,9 @@ class _LabRow extends StatelessWidget {
               Text(o.lab, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 4),
               Wrap(spacing: 6, runSpacing: 4, children: [
-                if (o.demo) const _Tag('Estimated price (demo)', Color(0xFFC2410C), Color(0xFFFFEDD5)),
-                if (best && !o.demo) const _Tag('Lowest price', AppColors.success, Color(0xFFE7F6EC)),
+                if (best && !o.demo) const _Tag('Lowest price', AppColors.success, Color(0xFFE6F4EF)),
                 if (o.branches > 1) _Tag('${o.branches} branches', AppColors.primary, AppColors.primaryTint),
-                if (gov) const _Tag('Government', AppColors.success, Color(0xFFE7F6EC)),
+                if (gov) const _Tag('Government', AppColors.success, Color(0xFFE6F4EF)),
               ]),
             ]),
           ),
@@ -349,7 +348,9 @@ class _LabRow extends StatelessWidget {
                       fontSize: o.price == null ? 13 : 18,
                       color: o.price == null
                           ? AppColors.textMuted
-                          : (o.demo ? const Color(0xFFC2410C) : AppColors.success))),
+                          : (o.demo ? AppColors.primary : AppColors.success))),
+              if (o.demo && o.price != null)
+                const Text('approx.', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
               if (o.discountPrice != null)
                 Text('Rs ${o.discountPrice!.toStringAsFixed(0)} online',
                     style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
@@ -522,7 +523,7 @@ class _AllLabsScreenState extends State<AllLabsScreen> {
               child: ListView.separated(
                 padding: const EdgeInsets.only(bottom: 24),
                 itemCount: list.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE3F2E0)),
+                separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEDF1F4)),
                 itemBuilder: (_, i) => _LabRow(offer: list[i], priceText: ''),
               ),
             ),

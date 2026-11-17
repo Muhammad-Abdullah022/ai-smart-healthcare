@@ -85,7 +85,7 @@ class _TrendPainter extends CustomPainter {
     hi += pad;
 
     final grid = Paint()
-      ..color = const Color(0xFFE3F2E0)
+      ..color = const Color(0xFFEDF1F4)
       ..strokeWidth = 1;
     for (var i = 0; i <= 3; i++) {
       final y = size.height * i / 3;

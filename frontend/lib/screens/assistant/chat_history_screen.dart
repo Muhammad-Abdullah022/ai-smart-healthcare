@@ -60,7 +60,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                 borderRadius: BorderRadius.circular(16),
                 child: ListTile(
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFDDEFD9))),
+                      borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8EC))),
                   leading: const CircleAvatar(
                     backgroundColor: AppColors.diagnosisTint,
                     child: Icon(Icons.chat_bubble_outline, color: AppColors.diagnosis, size: 20),

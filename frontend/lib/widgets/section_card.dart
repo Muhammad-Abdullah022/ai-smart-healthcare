@@ -24,7 +24,7 @@ class SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFDDEFD9)),
+        border: Border.all(color: const Color(0xFFE2E8EC)),
         boxShadow: const [BoxShadow(color: Color(0x0816324F), blurRadius: 12, offset: Offset(0, 4))],
       ),
       clipBehavior: Clip.antiAlias,
@@ -49,7 +49,7 @@ class GroupedList extends StatelessWidget {
       child: Column(
         children: [
           for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(height: 1, indent: 68, color: Color(0xFFE3F2E0)),
+            if (i > 0) const Divider(height: 1, indent: 68, color: Color(0xFFEDF1F4)),
             children[i],
           ],
         ],
@@ -102,7 +102,7 @@ class ListRow extends StatelessWidget {
               ),
             ),
             if (trailing != null) trailing! else if (onTap != null)
-              const Icon(Icons.chevron_right, size: 20, color: Color(0xFFA3BDB3)),
+              const Icon(Icons.chevron_right, size: 20, color: Color(0xFFB3BDC9)),
           ],
         ),
       ),

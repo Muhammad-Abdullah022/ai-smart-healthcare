@@ -392,7 +392,7 @@ class _CompanionChatScreenState extends State<CompanionChatScreen> {
             decoration: BoxDecoration(
               color: bg,
               borderRadius: BorderRadius.circular(18),
-              border: m.fromUser ? null : Border.all(color: m.crisis ? AppColors.critical : const Color(0xFFDDEFD9)),
+              border: m.fromUser ? null : Border.all(color: m.crisis ? AppColors.critical : const Color(0xFFE2E8EC)),
             ),
             child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Flexible(

@@ -170,7 +170,7 @@ class _TestPickerScreenState extends State<TestPickerScreen> {
             child: ListView.separated(
               padding: const EdgeInsets.only(bottom: 24),
               itemCount: list.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE3F2E0)),
+              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFEDF1F4)),
               itemBuilder: (_, i) {
                 final t = list[i];
                 return ListTile(

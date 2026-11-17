@@ -1,31 +1,32 @@
 import 'package:flutter/material.dart';
 
 /// All colors used in the app, in one place.
-/// Palette: #EAF9E7 (mint), #C0E6BA (soft green), #4CA771 (green), #013237 (deep teal) — font Poppins.
+/// Palette "Emerald & Ink": emerald #0E9F6E for actions, ink navy #0B2B3C for text and headers,
+/// soft mint #E6F4EF tints on a cool off-white #F5F8F7 background — font Poppins.
 class AppColors {
   AppColors._();
 
   // The four brand colours.
-  static const Color mint = Color(0xFFEAF9E7);
-  static const Color softGreen = Color(0xFFC0E6BA);
-  static const Color green = Color(0xFF4CA771);
-  static const Color deep = Color(0xFF013237);
+  static const Color mint = Color(0xFFE6F4EF);
+  static const Color softGreen = Color(0xFFBFE3D5);
+  static const Color green = Color(0xFF0E9F6E);
+  static const Color deep = Color(0xFF0B2B3C);
 
   static const Color primary = deep; // titles, dark buttons
-  static const Color primaryDeep = Color(0xFF00242A); // header gradient end
+  static const Color primaryDeep = Color(0xFF071E2B); // header gradient end
   static const Color accent = green; // actions, highlights
-  static const Color background = Color(0xFFF3FBF1);
+  static const Color background = Color(0xFFF5F8F7);
   static const Color card = Color(0xFFFFFFFF);
-  static const Color text = Color(0xFF0E2A2E);
-  static const Color textMuted = Color(0xFF5E7470);
-  static const Color border = Color(0xFFD7EBD3);
+  static const Color text = Color(0xFF1B2B33);
+  static const Color textMuted = Color(0xFF64748B);
+  static const Color border = Color(0xFFE2E8EC);
   static const Color warning = Color(0xFFF59E0B);
   static const Color critical = Color(0xFFDC2626);
-  static const Color success = Color(0xFF2E8B57);
+  static const Color success = Color(0xFF0E9F6E);
 
   // Light tints used behind icons and banners.
   static const Color accentTint = mint;
-  static const Color primaryTint = Color(0xFFE1F0EC);
+  static const Color primaryTint = Color(0xFFE8EEF3);
   static const Color warningTint = Color(0xFFFEF3C7);
   static const Color criticalTint = Color(0xFFFEE2E2);
 
@@ -36,12 +37,12 @@ class AppColors {
   static const Color mindTint = Color(0xFFEFECFB);
   static const Color medicine = Color(0xFFE29A2D);
   static const Color medicineTint = Color(0xFFFCF1DF);
-  static const Color records = Color(0xFF2F7F8A);
-  static const Color recordsTint = Color(0xFFE0F1F2);
+  static const Color records = Color(0xFF2563EB);
+  static const Color recordsTint = Color(0xFFE8F0FE);
 
   /// Soft shadow tinted with the deep brand colour, so cards feel lifted, not dirty.
   static const List<BoxShadow> softShadow = [
-    BoxShadow(color: Color(0x14013237), blurRadius: 24, offset: Offset(0, 8)),
-    BoxShadow(color: Color(0x0A013237), blurRadius: 4, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x140B2B3C), blurRadius: 24, offset: Offset(0, 8)),
+    BoxShadow(color: Color(0x0A0B2B3C), blurRadius: 4, offset: Offset(0, 1)),
   ];
 }

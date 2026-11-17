@@ -160,7 +160,7 @@ class _AssistantHero extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('AI Health Assistant',
                       style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-                  Text('Symptoms, questions, reports · English · اردو · Roman Urdu', style: TextStyle(color: Color(0xFFA9CDB0), fontSize: 13)),
+                  Text('Symptoms, questions, reports · English · اردو · Roman Urdu', style: TextStyle(color: Color(0xFFB8C6CF), fontSize: 13)),
                 ]),
               ),
               const Icon(Icons.arrow_forward, color: Colors.white),

@@ -123,7 +123,7 @@ class _Header extends StatelessWidget {
             children: [
               Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 2),
-              Text(label, style: const TextStyle(color: Color(0xFFA9CDB0), fontSize: 12)),
+              Text(label, style: const TextStyle(color: Color(0xFFB8C6CF), fontSize: 12)),
             ],
           ),
         );
@@ -155,7 +155,7 @@ class _Header extends StatelessWidget {
                     Text(profile.fullName,
                         style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
-                    Text(profile.email, style: const TextStyle(color: Color(0xFFA9CDB0), fontSize: 13)),
+                    Text(profile.email, style: const TextStyle(color: Color(0xFFB8C6CF), fontSize: 13)),
                   ],
                 ),
               ),
@@ -192,7 +192,7 @@ class _InfoCard extends StatelessWidget {
           Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.primary)),
           const SizedBox(height: 4),
           for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: Color(0xFFE3F2E0)),
+            if (i > 0) const Divider(height: 1, color: Color(0xFFEDF1F4)),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(

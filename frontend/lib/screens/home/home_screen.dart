@@ -111,7 +111,7 @@ class _Hero extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(greeting, style: const TextStyle(color: Color(0xFFA9CDB0), fontSize: 15)),
+                child: Text(greeting, style: const TextStyle(color: Color(0xFFB8C6CF), fontSize: 15)),
               ),
               IconButton(
                 tooltip: 'Search',

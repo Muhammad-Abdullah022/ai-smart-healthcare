@@ -50,7 +50,7 @@ const checkInMoods = [
     key: 'calm',
     emoji: '😌',
     score: 4,
-    color: Color(0xFF4CA771),
+    color: Color(0xFF0E9F6E),
     label: {'en': 'Calm', 'ur': 'پرسکون', 'roman_ur': 'Pursukoon'},
     affirmation: {
       'en': 'Calm is a strength. You can return to this feeling whenever you need it.',
