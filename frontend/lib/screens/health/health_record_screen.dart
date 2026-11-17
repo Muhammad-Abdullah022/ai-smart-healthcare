@@ -10,7 +10,9 @@ import '../../services/api_client.dart';
 import '../../services/health_repository.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/state_views.dart';
+import '../doctors/doctors_screens.dart';
 import '../modules/feature_form_screen.dart';
+import '../pharmacy/medicine_search_screen.dart';
 
 /// Feature 38 (with 39 and 50): one health record built automatically from everything in the app —
 /// symptom checks, reports, prescriptions, medicines, vitals, history — plus a locked PDF and a QR code.
@@ -187,6 +189,14 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
                 [for (final x in r['reports'] as List) _reportTile(x as Map<String, dynamic>)]),
             _section(Icons.monitor_heart_outlined, 'Symptom checks (AI assistant)', AppColors.green,
                 [for (final x in r['symptom_checks'] as List) _checkTile(x as Map<String, dynamic>)]),
+            _section(Icons.local_pharmacy_outlined, 'Medicines suggested by AI chatbot', AppColors.medicine,
+                [for (final x in (r['ai_medicines'] as List? ?? const [])) _aiMedTile(x as Map<String, dynamic>)],
+                footer: (r['ai_medicines'] as List? ?? const []).isEmpty
+                    ? null
+                    : const Text('Over-the-counter options only, no doses. Ask a pharmacist or doctor before taking.',
+                        style: TextStyle(fontSize: 11.5, color: AppColors.textMuted))),
+            _section(Icons.medical_services_outlined, 'Recommended doctors & websites', AppColors.records,
+                [for (final x in (r['recommended_doctors'] as List? ?? const [])) _doctorTile(x as Map<String, dynamic>)]),
             _section(Icons.receipt_long_outlined, 'Prescriptions', AppColors.deep,
                 [for (final x in r['prescriptions'] as List) _rxTile(x as Map<String, dynamic>)]),
             _section(Icons.history_edu_outlined, 'Medical history', AppColors.mind,
@@ -517,6 +527,23 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
               ),
           ]),
         ],
+        if ((c['otc_options'] as List? ?? const []).isNotEmpty) ...[
+          const SizedBox(height: 10),
+          const Text('AI suggested medicines (no dose)', style: TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+          const SizedBox(height: 5),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final o in c['otc_options'] as List)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(20)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.medication_outlined, size: 14, color: AppColors.green),
+                  const SizedBox(width: 4),
+                  Text('${o['name']}', style: const TextStyle(fontSize: 12.5, color: AppColors.deep, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+          ]),
+        ],
         if (doctor.isNotEmpty) ...[
           const SizedBox(height: 10),
           Row(children: [
@@ -528,6 +555,91 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
       ]),
     );
   }
+
+  Widget _aiMedTile(Map<String, dynamic> m) => _itemCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.medication_liquid_outlined, size: 18, color: AppColors.green),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+                child: Text('${m['name']}',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.deep))),
+            _dateChip('${m['date']}'),
+          ]),
+          if ('${m['helps_with'] ?? ''}'.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _infoLine(Icons.check_circle_outline, AppColors.green, 'Helps with: ${m['helps_with']}'),
+          ],
+          if ('${m['avoid_if'] ?? ''}'.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            _infoLine(Icons.warning_amber_rounded, Colors.orange.shade800, 'Avoid if: ${m['avoid_if']}'),
+          ],
+          if ('${m['for_symptoms'] ?? ''}'.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            _infoLine(Icons.chat_bubble_outline, AppColors.textMuted, 'Suggested for: "${_niceText('${m['for_symptoms']}')}"'),
+          ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => MedicineSearchScreen(initialQuery: '${m['name']}'))),
+              icon: const Icon(Icons.search, size: 17),
+              label: const Text('Brands & prices'),
+            ),
+          ),
+        ]),
+      );
+
+  Widget _doctorTile(Map<String, dynamic> d) {
+    final sites = (d['websites'] as List? ?? const []).cast<Map<String, dynamic>>();
+    return _itemCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(color: AppColors.recordsTint, borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.person_search_outlined, size: 18, color: AppColors.records),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Text('${d['specialist']}',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.deep))),
+          _dateChip('${d['date']}'),
+        ]),
+        if ('${d['for_symptoms'] ?? ''}'.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          _infoLine(Icons.chat_bubble_outline, AppColors.textMuted, 'For: "${_niceText('${d['for_symptoms']}')}"'),
+        ],
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          FilledButton.icon(
+            style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => DoctorListScreen(specialty: '${d['specialist']}', reason: 'Recommended in your health record'))),
+            icon: const Icon(Icons.search, size: 17),
+            label: const Text('Find in app'),
+          ),
+          for (final w in sites)
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+              onPressed: () => openExternal(context, Uri.parse('${w['url']}')),
+              icon: const Icon(Icons.open_in_new, size: 16),
+              label: Text('${w['site']}'),
+            ),
+        ]),
+      ]),
+    );
+  }
+
+  static Widget _infoLine(IconData icon, Color color, String text) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 6),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 12.5, color: AppColors.deep, height: 1.35))),
+      ]);
 
   Widget _rxTile(Map<String, dynamic> x) =>
       _simple('${x['doctor'].toString().isEmpty ? 'Prescription' : x['doctor']} · ${_d(x['date'])}', (x['medicines'] as List).join('\n'));

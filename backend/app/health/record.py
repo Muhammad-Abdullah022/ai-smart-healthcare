@@ -4,6 +4,7 @@ Nothing is typed twice: symptom checks (chatbot), report readings, prescriptions
 intake, vitals (manual or smartwatch), mental-health screenings (only with consent) and anything the user
 added by hand to their medical history all appear here, newest first.
 """
+import re
 from datetime import date, datetime, timedelta, timezone
 
 from app.routers.consents import has_consent
@@ -19,6 +20,17 @@ VITAL_KINDS = {
     "steps": ("Steps", "steps"),
     "sleep": ("Sleep", "hours"),
 }
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"^-|-$", "", re.sub(r"[^a-z0-9]+", "-", (text or "").strip().lower()))
+
+
+def doctor_websites(city: str, specialty: str) -> list[dict]:
+    """Doctor search pages (Marham / oladoc) for the city and specialist the AI recommended."""
+    c, sp = _slug(city) or "lahore", _slug(specialty) or "general-physician"
+    return [{"site": "Marham", "url": f"https://www.marham.pk/doctors/{c}/{sp}"},
+            {"site": "oladoc", "url": f"https://oladoc.com/pakistan/{c}/{sp}"}]
 
 
 def age_of(dob) -> int | None:
@@ -51,13 +63,28 @@ async def build_record(db, user: dict) -> dict:
     profile = await db.profiles.find_one({"user_id": uid}) or {}
     lifestyle = profile.get("lifestyle") or {}
 
+    city = profile.get("city") or ""
     checks = []
+    otc_seen: dict[str, dict] = {}
+    doctors_seen: dict[str, dict] = {}
     async for a in db.symptom_assessments.find({"user_id": uid}).sort("created_at", -1).limit(50):
+        otc = [{"name": o.get("name", ""), "helps_with": o.get("helps_with", ""), "avoid_if": o.get("avoid_if", "")}
+               for o in (a.get("otc_options") or []) if o.get("name")]
+        spec = "" if str(a.get("specialist_type", "")).lower() in ("", "none", "null") else a["specialist_type"]
+        for o in otc:
+            otc_seen.setdefault(o["name"].lower(), {**o, "date": _iso(a["created_at"]),
+                                                    "for_symptoms": a.get("symptoms", "")[:80]})
+        if spec:
+            doctors_seen.setdefault(spec.lower(), {"specialist": spec, "date": _iso(a["created_at"]),
+                                                   "for_symptoms": a.get("symptoms", "")[:80],
+                                                   "websites": doctor_websites(city, spec)})
         checks.append({
+            "otc_options": otc, "doctor_websites": doctor_websites(city, spec) if spec else [],
             "date": _iso(a["created_at"]), "symptoms": a.get("symptoms", ""),
             "urgency": a.get("triage_level", ""),
             "possible_causes": [c.get("name", "") for c in (a.get("possible_causes") or [])][:4],
-            "specialist": "" if str(a.get("specialist_type", "")).lower() in ("", "none", "null") else a["specialist_type"],
+            "specialist": spec,
+            "next_steps": (a.get("next_steps") or [])[:4],
             "tests": (a.get("tests_to_discuss") or [])[:5],
         })
 
@@ -122,9 +149,11 @@ async def build_record(db, user: dict) -> dict:
                     "allergies": profile.get("allergies", []), "conditions": profile.get("conditions", []),
                     "height_cm": lifestyle.get("height_cm"),
                     "emergency_contacts": profile.get("emergency_contacts", [])},
-        "vitals": vitals, "symptom_checks": checks, "reports": reports, "medicines": medicines,
+        "vitals": vitals, "symptom_checks": checks,
+        "ai_medicines": list(otc_seen.values()), "recommended_doctors": list(doctors_seen.values()), "reports": reports, "medicines": medicines,
         "prescriptions": prescriptions, "adherence_30d": adherence, "history": history,
         "mental_health": mental, "appointments": appointments,
         "counts": {"symptom_checks": len(checks), "reports": len(reports), "medicines": len(medicines),
-                   "prescriptions": len(prescriptions), "history": len(history)},
+                   "prescriptions": len(prescriptions), "history": len(history),
+                   "ai_medicines": len(otc_seen), "recommended_doctors": len(doctors_seen)},
     }

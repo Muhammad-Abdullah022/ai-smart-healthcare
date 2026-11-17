@@ -174,6 +174,30 @@ def build_pdf(record: dict, risk: dict | None = None) -> bytes:
                   table(rows, [25 * mm, 42 * mm, 60 * mm, 21 * mm, 32 * mm]),
                   Spacer(1, 3), Paragraph("Possible causes are AI suggestions, not diagnoses.", small)]
 
+    ai_meds = record.get("ai_medicines") or []
+    if ai_meds:
+        rows = [["Medicine (generic)", "Helps with", "Avoid if", "Suggested on"]]
+        for m in ai_meds[:20]:
+            rows.append([Paragraph(f"<b>{_esc(m['name'])}</b>", body), P(m.get("helps_with") or "—"),
+                         P(m.get("avoid_if") or "—"), P((m.get("date") or "")[:10])])
+        story += [Paragraph("Medicines suggested by AI chatbot", h2),
+                  table(rows, [40 * mm, 55 * mm, 60 * mm, 25 * mm]),
+                  Spacer(1, 3), Paragraph("Over-the-counter options only, no doses. Ask a pharmacist or doctor "
+                                          "before taking any of these.", small)]
+
+    docs = record.get("recommended_doctors") or []
+    if docs:
+        link = colors.HexColor("#0E7C5A").hexval()
+        rows = [["Recommended doctor", "For symptoms", "Find this doctor online", "Date"]]
+        for d in docs[:12]:
+            sites = "<br/>".join(f'<link href="{_esc(w["url"])}"><font color="{link}"><u>{_esc(w["site"])}</u></font></link>'
+                                 f'<font size="6.5" color="{MUTED.hexval()}"> {_esc(w["url"].split("//", 1)[-1])}</font>'
+                                 for w in d.get("websites", []))
+            rows.append([Paragraph(f"<b>{_esc(d['specialist'])}</b>", body), P(d.get("for_symptoms") or "—"),
+                         Paragraph(sites or "—", body), P((d.get("date") or "")[:10])])
+        story += [Paragraph("Recommended doctors & websites", h2),
+                  table(rows, [36 * mm, 46 * mm, 73 * mm, 25 * mm])]
+
     if record["prescriptions"]:
         rows = [["Date", "Doctor", "Medicines"]]
         for x in record["prescriptions"][:10]:

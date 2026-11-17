@@ -66,3 +66,28 @@ def test_qr_share_link(registered):
     assert got.status_code == 200 and PdfReader(io.BytesIO(got.content)).is_encrypted
     assert client.delete("/health-record/share", headers=h).status_code == 204
     assert client.get("/" + path).status_code == 404
+
+
+def test_record_has_ai_medicines_and_doctor_websites(registered):
+    import asyncio
+    from datetime import datetime, timezone
+    client, tokens = registered
+    h = auth_header(tokens)
+    client.patch("/profile", headers=h, json={"city": "Faisalabad"})
+    db = client.app.state.db
+    user = asyncio.run(db.users.find_one({}))
+    asyncio.run(db.symptom_assessments.insert_one({
+        "user_id": user["_id"], "created_at": datetime.now(timezone.utc), "symptoms": "fever and body ache",
+        "triage_level": "routine", "specialist_type": "General Physician", "possible_causes": [{"name": "Viral fever"}],
+        "otc_options": [{"name": "Paracetamol", "helps_with": "fever", "avoid_if": "liver disease"}]}))
+    rec = client.get("/health-record", headers=h).json()
+    assert rec["ai_medicines"][0]["name"] == "Paracetamol"
+    doc = rec["recommended_doctors"][0]
+    assert doc["specialist"] == "General Physician"
+    assert {w["url"] for w in doc["websites"]} == {"https://www.marham.pk/doctors/faisalabad/general-physician",
+                                                   "https://oladoc.com/pakistan/faisalabad/general-physician"}
+    pdf = client.post("/health-record/pdf", headers=h, json={"password": "Secure123"})
+    reader = PdfReader(io.BytesIO(pdf.content))
+    reader.decrypt("Secure123")
+    text = "".join(p.extract_text() for p in reader.pages)
+    assert "Paracetamol" in text and "Marham" in text and "oladoc" in text
