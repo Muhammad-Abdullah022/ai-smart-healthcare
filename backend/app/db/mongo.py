@@ -1,11 +1,74 @@
 """MongoDB connection and index setup."""
+import json
+import socket
+import urllib.parse
+import urllib.request
+from datetime import datetime
+from pathlib import Path
+
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import ASCENDING, DESCENDING
+from pymongo.errors import ConfigurationError
+
+DOH_URL = "https://dns.google/resolve?name={name}&type={type}"
+LOG = Path(__file__).resolve().parents[2] / "logs" / "startup.log"
+
+
+def _log(msg: str) -> None:
+    print(f"[mongo] {msg}")
+    try:
+        LOG.parent.mkdir(exist_ok=True)
+        with LOG.open("a", encoding="utf-8") as f:
+            f.write(f"{datetime.now():%Y-%m-%d %H:%M:%S} {msg}\n")
+    except OSError:
+        pass
+
+
+def _doh(name: str, rtype: str) -> list[str]:
+    """DNS lookup over HTTPS (Google), for networks whose DNS cannot answer SRV/TXT lookups."""
+    with urllib.request.urlopen(DOH_URL.format(name=name, type=rtype), timeout=8) as r:
+        data = json.loads(r.read())
+    code = {"SRV": 33, "TXT": 16}[rtype]
+    return [a["data"].strip('"') for a in data.get("Answer", []) if a.get("type") == code]
+
+
+def srv_to_standard(uri: str) -> str:
+    """mongodb+srv://user:pw@cluster/db?x  ->  mongodb://user:pw@host1:27017,host2:27017/db?x&replicaSet=..&tls=true"""
+    parts = urllib.parse.urlsplit(uri)
+    userinfo, _, host = parts.netloc.rpartition("@")
+    hosts = []
+    for rec in _doh(f"_mongodb._tcp.{host}", "SRV"):
+        _prio, _weight, port, target = rec.split()
+        hosts.append(f"{target.rstrip('.')}:{port}")
+    if not hosts:
+        raise ConfigurationError(f"Could not find the database servers for {host}")
+    opts = dict(urllib.parse.parse_qsl(parts.query))
+    for txt in _doh(host, "TXT"):
+        for k, v in urllib.parse.parse_qsl(txt):
+            opts.setdefault(k, v)
+    opts.setdefault("tls", "true")
+    return f"mongodb://{userinfo + '@' if userinfo else ''}{','.join(hosts)}{parts.path or '/'}?{urllib.parse.urlencode(opts)}"
 
 
 def create_client(uri: str) -> AsyncIOMotorClient:
     # tz_aware=True keeps all dates in UTC with timezone info.
-    return AsyncIOMotorClient(uri, tz_aware=True, serverSelectionTimeoutMS=10000)
+    try:
+        return AsyncIOMotorClient(uri, tz_aware=True, serverSelectionTimeoutMS=10000)
+    except ConfigurationError as exc:
+        # Some home/ISP DNS servers cannot answer the special (SRV) lookup that "mongodb+srv://"
+        # addresses need ("The DNS query name does not exist"). Look it up over HTTPS instead and
+        # connect with the normal address format.
+        if not uri.startswith("mongodb+srv://"):
+            raise
+        _log(f"Local DNS failed for the Atlas address ({exc}); looking it up over HTTPS instead.")
+        standard = srv_to_standard(uri)
+        first = standard.split("@")[-1].split(",")[0].split(":")[0]
+        try:
+            socket.getaddrinfo(first, 27017)
+            _log(f"Server {first} resolves on this network; connecting.")
+        except OSError as e:
+            _log(f"Warning: this network also cannot resolve {first}: {e}")
+        return AsyncIOMotorClient(standard, tz_aware=True, serverSelectionTimeoutMS=10000)
 
 
 async def ensure_indexes(db: AsyncIOMotorDatabase) -> None:
