@@ -110,10 +110,11 @@ const List<HealthModule> healthModules = [
           status: FeatureStatus.available),
       HealthFeature(27, 'Medicine Identification from Image', Icons.camera_alt_outlined),
       HealthFeature(28, 'Nearby Pharmacy & Availability', Icons.local_pharmacy_outlined,
-          status: FeatureStatus.prototype, note: _noData),
+          status: FeatureStatus.available),
       HealthFeature(29, 'Medicine Price Comparison', Icons.sell_outlined,
           status: FeatureStatus.prototype, note: _noData),
-      HealthFeature(30, 'Same-Salt / Generic Alternatives', Icons.swap_horiz),
+      HealthFeature(30, 'Medicine Search & Same-Salt Alternatives', Icons.swap_horiz,
+          status: FeatureStatus.available),
       HealthFeature(31, 'Drug Interaction & Safety Checker', Icons.warning_amber_outlined),
       HealthFeature(32, 'Allergy & Contraindication Warning', Icons.do_not_disturb_on_outlined, status: FeatureStatus.available),
       HealthFeature(33, 'Smart Medicine Reminders', Icons.alarm, status: FeatureStatus.available),
@@ -182,7 +183,7 @@ const Set<int> hiddenMentalFeatures = {16, 18, 19, 20, 21, 22, 23, 24, 25};
 
 /// Whether a feature appears in section lists and search.
 /// Appointment booking (11) now happens from the chat result and the doctor list, so it has no row.
-const Set<int> hiddenOtherFeatures = {11, 14, 15};
+const Set<int> hiddenOtherFeatures = {11, 14, 15, 27, 32, 34, 35, 36, 37};
 
 bool isListedFeature(HealthFeature f) =>
     !mergedIntoSymptomChecker.contains(f.number) &&

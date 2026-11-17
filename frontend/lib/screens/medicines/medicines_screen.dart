@@ -8,6 +8,7 @@ import '../../services/medicine_repository.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/section_card.dart';
 import '../../widgets/state_views.dart';
+import '../prescriptions/prescription_reader_screen.dart';
 import 'add_medicine_screen.dart';
 
 /// Features 33, 35, 36: today's doses (mark taken/skipped, missed alerts) and the medicine list.
@@ -56,7 +57,41 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
     }
   }
 
+  /// Add medicines: scan a prescription photo (the AI reads it, you check it, reminders are made)
+  /// or add them one by one.
   Future<void> _add() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('Add medicines', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            _AddOption(
+              icon: Icons.document_scanner_outlined,
+              title: 'Scan a prescription',
+              subtitle: 'Take or upload a photo — the AI reads every medicine, you check it, reminders are set',
+              onTap: () => Navigator.pop(ctx, 'scan'),
+            ),
+            const SizedBox(height: 10),
+            _AddOption(
+              icon: Icons.edit_note_outlined,
+              title: 'Add one by one',
+              subtitle: 'Type the medicine name, strength, how often, before/after food and for how many days',
+              onTap: () => Navigator.pop(ctx, 'manual'),
+            ),
+          ]),
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    if (choice == 'scan') {
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PrescriptionReaderScreen()));
+      _reload();
+      return;
+    }
     final added = await Navigator.of(context)
         .push<bool>(MaterialPageRoute(builder: (_) => AddMedicineScreen(repository: _repo)));
     if (added == true) _reload();
@@ -225,4 +260,43 @@ class _DoseTile extends StatelessWidget {
       ),
     );
   }
+}
+
+
+class _AddOption extends StatelessWidget {
+  const _AddOption({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.mint,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+                child: Icon(icon, color: AppColors.green),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5, color: AppColors.deep)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted, height: 1.3)),
+                ]),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.textMuted),
+            ]),
+          ),
+        ),
+      );
 }

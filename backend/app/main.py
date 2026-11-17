@@ -15,12 +15,13 @@ from app.core.errors import register_error_handlers
 from app.db.mongo import create_client, ensure_indexes
 from app.labs.loader import ensure_lab_data
 from app.doctors import ensure_doctor_data
+from app.pharmacy import ensure_pharmacy_data
 from app.core.rate_limit import RateLimiter
-from app.routers import admin, assessments, assistant, auth, companion, consents, doctors, voice, entries, labs, medicines, mental, notifications, prescriptions, profile, reports, sos
+from app.routers import admin, assessments, assistant, auth, companion, consents, doctors, voice, entries, labs, drugs, medicines, mental, notifications, prescriptions, profile, reports, sos
 
 
 async def _import_data(db) -> None:
-    for step in (ensure_lab_data, ensure_doctor_data):
+    for step in (ensure_lab_data, ensure_doctor_data, ensure_pharmacy_data):
         try:
             await step(db)
         except Exception as exc:  # keep the server running; the import is retried at the next start
@@ -49,6 +50,7 @@ async def lifespan(app: FastAPI):
     if testing:
         await ensure_lab_data(app.state.db)
         await ensure_doctor_data(app.state.db)
+        await ensure_pharmacy_data(app.state.db)
     else:
         # Importing lab/doctor data can take a minute on a slow connection (only when the CSV files
         # change), so it runs in the background and the server answers right away.
@@ -89,10 +91,11 @@ def create_app() -> FastAPI:
     app.include_router(doctors.router)
     app.include_router(voice.router)
     app.include_router(prescriptions.router)
+    app.include_router(drugs.router)
 
     @app.get("/health", tags=["system"])
     async def health():
-        return {"status": "ok", "version": "2026-11-17b"}
+        return {"status": "ok", "version": "2026-11-17c"}
 
     return app
 

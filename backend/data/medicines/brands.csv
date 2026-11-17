@@ -1,0 +1,351 @@
+brand,generic,company,forms,strengths
+Panadol,Paracetamol,Haleon (GSK),tablet;syrup;drops,500 mg;120 mg/5 ml;80 mg/0.8 ml
+Calpol,Paracetamol,Haleon (GSK),tablet;syrup;drops,500 mg;120 mg/5 ml;250 mg/5 ml
+Febrol,Paracetamol,,tablet;syrup,500 mg;120 mg/5 ml
+Tylenol,Paracetamol,,tablet,500 mg
+Provas Paracetamol,Paracetamol,,tablet,500 mg
+Panadol Extra,Paracetamol + Caffeine,Haleon (GSK),tablet,500 mg + 65 mg
+Paracetamol Extra,Paracetamol + Caffeine,,tablet,500 mg + 65 mg
+Nuberol,Paracetamol + Orphenadrine,,tablet,450 mg + 35 mg
+Nuberol Forte,Paracetamol + Orphenadrine,,tablet,650 mg + 50 mg
+Norgesic,Paracetamol + Orphenadrine,,tablet,450 mg + 35 mg
+Brufen,Ibuprofen,Abbott,tablet;syrup,200 mg;400 mg;600 mg;100 mg/5 ml
+Advil,Ibuprofen,Haleon,tablet,200 mg
+Ibufen,Ibuprofen,,tablet;syrup,400 mg;100 mg/5 ml
+Nurofen,Ibuprofen,Reckitt,tablet;syrup,200 mg;100 mg/5 ml
+Arinac,Ibuprofen + Pseudoephedrine,Abbott,tablet,200 mg + 30 mg
+Arinac Forte,Ibuprofen + Pseudoephedrine,Abbott,tablet,400 mg + 60 mg
+Naprosyn,Naproxen,,tablet;suspension,250 mg;500 mg;125 mg/5 ml
+Naprox,Naproxen,,tablet,250 mg;500 mg
+Neoprox,Naproxen,,tablet,250 mg;500 mg
+Xenobid,Naproxen,,tablet,250 mg;500 mg
+Synflex,Naproxen Sodium,,tablet,275 mg;550 mg
+Anaprox,Naproxen Sodium,,tablet,275 mg;550 mg
+Naprosyn DS,Naproxen Sodium,,tablet,550 mg
+Voltral,Diclofenac Sodium,Novartis,tablet;injection;gel,50 mg;75 mg;100 mg SR;75 mg/3 ml
+Dicloran,Diclofenac Sodium,Sami,tablet;injection;gel,50 mg;100 mg SR;75 mg/3 ml
+Voren,Diclofenac Sodium,,tablet;injection,50 mg;100 mg SR;75 mg/3 ml
+Diclofen,Diclofenac Sodium,,tablet,50 mg
+Cataflam,Diclofenac Potassium,Novartis,tablet;drops,50 mg
+Caflam,Diclofenac Potassium,,tablet,50 mg
+Dicloran K,Diclofenac Potassium,Sami,tablet,50 mg
+Ponstan,Mefenamic Acid,Pfizer,tablet;suspension,250 mg;500 mg;50 mg/5 ml
+Ponstan Forte,Mefenamic Acid,Pfizer,tablet,500 mg
+Mefnac,Mefenamic Acid,,tablet,250 mg;500 mg
+Loprin,Aspirin (low dose),Highnoon,tablet,75 mg;150 mg
+Ascard,Aspirin (low dose),Atco,tablet,75 mg;150 mg
+Cardnit Aspirin,Aspirin (low dose),,tablet,75 mg
+Disprin,Aspirin,Reckitt,dispersible tablet,300 mg
+Disprin CV,Aspirin (low dose),Reckitt,tablet,100 mg
+Celbexx,Celecoxib,Getz Pharma,capsule,100 mg;200 mg
+Celebrex,Celecoxib,Pfizer,capsule,100 mg;200 mg
+Arcoxia,Etoricoxib,MSD,tablet,60 mg;90 mg;120 mg
+Etorix,Etoricoxib,,tablet,60 mg;90 mg;120 mg
+Tramal,Tramadol,,capsule;injection,50 mg;100 mg/2 ml
+Tramadol HCl,Tramadol,,capsule,50 mg
+Amoxil,Amoxicillin,Haleon (GSK),capsule;suspension,250 mg;500 mg;125 mg/5 ml;250 mg/5 ml
+Amoxicillin Trihydrate,Amoxicillin,,capsule;suspension,250 mg;500 mg;125 mg/5 ml
+Zeemox,Amoxicillin,,capsule;suspension,250 mg;500 mg
+Augmentin,Amoxicillin + Clavulanic Acid,GSK,tablet;suspension,375 mg;625 mg;1 g;156 mg/5 ml;312 mg/5 ml;457 mg/5 ml
+Amclav,Amoxicillin + Clavulanic Acid,Getz Pharma,tablet;suspension;drops,375 mg;625 mg;1 g;156.25 mg/5 ml;312.5 mg/5 ml;457 mg/5 ml
+Calamox,Amoxicillin + Clavulanic Acid,Bosch,tablet;suspension,375 mg;625 mg;1 g;156 mg/5 ml;312 mg/5 ml
+Co-Amoxiclav,Amoxicillin + Clavulanic Acid,,tablet;suspension,375 mg;625 mg;1 g
+Moxiclav,Amoxicillin + Clavulanic Acid,,tablet;suspension,375 mg;625 mg
+Azomax,Azithromycin,Novartis,tablet;capsule;suspension,250 mg;500 mg;200 mg/5 ml
+Zetro,Azithromycin,Getz Pharma,tablet;capsule;suspension,250 mg;500 mg;200 mg/5 ml
+Azitma,Azithromycin,,tablet;suspension,250 mg;500 mg;200 mg/5 ml
+Zithromax,Azithromycin,Pfizer,tablet;suspension,250 mg;500 mg;200 mg/5 ml
+Macrobac,Azithromycin,,tablet;suspension,250 mg;500 mg
+Klaricid,Clarithromycin,Abbott,tablet;suspension,250 mg;500 mg;125 mg/5 ml;250 mg/5 ml
+Claritek,Clarithromycin,Getz Pharma,tablet;suspension,250 mg;500 mg;125 mg/5 ml;250 mg/5 ml
+Clarith,Clarithromycin,,tablet,250 mg;500 mg
+Ciproxin,Ciprofloxacin,Bayer,tablet;injection,250 mg;500 mg;750 mg
+Novidat,Ciprofloxacin,Sami,tablet;injection,250 mg;500 mg;750 mg
+Cipesta,Ciprofloxacin,,tablet,250 mg;500 mg
+Ciprocin,Ciprofloxacin,,tablet,250 mg;500 mg
+Leflox,Levofloxacin,Getz Pharma,tablet;injection,250 mg;500 mg;750 mg
+Tavanic,Levofloxacin,Sanofi,tablet;injection,250 mg;500 mg
+Levoxin,Levofloxacin,,tablet,250 mg;500 mg
+Lefloxin,Levofloxacin,,tablet,250 mg;500 mg
+Avelox,Moxifloxacin,Bayer,tablet;injection,400 mg
+Moxiget,Moxifloxacin,Getz Pharma,tablet,400 mg
+Moxiflox,Moxifloxacin,,tablet,400 mg
+Cefiget,Cefixime,Getz Pharma,capsule;suspension,200 mg;400 mg;100 mg/5 ml
+Caricef,Cefixime,Sami,capsule;suspension,200 mg;400 mg;100 mg/5 ml
+Cefspan,Cefixime,Barrett Hodgson,capsule;suspension,200 mg;400 mg;100 mg/5 ml
+Ceforal,Cefixime,,capsule;suspension,200 mg;400 mg
+Velosef,Cephradine,Haleon (GSK),capsule;suspension;injection,250 mg;500 mg;125 mg/5 ml
+Cefrin,Cephradine,,capsule;suspension,250 mg;500 mg
+Ceframid,Cephradine,,capsule,250 mg;500 mg
+Zinnat,Cefuroxime,GSK,tablet;suspension,125 mg;250 mg;500 mg
+Zinacef,Cefuroxime,GSK,injection,750 mg;1.5 g
+Cefim,Cefuroxime,,tablet,250 mg;500 mg
+Rocephin,Ceftriaxone,Roche,injection,250 mg;500 mg;1 g
+Oxidil,Ceftriaxone,Sami,injection,250 mg;500 mg;1 g
+Ceftrox,Ceftriaxone,,injection,250 mg;500 mg;1 g
+Ceftriaxone Sodium,Ceftriaxone,,injection,500 mg;1 g
+Flagyl,Metronidazole,Sanofi,tablet;suspension;injection,200 mg;400 mg;200 mg/5 ml;500 mg/100 ml
+Metrozine,Metronidazole,,tablet;suspension,200 mg;400 mg
+Metronidazole BP,Metronidazole,,tablet,200 mg;400 mg
+Vibramycin,Doxycycline,Pfizer,capsule,100 mg
+Doxycap,Doxycycline,,capsule,100 mg
+Doxycycline HCl,Doxycycline,,capsule,100 mg
+Septran,Co-trimoxazole,GSK,tablet;suspension,480 mg;960 mg;240 mg/5 ml
+Bactrim,Co-trimoxazole,,tablet;suspension,480 mg;960 mg
+Zyvox,Linezolid,Pfizer,tablet;injection,600 mg
+Linez,Linezolid,,tablet,600 mg
+Diflucan,Fluconazole,Pfizer,capsule,50 mg;150 mg;200 mg
+Flucan,Fluconazole,,capsule,150 mg
+Fluconazole BP,Fluconazole,,capsule,150 mg
+Canesten,Clotrimazole,Bayer,cream;vaginal tablet,1%;500 mg
+Clotrim,Clotrimazole,,cream,1%
+Lamisil,Terbinafine,Novartis,tablet;cream,250 mg;1%
+Terbisil,Terbinafine,,tablet;cream,250 mg;1%
+Zovirax,Acyclovir,GSK,tablet;cream,200 mg;400 mg;800 mg;5%
+Acyclovir BP,Acyclovir,,tablet,400 mg;800 mg
+Virest,Acyclovir,,tablet;cream,400 mg;800 mg
+Zentel,Albendazole,GSK,tablet;suspension,400 mg;200 mg/5 ml
+Albenza,Albendazole,,tablet,400 mg
+Vermox,Mebendazole,Janssen,tablet;suspension,100 mg;500 mg
+Coartem,Artemether + Lumefantrine,Novartis,tablet,20 mg + 120 mg
+Artem,Artemether + Lumefantrine,,tablet,20 mg + 120 mg;80 mg + 480 mg
+HCQ,Hydroxychloroquine,,tablet,200 mg
+Plaquenil,Hydroxychloroquine,Sanofi,tablet,200 mg
+Risek,Omeprazole,Getz Pharma,capsule;injection,20 mg;40 mg
+Losec,Omeprazole,AstraZeneca,capsule,20 mg;40 mg
+Omega,Omeprazole,,capsule,20 mg;40 mg
+Omeprazole BP,Omeprazole,,capsule,20 mg
+Nexum,Esomeprazole,Getz Pharma,capsule;tablet;injection,20 mg;40 mg
+Esso,Esomeprazole,,capsule,20 mg;40 mg
+Nexium,Esomeprazole,AstraZeneca,tablet,20 mg;40 mg
+Esomep,Esomeprazole,,capsule,20 mg;40 mg
+Protium,Pantoprazole,,tablet;injection,20 mg;40 mg
+Pantra,Pantoprazole,,tablet,20 mg;40 mg
+Controloc,Pantoprazole,Takeda,tablet,20 mg;40 mg
+Motilium,Domperidone,Janssen,tablet;suspension,10 mg;5 mg/5 ml
+Peridon,Domperidone,,tablet;suspension,10 mg
+Domel,Domperidone,,tablet;suspension,10 mg
+Maxolon,Metoclopramide,,tablet;injection,10 mg
+Zofran,Ondansetron,Novartis,tablet;injection,4 mg;8 mg
+Onset,Ondansetron,Getz Pharma,tablet;injection;syrup,4 mg;8 mg
+Ondanset,Ondansetron,,tablet,4 mg;8 mg
+Ganaton,Itopride,Abbott,tablet,50 mg
+Itopan,Itopride,,tablet,50 mg
+Imodium,Loperamide,Janssen,capsule,2 mg
+Lopamide,Loperamide,,capsule,2 mg
+Peditral,Oral Rehydration Salts,Searle,sachet;liquid,standard WHO ORS
+ORS (WHO formula),Oral Rehydration Salts,,sachet,standard WHO ORS
+Duphalac,Lactulose,Abbott,syrup,3.35 g/5 ml
+Lilac,Lactulose,,syrup,3.35 g/5 ml
+Colofac,Mebeverine,Abbott,tablet,135 mg;200 mg MR
+Spasler,Mebeverine,,tablet,135 mg
+Buscopan,Hyoscine Butylbromide,Sanofi,tablet;injection,10 mg;20 mg/ml
+Hyoscine,Hyoscine Butylbromide,,tablet,10 mg
+Gravinate,Dimenhydrinate,Searle,tablet;injection;syrup,50 mg
+Dramamine,Dimenhydrinate,,tablet,50 mg
+Gaviscon,Sodium Alginate + Antacid,Reckitt,tablet;liquid,chewable;liquid
+Mucaine,Sodium Alginate + Antacid,,liquid,suspension
+Zyrtec,Cetirizine,GSK,tablet;syrup,10 mg;5 mg/5 ml
+Rigix,Cetirizine,,tablet;syrup,10 mg;5 mg/5 ml
+Cetrizet,Cetirizine,,tablet,10 mg
+Alerid,Cetirizine,,tablet,10 mg
+Xyzal,Levocetirizine,GSK,tablet;syrup,5 mg;2.5 mg/5 ml
+Levocet,Levocetirizine,,tablet,5 mg
+Softin,Loratadine,,tablet;syrup,10 mg;5 mg/5 ml
+Claritine,Loratadine,Bayer,tablet;syrup,10 mg
+Lorin,Loratadine,,tablet,10 mg
+Aerius,Desloratadine,Organon,tablet;syrup,5 mg;2.5 mg/5 ml
+Deslor,Desloratadine,,tablet,5 mg
+Telfast,Fexofenadine,Sanofi,tablet,60 mg;120 mg;180 mg
+Fexet,Fexofenadine,,tablet,60 mg;120 mg;180 mg
+Fexo,Fexofenadine,,tablet,120 mg;180 mg
+Piriton,Chlorpheniramine,Haleon (GSK),tablet;syrup,4 mg;2 mg/5 ml
+Avil,Pheniramine,Sanofi,tablet;injection;syrup,25 mg;22.75 mg/ml
+Singulair,Montelukast,MSD,tablet;chewable tablet,10 mg;4 mg;5 mg
+Montiget,Montelukast,Getz Pharma,tablet;chewable tablet;sachet,10 mg;4 mg;5 mg
+Myteka,Montelukast,Hilton Pharma,tablet;chewable tablet,10 mg;4 mg;5 mg
+Airfast,Montelukast,,tablet,10 mg
+Ventolin,Salbutamol,GSK,inhaler;syrup;tablet;nebuliser solution,100 mcg/puff;2 mg/5 ml;2 mg;4 mg
+Salbo,Salbutamol,,inhaler;syrup,100 mcg/puff;2 mg/5 ml
+Seretide,Salmeterol + Fluticasone,GSK,inhaler;diskus,25/50;25/125;25/250;50/250;50/500
+Fluticort,Salmeterol + Fluticasone,,inhaler,25/125;25/250
+Symbicort,Budesonide + Formoterol,AstraZeneca,turbuhaler,160/4.5;320/9
+Atrovent,Ipratropium,Boehringer Ingelheim,inhaler;nebuliser solution,20 mcg/puff;250 mcg/ml
+Hydryllin,Aminophylline + Diphenhydramine + Ammonium Chloride,Searle,syrup,per 5 ml
+Bisolvon,Bromhexine,Boehringer Ingelheim,tablet;syrup,8 mg;4 mg/5 ml
+Mucosolvan,Ambroxol,Boehringer Ingelheim,syrup;tablet,15 mg/5 ml;30 mg
+Ambrox,Ambroxol,,syrup,15 mg/5 ml
+Deltacortril,Prednisolone,Pfizer,tablet,5 mg
+Prednisolone BP,Prednisolone,,tablet,5 mg
+Decadron,Dexamethasone,,tablet;injection,0.5 mg;4 mg/ml
+Dexamethasone BP,Dexamethasone,,tablet;injection,0.5 mg;4 mg/ml
+Norvasc,Amlodipine,Pfizer,tablet,5 mg;10 mg
+Amodip,Amlodipine,Mass Pharma,tablet,2.5 mg;5 mg;10 mg
+Amlo,Amlodipine,,tablet,5 mg;10 mg
+Lodopin,Amlodipine,,tablet,5 mg;10 mg
+Cozaar,Losartan,MSD,tablet,50 mg;100 mg
+Eziday,Losartan,Getz Pharma,tablet,25 mg;50 mg;100 mg
+Losartan Potassium,Losartan,,tablet,50 mg
+Diovan,Valsartan,Novartis,tablet,80 mg;160 mg
+Valsar,Valsartan,,tablet,80 mg;160 mg
+Micardis,Telmisartan,Boehringer Ingelheim,tablet,40 mg;80 mg
+Telsan,Telmisartan,,tablet,40 mg;80 mg
+Concor,Bisoprolol,Merck,tablet,2.5 mg;5 mg;10 mg
+Bisocor,Bisoprolol,,tablet,2.5 mg;5 mg
+Tenormin,Atenolol,AstraZeneca,tablet,50 mg;100 mg
+Atenolol BP,Atenolol,,tablet,50 mg
+Betaloc,Metoprolol,AstraZeneca,tablet,50 mg;100 mg
+Lopressor,Metoprolol,,tablet,50 mg;100 mg
+Inderal,Propranolol,AstraZeneca,tablet,10 mg;40 mg
+Propranolol BP,Propranolol,,tablet,10 mg;40 mg
+Lasix,Furosemide,Sanofi,tablet;injection,40 mg;20 mg/2 ml
+Furosemide BP,Furosemide,,tablet,40 mg
+Aldactone,Spironolactone,Pfizer,tablet,25 mg;100 mg
+Spiro,Spironolactone,,tablet,25 mg
+Natrilix,Indapamide,Servier,tablet,2.5 mg;1.5 mg SR
+Indap,Indapamide,,tablet,2.5 mg
+Hydrochlorothiazide BP,Hydrochlorothiazide,,tablet,25 mg
+Capoten,Captopril,,tablet,25 mg
+Renitec,Enalapril,MSD,tablet,5 mg;10 mg;20 mg
+Zestril,Lisinopril,AstraZeneca,tablet,5 mg;10 mg;20 mg
+Tritace,Ramipril,Sanofi,capsule;tablet,2.5 mg;5 mg;10 mg
+Lipitor,Atorvastatin,Pfizer,tablet,10 mg;20 mg;40 mg;80 mg
+Lipiget,Atorvastatin,Getz Pharma,tablet,10 mg;20 mg;40 mg
+Atorva,Atorvastatin,,tablet,10 mg;20 mg;40 mg
+Ator,Atorvastatin,,tablet,10 mg;20 mg
+Crestor,Rosuvastatin,AstraZeneca,tablet,5 mg;10 mg;20 mg;40 mg
+Rovista,Rosuvastatin,,tablet,5 mg;10 mg;20 mg
+Rosuva,Rosuvastatin,,tablet,10 mg;20 mg
+Zocor,Simvastatin,MSD,tablet,10 mg;20 mg;40 mg
+Plavix,Clopidogrel,Sanofi,tablet,75 mg
+Lowplat,Clopidogrel,,tablet,75 mg
+Clopid,Clopidogrel,,tablet,75 mg
+Warfarin,Warfarin,,tablet,1 mg;3 mg;5 mg
+Coumadin,Warfarin,,tablet,1 mg;5 mg
+Xarelto,Rivaroxaban,Bayer,tablet,10 mg;15 mg;20 mg
+Rivaxa,Rivaroxaban,,tablet,10 mg;20 mg
+Eliquis,Apixaban,Pfizer,tablet,2.5 mg;5 mg
+Angised,Glyceryl Trinitrate,GSK,sublingual tablet,0.5 mg
+Nitroglycerin spray,Glyceryl Trinitrate,,spray,0.4 mg/dose
+Monis,Isosorbide Mononitrate,,tablet,20 mg;40 mg
+Imdur,Isosorbide Mononitrate,,tablet,60 mg
+Lanoxin,Digoxin,GSK,tablet,0.25 mg
+Vastarel,Trimetazidine,Servier,tablet,35 mg MR
+Glucophage,Metformin,Merck,tablet,500 mg;850 mg;1000 mg;500 mg XR
+Neodipar,Metformin,,tablet,500 mg;850 mg
+Getformin,Metformin,Getz Pharma,tablet,500 mg;850 mg;1000 mg
+Metformin HCl,Metformin,,tablet,500 mg;850 mg
+Amaryl,Glimepiride,Sanofi,tablet,1 mg;2 mg;3 mg;4 mg
+Diabnil,Glimepiride,Jinnah Pharmaceuticals,tablet,1 mg;2 mg;3 mg;4 mg
+Getryl,Glimepiride,Getz Pharma,tablet,1 mg;2 mg;3 mg;4 mg
+Glimepiride BP,Glimepiride,,tablet,2 mg
+Diamicron,Gliclazide,Servier,tablet,80 mg;30 mg MR;60 mg MR
+Gliclazide BP,Gliclazide,,tablet,80 mg
+Januvia,Sitagliptin,MSD,tablet,25 mg;50 mg;100 mg
+Sitaglu,Sitagliptin,,tablet,50 mg;100 mg
+Janumet,Sitagliptin + Metformin,MSD,tablet,50/500 mg;50/1000 mg
+Sitamet,Sitagliptin + Metformin,,tablet,50/500 mg;50/1000 mg
+Galvus,Vildagliptin,Novartis,tablet,50 mg
+Vildagen,Vildagliptin,,tablet,50 mg
+Galvus Met,Vildagliptin + Metformin,Novartis,tablet,50/500 mg;50/850 mg;50/1000 mg
+Jardiance,Empagliflozin,Boehringer Ingelheim,tablet,10 mg;25 mg
+Empa,Empagliflozin,,tablet,10 mg;25 mg
+Forxiga,Dapagliflozin,AstraZeneca,tablet,5 mg;10 mg
+Dapa,Dapagliflozin,,tablet,10 mg
+Lantus,Insulin Glargine,Sanofi,injection (pen/vial),100 units/ml
+Basaglar,Insulin Glargine,Eli Lilly,injection (pen),100 units/ml
+NovoRapid,Insulin Aspart,Novo Nordisk,injection (pen/vial),100 units/ml
+Mixtard 30,Insulin Isophane + Regular (70/30),Novo Nordisk,injection (vial/pen),100 units/ml
+Humulin 70/30,Insulin Isophane + Regular (70/30),Eli Lilly,injection (vial),100 units/ml
+Euthyrox,Levothyroxine,Merck,tablet,25 mcg;50 mcg;75 mcg;100 mcg
+Thyroxine,Levothyroxine,,tablet,50 mcg;100 mcg
+Neo-Mercazole,Carbimazole,,tablet,5 mg;20 mg
+Zoloft,Sertraline,Pfizer,tablet,50 mg;100 mg
+Serlin,Sertraline,,tablet,50 mg;100 mg
+Sertraline HCl,Sertraline,,tablet,50 mg
+Cipralex,Escitalopram,Lundbeck,tablet,10 mg;20 mg
+Esita,Escitalopram,,tablet,10 mg;20 mg
+Estar,Escitalopram,,tablet,10 mg
+Prozac,Fluoxetine,Eli Lilly,capsule,20 mg
+Flux,Fluoxetine,,capsule,20 mg
+Seroxat,Paroxetine,GSK,tablet,20 mg
+Paroxetine HCl,Paroxetine,,tablet,20 mg
+Xanax,Alprazolam,Pfizer,tablet,0.25 mg;0.5 mg;1 mg
+Alprax,Alprazolam,,tablet,0.5 mg
+Lexotanil,Bromazepam,Roche,tablet,1.5 mg;3 mg
+Rivotril,Clonazepam,Roche,tablet;drops,0.5 mg;2 mg
+Valium,Diazepam,Roche,tablet;injection,2 mg;5 mg;10 mg
+Lyrica,Pregabalin,Pfizer,capsule,25 mg;50 mg;75 mg;150 mg
+Pregy,Pregabalin,,capsule,50 mg;75 mg;150 mg
+Prebalin,Pregabalin,,capsule,75 mg;150 mg
+Neurontin,Gabapentin,Pfizer,capsule,100 mg;300 mg;400 mg
+Gabica,Gabapentin,,capsule,100 mg;300 mg
+Tegral,Carbamazepine,Novartis,tablet;CR tablet;syrup,200 mg;400 mg CR
+Tegretol,Carbamazepine,Novartis,tablet,200 mg
+Epival,Sodium Valproate,Abbott,tablet;syrup,250 mg;500 mg
+Depakine,Sodium Valproate,Sanofi,tablet;syrup,200 mg;500 mg
+Keppra,Levetiracetam,UCB,tablet;syrup,250 mg;500 mg;1000 mg
+Levetiracetam,Levetiracetam,,tablet,500 mg
+Zyprexa,Olanzapine,Eli Lilly,tablet,5 mg;10 mg
+Olanzia,Olanzapine,,tablet,5 mg;10 mg
+Seroquel,Quetiapine,AstraZeneca,tablet,25 mg;100 mg;200 mg;300 mg
+Qusel,Quetiapine,,tablet,25 mg;100 mg
+Risperdal,Risperidone,Janssen,tablet,1 mg;2 mg;4 mg
+Imigran,Sumatriptan,GSK,tablet,50 mg;100 mg
+Serc,Betahistine,Abbott,tablet,8 mg;16 mg;24 mg
+Betahistine BP,Betahistine,,tablet,16 mg
+Methycobal,Mecobalamin,Eisai,tablet;injection,500 mcg
+Mecobal,Mecobalamin,,tablet,500 mcg
+Aricept,Donepezil,Eisai,tablet,5 mg;10 mg
+Sunny D,Cholecalciferol (Vitamin D3),,capsule;sachet,200000 IU;50000 IU
+Indrop D,Cholecalciferol (Vitamin D3),,capsule;oral solution,200000 IU
+D-Max,Cholecalciferol (Vitamin D3),,capsule,200000 IU
+Vitamin D3 drops,Cholecalciferol (Vitamin D3),,drops,400 IU/drop
+Cal-Q,Calcium Carbonate + Vitamin D3,,tablet,600 mg + 400 IU
+Caltrate D,Calcium Carbonate + Vitamin D3,Haleon,tablet,600 mg + 400 IU
+Calcium D,Calcium Carbonate + Vitamin D3,,tablet,500 mg + 200 IU
+Folic Acid,Folic Acid,,tablet,5 mg;400 mcg
+Folicare,Folic Acid,,tablet,5 mg
+Fefol,Ferrous Sulfate / Iron,,capsule,iron + folic acid
+Ferrous Sulfate BP,Ferrous Sulfate / Iron,,tablet,200 mg
+Iberet Folic,Ferrous Sulfate / Iron,Abbott,tablet,iron + vitamins + folic acid
+Venofer,Iron Sucrose,,injection,100 mg/5 ml
+Neurobion,Vitamin B Complex,Merck (P&G),tablet;injection,B1 + B6 + B12
+Becosules,Vitamin B Complex,Pfizer,capsule,B complex + vitamin C
+Surbex-Z,Multivitamin + Zinc,Abbott,tablet,multivitamin + zinc
+Centrum,Multivitamin + Zinc,Haleon,tablet,A-Z multivitamin
+Flomax,Tamsulosin,Boehringer Ingelheim,capsule,0.4 mg
+Tamsolin,Tamsulosin,,capsule,0.4 mg
+Prosta,Tamsulosin,,capsule,0.4 mg
+Viagra,Sildenafil,Pfizer,tablet,25 mg;50 mg;100 mg
+Vesicare,Solifenacin,Astellas,tablet,5 mg;10 mg
+Betnovate,Betamethasone,GSK,cream;ointment;lotion,0.1%
+Hydrocortisone cream,Hydrocortisone,,cream,1%
+Solu-Cortef,Hydrocortisone,Pfizer,injection,100 mg
+Fucidin,Fusidic Acid,Leo Pharma,cream;ointment,2%
+Fusidin,Fusidic Acid,,cream,2%
+Bactroban,Mupirocin,GSK,ointment,2%
+Mupirocin BP,Mupirocin,,ointment,2%
+Permethrin 5% cream,Permethrin,,cream,5%
+Lotrix,Permethrin,,cream,5%
+Retin-A,Tretinoin,Janssen,cream,0.025%;0.05%
+Cytotec,Misoprostol,Pfizer,tablet,200 mcg
+Misotac,Misoprostol,,tablet,200 mcg
+Clomid,Clomiphene,Sanofi,tablet,50 mg
+Clomiphene Citrate,Clomiphene,,tablet,50 mg
+Primolut-N,Norethisterone,Bayer,tablet,5 mg
+Duphaston,Dydrogesterone,Abbott,tablet,10 mg
+Transamin,Tranexamic Acid,,capsule;injection,250 mg;500 mg
+Cyklokapron,Tranexamic Acid,Pfizer,tablet;injection,500 mg
+Tobrex,Tobramycin (eye),Alcon (Novartis),eye drops;eye ointment,0.3%
+Tobra,Tobramycin (eye),,eye drops,0.3%
+Vigamox,Moxifloxacin (eye),Alcon (Novartis),eye drops,0.5%
+Moxigan,Moxifloxacin (eye),,eye drops,0.5%
+Zyloric,Allopurinol,GSK,tablet,100 mg;300 mg
+Allopurinol BP,Allopurinol,,tablet,100 mg;300 mg
+Colchicine,Colchicine,,tablet,0.5 mg
+Febustat,Febuxostat,,tablet,40 mg;80 mg
+Feburic,Febuxostat,,tablet,40 mg;80 mg
+Fosamax,Alendronate,MSD,tablet,70 mg weekly
+Alenta,Alendronate,,tablet,70 mg weekly
+Methotrexate,Methotrexate,,tablet;injection,2.5 mg

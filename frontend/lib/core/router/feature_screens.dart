@@ -17,6 +17,8 @@ import '../../screens/mental/companion/mood_checkin_screen.dart';
 import '../../screens/mental/mood_screen.dart';
 import '../../screens/mental/screening_screen.dart';
 import '../../screens/modules/feature_form_screen.dart';
+import '../../screens/pharmacy/medicine_search_screen.dart';
+import '../../screens/pharmacy/pharmacy_finder_screen.dart';
 import '../../screens/prescriptions/prescription_reader_screen.dart';
 import '../../screens/modules/feature_screen.dart';
 import '../../screens/records/activity_screen.dart';
@@ -62,6 +64,10 @@ Widget screenForFeature(int number) {
       return const MoodScreen();
     case 25:
       return const CrisisScreen();
+    case 28:
+      return const PharmacyFinderScreen();
+    case 30 || 37:
+      return const MedicineSearchScreen();
     case 26 || 34:
       // Photograph a prescription -> AI reads the handwriting -> user checks -> reminders.
       return const PrescriptionReaderScreen();
