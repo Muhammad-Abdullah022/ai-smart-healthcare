@@ -18,6 +18,9 @@ python-multipart==0.0.20
 reportlab>=4.2
 pypdf>=5.0
 cryptography>=43
+# Urdu text in the PDF (letter joining + right-to-left)
+arabic-reshaper>=3.0
+python-bidi>=0.4
 # In-memory database for quick local runs (USE_MEMORY_DB=true) and tests
 mongomock-motor==0.0.34
 

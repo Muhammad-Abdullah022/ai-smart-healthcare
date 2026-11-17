@@ -57,7 +57,8 @@ async def build_record(db, user: dict) -> dict:
             "date": _iso(a["created_at"]), "symptoms": a.get("symptoms", ""),
             "urgency": a.get("triage_level", ""),
             "possible_causes": [c.get("name", "") for c in (a.get("possible_causes") or [])][:4],
-            "specialist": a.get("specialist_type", ""), "tests": (a.get("tests_to_discuss") or [])[:5],
+            "specialist": "" if str(a.get("specialist_type", "")).lower() in ("", "none", "null") else a["specialist_type"],
+            "tests": (a.get("tests_to_discuss") or [])[:5],
         })
 
     reports = []

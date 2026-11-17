@@ -183,7 +183,7 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
             _section(Icons.medication_outlined, 'Medicines', AppColors.medicine,
                 [for (final m in (r['medicines'] as List).where((m) => m['active'] == true)) _medTile(m as Map<String, dynamic>)],
                 footer: _adherence(r['adherence_30d'] as Map<String, dynamic>)),
-            _section(Icons.biotech_outlined, 'Lab reports', AppColors.records,
+            _section(Icons.biotech_outlined, 'Reports & scans', AppColors.records,
                 [for (final x in r['reports'] as List) _reportTile(x as Map<String, dynamic>)]),
             _section(Icons.monitor_heart_outlined, 'Symptom checks (AI assistant)', AppColors.green,
                 [for (final x in r['symptom_checks'] as List) _checkTile(x as Map<String, dynamic>)]),
@@ -296,38 +296,102 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
     return d % 1 == 0 ? d.toInt().toString() : d.toStringAsFixed(1);
   }
 
+  final Set<String> _showAll = {};
+
   Widget _section(IconData icon, String title, Color color, List<Widget> children, {Widget? footer, Widget? action}) {
+    const preview = 4;
+    final all = _showAll.contains(title);
+    final visible = all ? children : children.take(preview).toList();
     return Container(
       margin: const EdgeInsets.only(top: 12),
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.border)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
+        boxShadow: AppColors.softShadow,
+      ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          initiallyExpanded: children.isNotEmpty && children.length <= 3,
+          initiallyExpanded: children.isNotEmpty,
           shape: const RoundedRectangleBorder(),
+          tilePadding: const EdgeInsets.fromLTRB(14, 4, 10, 4),
           leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(color: color.withAlpha(30), borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: color, size: 21),
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(color: color.withAlpha(28), borderRadius: BorderRadius.circular(13)),
+            child: Icon(icon, color: color, size: 22),
           ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.deep)),
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.deep, fontSize: 16)),
           subtitle: Text(children.isEmpty ? 'Nothing saved yet' : '${children.length} saved',
               style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
           trailing: action,
-          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-          children: [...children, if (footer != null) footer],
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          children: [
+            ...visible,
+            if (children.length > preview)
+              TextButton.icon(
+                onPressed: () => setState(() => all ? _showAll.remove(title) : _showAll.add(title)),
+                icon: Icon(all ? Icons.expand_less : Icons.expand_more),
+                label: Text(all ? 'Show less' : 'Show all ${children.length}'),
+              ),
+            if (footer != null) footer,
+          ],
         ),
       ),
     );
   }
 
-  Widget _simple(String title, String sub) => ListTile(
-        dense: true,
-        contentPadding: EdgeInsets.zero,
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(sub),
+  static String _niceText(String t) {
+    final s = t.trim();
+    if (s.isEmpty) return s;
+    // "MUJY SAR DARD HA" -> "Mujy sar dard ha"
+    final lower = s == s.toUpperCase() ? s.toLowerCase() : s;
+    return lower[0].toUpperCase() + lower.substring(1);
+  }
+
+  static Widget _dateChip(String iso) => Row(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.calendar_today_outlined, size: 13, color: AppColors.textMuted),
+        const SizedBox(width: 4),
+        Text(_d(iso), style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+      ]);
+
+  static Widget _levelBadge(String level) {
+    final l = level.toLowerCase();
+    final (fg, bg, label) = switch (l) {
+      'emergency' || 'urgent' => (AppColors.critical, AppColors.criticalTint, l == 'emergency' ? 'Emergency' : 'Urgent'),
+      'soon' || 'see_doctor' || 'moderate' => (const Color(0xFFB45309), AppColors.warningTint, 'See a doctor soon'),
+      'routine' || 'self_care' || 'normal' || 'low' => (AppColors.success, AppColors.mint, 'Routine'),
+      _ => (AppColors.textMuted, AppColors.primaryTint, level.isEmpty ? '—' : level),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Text(label, style: TextStyle(color: fg, fontSize: 11.5, fontWeight: FontWeight.w700)),
+    );
+  }
+
+  static Widget _itemCard({required Widget child}) => Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: child,
+      );
+
+  Widget _simple(String title, String sub) => _itemCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5, color: AppColors.deep)),
+          if (sub.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(sub, style: const TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.4)),
+            ),
+        ]),
       );
 
   Widget _medTile(Map<String, dynamic> m) => _simple(
@@ -351,36 +415,119 @@ class _HealthRecordScreenState extends State<HealthRecordScreen> {
 
   Widget _reportTile(Map<String, dynamic> r) {
     final ab = (r['abnormal'] as List).cast<Map<String, dynamic>>();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+    final type = '${r['type']}';
+    final t = type.toLowerCase();
+    final icon = t.contains('x-ray') || t.contains('xray') || t.contains('scan') || t.contains('ultrasound') || t.contains('mri')
+        ? Icons.image_search_outlined
+        : t.contains('prescription')
+            ? Icons.receipt_long_outlined
+            : Icons.science_outlined;
+    return _itemCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('${r['type']} · ${_d(r['date'])}', style: const TextStyle(fontWeight: FontWeight.w700)),
-        if ((r['summary'] ?? '').toString().isNotEmpty)
-          Text('${r['summary']}', maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
-        const SizedBox(height: 4),
-        Wrap(spacing: 6, runSpacing: 4, children: [
-          if (ab.isEmpty)
-            const Text('All values in range', style: TextStyle(fontSize: 12, color: AppColors.success)),
-          for (final v in ab)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                  color: v['critical'] == true ? AppColors.criticalTint : AppColors.warningTint,
-                  borderRadius: BorderRadius.circular(8)),
-              child: Text('${v['name']} ${v['value']} ${v['unit']} (${v['flag']})', style: const TextStyle(fontSize: 11.5)),
-            ),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(color: AppColors.recordsTint, borderRadius: BorderRadius.circular(11)),
+            child: Icon(icon, color: AppColors.records, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(type, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.deep)),
+              const SizedBox(height: 2),
+              _dateChip('${r['date']}'),
+            ]),
+          ),
+          if (ab.isNotEmpty) _levelBadge(ab.any((v) => v['critical'] == true) ? 'urgent' : 'moderate'),
         ]),
+        if ('${r['summary'] ?? ''}'.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text('${r['summary']}', style: const TextStyle(fontSize: 13.5, height: 1.45)),
+          ),
+        const SizedBox(height: 10),
+        if (ab.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(20)),
+            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.check_circle, size: 15, color: AppColors.success),
+              SizedBox(width: 5),
+              Text('All values in range', style: TextStyle(fontSize: 12, color: AppColors.success, fontWeight: FontWeight.w600)),
+            ]),
+          )
+        else
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final v in ab)
+              Builder(builder: (_) {
+                final high = v['flag'] == 'high';
+                final critical = v['critical'] == true;
+                final fg = critical ? AppColors.critical : (high ? const Color(0xFFB91C1C) : const Color(0xFF1D4ED8));
+                final bg = critical ? AppColors.criticalTint : (high ? const Color(0xFFFDECEC) : const Color(0xFFE8F0FE));
+                return Container(
+                  padding: const EdgeInsets.fromLTRB(6, 4, 9, 4),
+                  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(high ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 14, color: fg),
+                    const SizedBox(width: 3),
+                    Text('${v['name']} ', style: const TextStyle(fontSize: 12, color: AppColors.text)),
+                    Text('${v['value']} ${v['unit']}', style: TextStyle(fontSize: 12, color: fg, fontWeight: FontWeight.w700)),
+                  ]),
+                );
+              }),
+          ]),
       ]),
     );
   }
 
-  Widget _checkTile(Map<String, dynamic> c) => _simple(
-      '${c['symptoms']}',
-      [
-        _d(c['date']),
-        if ((c['possible_causes'] as List).isNotEmpty) 'Possible: ${(c['possible_causes'] as List).join(', ')}',
-        if ((c['specialist'] ?? '').toString().isNotEmpty) 'Doctor: ${c['specialist']}',
-      ].join(' · '));
+  Widget _checkTile(Map<String, dynamic> c) {
+    final causes = (c['possible_causes'] as List).cast<String>();
+    final doctor = '${c['specialist'] ?? ''}';
+    return _itemCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          _levelBadge('${c['urgency'] ?? ''}'),
+          const Spacer(),
+          _dateChip('${c['date']}'),
+        ]),
+        const SizedBox(height: 8),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Icon(Icons.chat_bubble_outline, size: 17, color: AppColors.green),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('"${_niceText('${c['symptoms']}')}"',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5, color: AppColors.deep)),
+          ),
+        ]),
+        if (causes.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          const Text('Possible causes', style: TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+          const SizedBox(height: 5),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final cause in causes)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.softGreen),
+                ),
+                child: Text(cause, style: const TextStyle(fontSize: 12.5, color: AppColors.deep)),
+              ),
+          ]),
+        ],
+        if (doctor.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Row(children: [
+            const Icon(Icons.medical_services_outlined, size: 16, color: AppColors.records),
+            const SizedBox(width: 6),
+            Text('See: $doctor', style: const TextStyle(fontSize: 12.5, color: AppColors.records, fontWeight: FontWeight.w600)),
+          ]),
+        ],
+      ]),
+    );
+  }
 
   Widget _rxTile(Map<String, dynamic> x) =>
       _simple('${x['doctor'].toString().isEmpty ? 'Prescription' : x['doctor']} · ${_d(x['date'])}', (x['medicines'] as List).join('\n'));
