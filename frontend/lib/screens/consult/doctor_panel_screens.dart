@@ -276,6 +276,7 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
 
     LiveEvents.instance.ensureConnected(_api);
     _sub = LiveEvents.instance.events.listen((e) {
+      if ((e['type'] == 'connected' || e['type'] == 'disconnected') && mounted) setState(() {});
       if (e['type'] == 'message') {
         _load();
         final m = e['message'] as Map?;
@@ -335,6 +336,10 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
     }
   }
 
+  bool _showClosed = false;
+
+  static const _actionStatuses = {'requested', 'payment_submitted', 'paid'};
+
   @override
   Widget build(BuildContext context) {
     if (_notDoctor) {
@@ -356,102 +361,351 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
     }
     final open = d.consultations.where((c) => c.open).toList();
     final closed = d.consultations.where((c) => !c.open).toList();
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: NestedScrollView(
-          headerSliverBuilder: (_, __) => [
-            SliverAppBar(
-              pinned: true,
-              expandedHeight: 230,
-              backgroundColor: AppColors.deep,
-              foregroundColor: Colors.white,
-              title: const Text('Doctor panel'),
-              actions: [
-                IconButton(onPressed: _editProfile, icon: const Icon(Icons.edit_outlined), tooltip: 'Edit profile'),
-                PopupMenuButton<String>(
-                  onSelected: (v) {
-                    if (v == 'password') showChangePasswordDialog(context);
-                    if (v == 'issues') context.push('/issues');
-                    if (v == 'logout') context.read<AuthProvider>().logout();
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'issues', child: Text('Help & issues')),
-                    PopupMenuItem(value: 'password', child: Text('Change password')),
-                    PopupMenuItem(value: 'logout', child: Text('Log out')),
-                  ],
+    final action = open.where((c) => _actionStatuses.contains(c.status)).toList();
+    final waiting = open.where((c) => !_actionStatuses.contains(c.status)).toList();
+    final shown = _showClosed ? closed : waiting;
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.deep,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: 16,
+        title: const Text('Doctor panel',
+            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Row(children: [
+              Icon(Icons.circle, size: 9, color: LiveEvents.instance.connected ? const Color(0xFF4ADE80) : Colors.white38),
+              const SizedBox(width: 5),
+              Text(LiveEvents.instance.connected ? 'Live' : 'Offline',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12.5)),
+            ]),
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (v) {
+              if (v == 'profile') _editProfile();
+              if (v == 'password') showChangePasswordDialog(context);
+              if (v == 'issues') context.push('/issues');
+              if (v == 'logout') context.read<AuthProvider>().logout();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'profile', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Edit profile'))),
+              PopupMenuItem(value: 'issues', child: ListTile(leading: Icon(Icons.support_agent_outlined), title: Text('Help & issues'))),
+              PopupMenuItem(value: 'password', child: ListTile(leading: Icon(Icons.lock_outline), title: Text('Change password'))),
+              PopupMenuItem(value: 'logout', child: ListTile(leading: Icon(Icons.logout), title: Text('Log out'))),
+            ],
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            _profileCard(d),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    _statsGrid(d.stats),
+                    const SizedBox(height: 22),
+                    _sectionTitle('Needs your action', action.length, AppColors.critical),
+                    const SizedBox(height: 10),
+                    if (action.isEmpty)
+                      _emptyBox(Icons.task_alt, 'All caught up', 'New requests, payments to check and patients to advise appear here.')
+                    else
+                      for (final c in action) _actionCard(c),
+                    const SizedBox(height: 22),
+                    _sectionTitle('Consultations', null, AppColors.deep),
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: SegmentedButton<bool>(
+                        showSelectedIcon: false,
+                        style: SegmentedButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          selectedBackgroundColor: AppColors.mint,
+                          selectedForegroundColor: AppColors.deep,
+                        ),
+                        segments: [
+                          ButtonSegment(value: false, label: Text('Ongoing (${waiting.length})')),
+                          ButtonSegment(value: true, label: Text('Closed (${closed.length})')),
+                        ],
+                        selected: {_showClosed},
+                        onSelectionChanged: (v) => setState(() => _showClosed = v.first),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (shown.isEmpty)
+                      _emptyBox(Icons.forum_outlined, _showClosed ? 'Nothing closed yet' : 'No ongoing chats',
+                          _showClosed
+                              ? 'Completed, declined and cancelled consultations appear here.'
+                              : 'Consultations waiting for the patient (payment, reply) appear here.')
+                    else
+                      for (final c in shown)
+                        ConsultTile(c: c, doctorView: true, onTap: () => _open(c.id)),
+                  ]),
                 ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(background: _header(d)),
-              bottom: TabBar(
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white60,
-                indicatorColor: AppColors.green,
-                tabs: [Tab(text: 'Active (${open.length})'), Tab(text: 'Closed (${closed.length})')],
               ),
             ),
           ],
-          body: TabBarView(children: [_list(open, 'No active consultations', 'New requests appear here live.'),
-            _list(closed, 'Nothing closed yet', 'Completed and declined consultations appear here.')]),
         ),
       ),
     );
   }
 
-  Widget _header(DoctorPanelData d) {
-    final s = d.stats;
-    final available = d.doctor['available'] == true;
+  Future<void> _open(String id) async {
+    await openConsultation(context, id);
+    _load();
+  }
+
+  Widget _profileCard(DoctorPanelData d) {
+    final doc = d.doctor;
+    final available = doc['available'] == true;
+    final name = '${doc['name']}';
+    final initials = name
+        .replaceAll(RegExp(r'^(Dr\.?|Prof\.?)\s*', caseSensitive: false), '')
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .take(2)
+        .map((w) => w[0].toUpperCase())
+        .join();
+    final fee = (doc['fee_pkr'] as num?)?.toStringAsFixed(0) ?? '0';
     return Container(
-      decoration: const BoxDecoration(gradient: LinearGradient(colors: [AppColors.deep, Color(0xFF0E5A4B)])),
-      padding: const EdgeInsets.fromLTRB(16, 92, 16, 56),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-            child: Text('${d.doctor['name']} · ${d.doctor['specialty']}',
-                maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-          ),
-          Text(available ? 'Available' : 'Away', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-          Switch(value: available, activeColor: AppColors.green, onChanged: _toggleAvailable),
-        ]),
-        const SizedBox(height: 4),
-        Row(children: [
-          _stat('${s['new']}', 'New', Icons.mark_email_unread_outlined),
-          _stat('${s['to_check']}', 'Payments', Icons.receipt_long_outlined),
-          _stat('${s['to_advise']}', 'To advise', Icons.edit_note),
-          _stat('Rs ${(s['earned_pkr'] as num).toStringAsFixed(0)}', 'Received', Icons.payments_outlined),
-        ]),
-      ]),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.deep, Color(0xFF0E5A4B)]),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              Container(
+                width: 58,
+                height: 58,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: available ? const Color(0xFF4ADE80) : Colors.white38, width: 3),
+                ),
+                child: Text(initials.isEmpty ? 'Dr' : initials,
+                    style: const TextStyle(color: AppColors.deep, fontSize: 20, fontWeight: FontWeight.w800)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text('${doc['specialty']} · ${doc['city']}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13.5)),
+                  const SizedBox(height: 8),
+                  Wrap(spacing: 6, runSpacing: 6, children: [
+                    _headerChip(Icons.payments_outlined, 'Fee Rs $fee'),
+                    if ('${doc['payment_method'] ?? ''}'.isNotEmpty) _headerChip(Icons.account_balance_wallet_outlined, '${doc['payment_method']}'),
+                    if ('${doc['timings'] ?? ''}'.isNotEmpty) _headerChip(Icons.schedule, '${doc['timings']}'),
+                  ]),
+                ]),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 6, 8, 6),
+              decoration: BoxDecoration(color: Colors.white.withAlpha(22), borderRadius: BorderRadius.circular(14)),
+              child: Row(children: [
+                Icon(available ? Icons.check_circle : Icons.pause_circle_outline,
+                    color: available ? const Color(0xFF4ADE80) : Colors.white60, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                    Text(available ? 'Available for online consultations' : 'Away — not taking new requests',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13.5)),
+                    Text(available ? 'Patients can send you requests now' : 'Patients cannot send you new requests',
+                        style: const TextStyle(color: Colors.white60, fontSize: 11.5)),
+                  ]),
+                ),
+                Switch(
+                  value: available,
+                  thumbColor: const WidgetStatePropertyAll(Colors.white),
+                  activeTrackColor: AppColors.green,
+                  onChanged: _toggleAvailable,
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ),
     );
   }
 
-  Widget _stat(String value, String label, IconData icon) => Expanded(
-        child: Container(
-          margin: const EdgeInsets.only(right: 6),
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-          decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(12)),
-          child: Column(children: [
-            Icon(icon, color: Colors.white70, size: 16),
-            const SizedBox(height: 2),
-            FittedBox(
-                child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16))),
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10.5)),
-          ]),
-        ),
+  Widget _headerChip(IconData icon, String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        decoration: BoxDecoration(color: Colors.white.withAlpha(30), borderRadius: BorderRadius.circular(20)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 13, color: Colors.white70),
+          const SizedBox(width: 4),
+          Text(text, style: const TextStyle(color: Colors.white, fontSize: 11.5)),
+        ]),
       );
 
-  Widget _list(List<ConsultSummary> list, String emptyTitle, String emptyText) {
-    if (list.isEmpty) return EmptyView(icon: Icons.forum_outlined, title: emptyTitle, message: emptyText);
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(padding: const EdgeInsets.all(14), children: [
-        for (final c in list)
-          ConsultTile(c: c, doctorView: true, onTap: () async {
-            await openConsultation(context, c.id);
-            _load();
-          }),
-      ]),
+  Widget _statsGrid(Map<String, dynamic> s) {
+    final tiles = [
+      _statTile('${s['new'] ?? 0}', 'New requests', Icons.mark_email_unread_outlined, AppColors.records),
+      _statTile('${s['to_check'] ?? 0}', 'Payments to check', Icons.receipt_long_outlined, AppColors.medicine),
+      _statTile('${s['to_advise'] ?? 0}', 'To advise', Icons.edit_note, AppColors.green),
+      _statTile('Rs ${((s['earned_pkr'] as num?) ?? 0).toStringAsFixed(0)}', 'Fees received', Icons.payments_outlined,
+          AppColors.deep),
+    ];
+    return LayoutBuilder(builder: (context, c) {
+      final cols = c.maxWidth >= 640 ? 4 : 2;
+      const gap = 10.0;
+      final w = (c.maxWidth - gap * (cols - 1)) / cols;
+      return Wrap(spacing: gap, runSpacing: gap, children: [for (final t in tiles) SizedBox(width: w, child: t)]);
+    });
+  }
+
+  Widget _statTile(String value, String label, IconData icon, Color color) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), boxShadow: AppColors.softShadow),
+        child: Row(children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(color: color.withAlpha(28), borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(value,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.deep, height: 1.1)),
+              ),
+              const SizedBox(height: 2),
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            ]),
+          ),
+        ]),
+      );
+
+  Widget _sectionTitle(String text, int? count, Color color) => Row(children: [
+        Text(text, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.deep)),
+        if (count != null && count > 0) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+            child: Text('$count', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ]);
+
+  Widget _emptyBox(IconData icon, String title, String text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(color: AppColors.mint, shape: BoxShape.circle),
+            child: Icon(icon, color: AppColors.green, size: 26),
+          ),
+          const SizedBox(height: 10),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.deep)),
+          const SizedBox(height: 4),
+          Text(text, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted, fontSize: 12.5)),
+        ]),
+      );
+
+  /// A consultation that needs the doctor now, with a clear call to action.
+  Widget _actionCard(ConsultSummary c) {
+    final (label, icon, color) = switch (c.status) {
+      'requested' => ('Review request', Icons.how_to_reg_outlined, AppColors.records),
+      'payment_submitted' => ('Check payment', Icons.receipt_long_outlined, AppColors.medicine),
+      _ => ('Write prescription', Icons.edit_note, AppColors.green),
+    };
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: AppColors.softShadow,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _open(c.id),
+        child: IntrinsicHeight(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Container(width: 5, color: color),
+            Expanded(
+              child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          child: Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Expanded(
+                    child: Text(c.patientName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: AppColors.deep)),
+                  ),
+                  if (c.unread > 0)
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(color: AppColors.green, borderRadius: BorderRadius.circular(20)),
+                      child: Text('${c.unread} new',
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                    ),
+                ]),
+                const SizedBox(height: 3),
+                Text(c.lastMessage.isEmpty ? c.reason : c.lastMessage,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.3)),
+              ]),
+            ),
+            const SizedBox(width: 10),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: color,
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+              onPressed: () => _open(c.id),
+              icon: Icon(icon, size: 17),
+              label: Text(label, style: const TextStyle(fontSize: 12.5)),
+            ),
+          ]),
+              ),
+            ),
+          ]),
+        ),
+      ),
     );
   }
 }
