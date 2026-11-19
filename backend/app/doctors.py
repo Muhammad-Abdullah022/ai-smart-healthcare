@@ -104,8 +104,12 @@ async def ensure_doctor_data(db) -> None:
                     # Made-up profile for the demo (demo_doctors.csv); the app labels it "Demo profile".
                     "demo": r.get("demo", "").lower() in ("yes", "true", "1"),
                 })
-    # Keep doctors who joined through the app (they have a login); only replace the imported lists.
+    # Keep doctors who have a login (joined through the app, or demo doctors given a demo login);
+    # only replace the imported rows, and do not import a second copy of a doctor who has a login.
     await db.doctors.delete_many({"user_id": {"$exists": False}})
+    with_login = {(d["name"], d.get("city_key")) async for d in
+                  db.doctors.find({"user_id": {"$exists": True}}, {"name": 1, "city_key": 1})}
+    docs = [d for d in docs if (d["name"], d["city_key"]) not in with_login]
     if docs:
         await db.doctors.insert_many(docs)
     await db.meta.update_one({"_id": "doctor_data"}, {"$set": {"sha256": digest, "count": len(docs),

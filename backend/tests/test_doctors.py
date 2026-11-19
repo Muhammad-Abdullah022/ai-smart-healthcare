@@ -109,3 +109,33 @@ def test_recommended_doctors_only_of_that_specialty(registered):
         assert body["doctors"], spec
         assert {d["specialty"] for d in body["doctors"]} == {body["specialty"]}
         assert body["specialty"] == spec.split(" ")[0] or body["backup"]
+
+
+def test_demo_doctor_logins(registered):
+    import asyncio
+    from app.core.security import hash_password
+    from app.demo_accounts import create_demo_doctor_logins, demo_email
+    from app.doctors import ensure_doctor_data
+    client, tokens = registered
+    db = client.app.state.db
+    assert demo_email("Dr. Ahmed Rana", "Lahore") == "ahmed.rana.lahore@example.com"
+    demo_total = asyncio.run(db.doctors.count_documents({"demo": True}))
+    real_total = asyncio.run(db.doctors.count_documents({"demo": {"$ne": True}}))
+    logins, made = asyncio.run(create_demo_doctor_logins(db, hash_password("ABC12345")))
+    assert made == demo_total == len(logins) and len({x["email"] for x in logins}) == made
+    # Real (government list) doctors never get an account.
+    assert asyncio.run(db.doctors.count_documents({"demo": {"$ne": True}, "user_id": {"$exists": True}})) == 0
+    # Running again makes nothing new; re-importing the data does not duplicate doctors.
+    assert asyncio.run(create_demo_doctor_logins(db, hash_password("ABC12345")))[1] == 0
+    asyncio.run(db.meta.delete_one({"_id": "doctor_data"}))
+    asyncio.run(ensure_doctor_data(db))
+    assert asyncio.run(db.doctors.count_documents({})) == demo_total + real_total
+
+    first = logins[0]
+    t = client.post("/auth/login", json={"email": first["email"], "password": "ABC12345"})
+    assert t.status_code == 200
+    panel = client.get("/doctor-panel/consultations", headers=auth_header(t.json())).json()
+    assert panel["doctor"]["name"] == first["name"] and panel["doctor"]["payment_account"].startswith("DEMO")
+    r = client.get("/doctors/recommended", headers=auth_header(tokens),
+                   params={"specialty": "Cardiologist", "city": "Lahore"}).json()
+    assert r["doctors"][0]["online"] and r["doctors"][0]["specialty"] == "Cardiologist"
