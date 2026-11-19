@@ -71,11 +71,12 @@ async def list_doctors(city: str | None = None, specialty: str | None = None, q:
     if q:
         rx = re.compile(re.escape(q.strip()), re.IGNORECASE)
         query["$or"] = [{"name": rx}, {"clinic": rx}, {"address": rx}]
-    docs = [d async for d in db.doctors.find(query).limit(limit)]
+    # Sort first, then cut: otherwise an online doctor could fall outside the first `limit` rows.
+    docs = [d async for d in db.doctors.find(query)]
     # Real (government list) doctors first, then demo profiles; within each, lower fee first.
     # Doctors on the app (online consultation) first, then real (government list), then demo profiles.
     docs.sort(key=_rank)
-    return {"specialty": spec, "doctors": [_doctor_out(d) for d in docs]}
+    return {"specialty": spec, "doctors": [_doctor_out(d) for d in docs[:limit]]}
 
 
 def _rank(d: dict) -> tuple:

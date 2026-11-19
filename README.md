@@ -30,7 +30,7 @@ One app with **three panels**. The app opens the right panel after login, depend
 - **Emergency detection & SOS:** red-flag symptoms trigger an emergency screen with 1122 and the user's emergency contacts.
 - **Medical report scanner:** upload a photo or PDF of a lab report. The AI reads each value, and code (not the AI) marks it low, normal or high using the printed range or standard adult ranges. Critical values are highlighted, and old and new reports can be compared.
 - **Labs:** a nearby laboratory finder (PHC-registered labs across Punjab cities) and test price comparison (estimated prices are labelled).
-- **Doctors:** specialists by city (Punjab government consultants list plus demo profiles, always labelled), links to Marham and oladoc, and **online consultation**.
+- **Doctors:** real specialists by city (514 doctors from official Punjab government and University of Health Sciences lists), links to Marham and oladoc, and **online consultation** with doctors who sign up and are approved.
 - **AI health assistant:** text and voice chat in English, Urdu and Roman Urdu.
 
 ### 2. Online Doctor Consultation (live)
@@ -157,8 +157,8 @@ cd frontend && flutter test
 ```
 
 ## Data & honesty
-- **Real data:** the PHC Punjab registered laboratories list, the Punjab government consultants list, the DRAP medicine list, and pharmacies found online. Each has a source column.
-- **Demo data** (some doctor profiles, lab prices, phone numbers) is generated for the demo and **always labelled "Demo" or "approx."** in the app.
+- **Real data:** the PHC Punjab registered laboratories list, real doctors from the Punjab health department consultants list and the University of Health Sciences supervisors list (teaching hospitals), the DRAP medicine list, and pharmacies found online. Each has a source column.
+- **Demo data** (some lab prices and phone numbers) is generated for the demo and **always labelled "Demo" or "approx."** in the app. There are no made-up doctors.
 - The AI never prescribes or suggests doses. Only an approved doctor can send a prescription.
 
 ## Security & privacy

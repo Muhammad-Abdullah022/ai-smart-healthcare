@@ -1,5 +1,8 @@
 """Doctor directory (feature 10): loads data/doctors/*.csv into MongoDB and maps
-AI specialist names (e.g. "General physician") to directory specialties."""
+AI specialist names (e.g. "General physician") to directory specialties.
+
+Only real doctors from public official sources are listed (each row has a source_url), plus doctors who
+signed up in the app and were approved by the admin. There are no made-up demo doctors."""
 import csv
 import hashlib
 import re
@@ -29,6 +32,9 @@ SPECIALTIES: dict[str, list[str]] = {
     "Endocrinologist": ["endocrin", "diabetolog", "diabetes specialist", "thyroid", "hormone"],
     "Eye Specialist": ["eye", "ophthalm"],
     "Dentist": ["dent", "teeth", "tooth"],
+    "Pediatric Surgeon": ["pediatric surg", "paediatric surg", "child surgeon"],
+    "Plastic Surgeon": ["plastic", "burn", "cosmetic surg", "reconstructive"],
+    "Cardiac Surgeon": ["cardiac surg", "heart surg", "cardiothoracic", "thoracic surg", "bypass"],
     "General Surgeon": ["surgeon", "surgery"],
     "Oncologist": ["onco", "cancer"],
     "Rheumatologist": ["rheumat", "arthritis"],
@@ -104,7 +110,13 @@ async def ensure_doctor_data(db) -> None:
                     # Made-up profile for the demo (demo_doctors.csv); the app labels it "Demo profile".
                     "demo": r.get("demo", "").lower() in ("yes", "true", "1"),
                 })
-    # Keep doctors who have a login (joined through the app, or demo doctors given a demo login);
+    # Made-up demo profiles are no longer used: remove them and any demo login made for them.
+    async for u in db.users.find({"demo": True, "roles": "doctor"}, {"_id": 1}):
+        await db.profiles.delete_many({"user_id": u["_id"]})
+        await db.refresh_tokens.delete_many({"user_id": u["_id"]})
+    await db.users.delete_many({"demo": True, "roles": "doctor"})
+    await db.doctors.delete_many({"demo": True})
+    # Keep doctors who have a login (joined through the app);
     # only replace the imported rows, and do not import a second copy of a doctor who has a login.
     await db.doctors.delete_many({"user_id": {"$exists": False}})
     with_login = {(d["name"], d.get("city_key")) async for d in
