@@ -10,22 +10,23 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "doctors"
 
 # Directory specialty -> words the AI or the user may use for it.
 SPECIALTIES: dict[str, list[str]] = {
-    "General Physician": ["general physician", "gp", "family", "medical specialist", "internal medicine", "physician"],
+    "General Physician": ["general physician", "gp", "family", "medical specialist", "internal medicine", "physician",
+                          "general practitioner", "medical officer"],
     "Cardiologist": ["cardio", "heart"],
     "Dermatologist": ["derma", "skin"],
-    "ENT Specialist": ["ent", "ear", "nose", "throat", "otolaryng"],
+    "ENT Specialist": ["ent", "ear", "nose", "throat", "otolaryng", "sinus", "tonsil"],
     "Gastroenterologist": ["gastro", "stomach", "liver", "hepatolog"],
-    "Gynecologist": ["gyn", "obstetric", "women"],
+    "Gynecologist": ["gyn", "obstetric", "women", "gynaec"],
     "Neurosurgeon": ["neurosurg"],
     "Neurologist": ["neuro", "brain", "headache"],
     "Orthopedic Surgeon": ["ortho", "bone", "joint", "fracture"],
     "Pediatrician": ["pediatric", "paediatric", "child"],
-    "Psychiatrist": ["psychiatr", "mental"],
+    "Psychiatrist": ["psychiatr", "mental health"],
     "Psychologist": ["psycholog", "counsel", "therap"],
     "Pulmonologist": ["pulmo", "chest", "lung", "respiratory"],
     "Urologist": ["urolog", "kidney stone", "bladder"],
     "Nephrologist": ["nephro", "kidney"],
-    "Endocrinologist": ["endocrin", "diabet", "thyroid", "hormone"],
+    "Endocrinologist": ["endocrin", "diabetolog", "diabetes specialist", "thyroid", "hormone"],
     "Eye Specialist": ["eye", "ophthalm"],
     "Dentist": ["dent", "teeth", "tooth"],
     "General Surgeon": ["surgeon", "surgery"],
@@ -34,17 +35,42 @@ SPECIALTIES: dict[str, list[str]] = {
 }
 
 
+def specialties_for(text: str | None) -> list[str]:
+    """All directory specialties named in a doctor-type text, in the order they appear.
+
+    The AI often answers "Pulmonologist (chest specialist) / General physician": the first one named is the
+    main specialist. Words must start at a word boundary ("ent" must not match "gastroenterologist" or
+    "dentist"). General Physician is only used when no specialist is named.
+    """
+    if not text:
+        return []
+    low = text.lower()
+    for name in SPECIALTIES:
+        if name.lower() == low.strip():
+            return [name]
+    found: list[tuple[int, str]] = []
+    for name, words in SPECIALTIES.items():
+        # Short words ("ent", "gp", "ear", "eye") must be whole words; longer ones may be word starts.
+        positions = [m.start() for w in [name.lower(), *words]
+                     for m in [re.search(r"(?<![a-z])" + re.escape(w) + (r"(?![a-z])" if len(w) <= 3 else ""), low)]
+                     if m]
+        if positions:
+            found.append((min(positions), name))
+    found.sort()
+    names = [n for _, n in found]
+    # "Neurosurgeon" also contains "neuro"/"surgeon": keep the most specific one only.
+    if "Neurosurgeon" in names:
+        names = [n for n in names if n not in ("Neurologist", "General Surgeon")]
+    # Prefer a named specialist over a general physician, but keep GP as the backup.
+    specific = [n for n in names if n != "General Physician"]
+    return specific + (["General Physician"] if "General Physician" in names else [])
+
+
 def normalize_specialty(text: str | None) -> str | None:
     if not text:
         return None
-    low = text.lower()
-    for name in SPECIALTIES:
-        if name.lower() == low:
-            return name
-    for name, words in SPECIALTIES.items():
-        if any(w in low for w in words):
-            return name
-    return text.strip().title()
+    names = specialties_for(text)
+    return names[0] if names else text.strip().title()
 
 
 def _key(text: str) -> str:

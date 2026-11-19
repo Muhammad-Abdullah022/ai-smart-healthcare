@@ -79,6 +79,27 @@ class DoctorRepository {
     ];
   }
 
+  /// Only doctors of the specialty the AI recommended (user's city first), ready to book.
+  Future<RecommendedDoctors> recommended(String specialty, {String? city, int limit = 3}) async {
+    final q = [
+      'specialty=${Uri.encodeQueryComponent(specialty)}',
+      if (city != null) 'city=${Uri.encodeQueryComponent(city)}',
+      'limit=$limit',
+    ].join('&');
+    final data = await api.get('/doctors/recommended?$q') as Map<String, dynamic>;
+    return RecommendedDoctors(
+      specialty: data['specialty'] as String? ?? specialty,
+      city: data['city'] as String?,
+      backup: data['backup'] as bool? ?? false,
+      totalInCity: data['total_in_city'] as int? ?? 0,
+      doctors: [for (final d in data['doctors'] as List) Doctor.fromJson(d as Map<String, dynamic>)],
+      otherCity: {
+        for (final d in data['doctors'] as List)
+          if ((d as Map)['other_city'] == true) '${d['id']}'
+      },
+    );
+  }
+
   Future<List<Doctor>> doctors({String? city, String? specialty, String? search}) async {
     final q = [
       if (city != null) 'city=${Uri.encodeQueryComponent(city)}',
@@ -109,4 +130,27 @@ class DoctorRepository {
     });
     return BookingResult.fromJson(data as Map<String, dynamic>);
   }
+}
+
+
+class RecommendedDoctors {
+  RecommendedDoctors({
+    required this.specialty,
+    required this.city,
+    required this.backup,
+    required this.totalInCity,
+    required this.doctors,
+    required this.otherCity,
+  });
+
+  final String specialty;
+  final String? city;
+
+  /// True when no doctor of the main specialty exists and the AI's backup (e.g. General Physician) is shown.
+  final bool backup;
+  final int totalInCity;
+  final List<Doctor> doctors;
+
+  /// Ids of doctors outside the user's city.
+  final Set<String> otherCity;
 }

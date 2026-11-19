@@ -16,7 +16,7 @@ from app.core.errors import ApiError
 from app.core.mailer import MailNotConfigured, send_mail
 from app.core.rate_limit import limit_by_user
 from app.deps import get_current_user, get_db
-from app.doctors import SPECIALTIES, normalize_specialty
+from app.doctors import SPECIALTIES, normalize_specialty, specialties_for
 from app.repositories.user_repository import to_object_id
 
 router = APIRouter(tags=["doctors"])
@@ -74,8 +74,45 @@ async def list_doctors(city: str | None = None, specialty: str | None = None, q:
     docs = [d async for d in db.doctors.find(query).limit(limit)]
     # Real (government list) doctors first, then demo profiles; within each, lower fee first.
     # Doctors on the app (online consultation) first, then real (government list), then demo profiles.
-    docs.sort(key=lambda d: (not d.get("user_id"), bool(d.get("demo")), d["fee_pkr"] is None, d["fee_pkr"] or 0, d["name"]))
+    docs.sort(key=_rank)
     return {"specialty": spec, "doctors": [_doctor_out(d) for d in docs]}
+
+
+def _rank(d: dict) -> tuple:
+    # Doctors on the app (online consultation, instant booking) first, then the real government list,
+    # then demo profiles; lower fee first.
+    return (not (d.get("user_id") and d.get("available", True) and d.get("approved", True)),
+            bool(d.get("demo")), d["fee_pkr"] is None, d["fee_pkr"] or 0, d["name"])
+
+
+@router.get("/doctors/recommended")
+async def recommended_doctors(specialty: str, city: str | None = None, limit: int = Query(3, ge=1, le=10),
+                              user: dict = Depends(get_current_user), db=Depends(get_db)):
+    """Only doctors of the specialty the AI recommended for this problem, ready to book.
+
+    Order: the user's city, then other cities (marked). If no doctor of the main specialty exists at all,
+    the backup specialty named by the AI (e.g. "/ General physician") is used and that is said clearly.
+    """
+    if not city:
+        profile = await db.profiles.find_one({"user_id": user["_id"]}) or {}
+        city = profile.get("city") or None
+    wanted = specialties_for(specialty) or [normalize_specialty(specialty) or "General Physician"]
+    for spec in wanted:
+        local = [d async for d in db.doctors.find({"specialty": spec, **({"city_key": _key(city)} if city else {})})]
+        local.sort(key=_rank)
+        picked = local[:limit]
+        if len(picked) < limit:
+            others = [d async for d in db.doctors.find(
+                {"specialty": spec, **({"city_key": {"$ne": _key(city)}} if city else {})}).limit(300)]
+            others.sort(key=_rank)
+            picked += others[:limit - len(picked)]
+        if picked:
+            return {"specialty": spec, "asked": specialty, "city": city, "backup": spec != wanted[0],
+                    "total_in_city": len(local),
+                    "doctors": [{**_doctor_out(d), "other_city": bool(city) and _key(d["city"]) != _key(city)}
+                                for d in picked]}
+    return {"specialty": wanted[0], "asked": specialty, "city": city, "backup": False, "total_in_city": 0,
+            "doctors": []}
 
 
 class AppointmentRequest(BaseModel):

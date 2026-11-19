@@ -86,3 +86,26 @@ def test_government_consultants_loaded(registered):
     demo = [d for d in data if d["demo"]]
     assert demo and all(d["experience_years"] and d["fee_pkr"] and "Demo profile" in d["about"] for d in demo)
     assert [d["demo"] for d in data] == sorted(d["demo"] for d in data)  # real doctors listed first
+
+
+def test_specialty_matching_picks_the_named_specialist():
+    from app.doctors import normalize_specialty, specialties_for
+    assert normalize_specialty("Pulmonologist (chest specialist) / General physician") == "Pulmonologist"
+    assert normalize_specialty("Gastroenterologist") == "Gastroenterologist"   # not "ENT"
+    assert normalize_specialty("Dentist") == "Dentist"                         # not "ENT"
+    assert normalize_specialty("ENT specialist / General physician") == "ENT Specialist"
+    assert normalize_specialty("Eye specialist (ophthalmologist)") == "Eye Specialist"
+    assert normalize_specialty("Gynaecologist") == "Gynecologist"
+    assert specialties_for("Cardiologist / General physician") == ["Cardiologist", "General Physician"]
+
+
+def test_recommended_doctors_only_of_that_specialty(registered):
+    client, tokens = registered
+    h = auth_header(tokens)
+    for spec in ("Cardiologist", "Dermatologist", "Pulmonologist (chest specialist) / General physician"):
+        r = client.get("/doctors/recommended", headers=h, params={"specialty": spec, "city": "Lahore", "limit": 5})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["doctors"], spec
+        assert {d["specialty"] for d in body["doctors"]} == {body["specialty"]}
+        assert body["specialty"] == spec.split(" ")[0] or body["backup"]
