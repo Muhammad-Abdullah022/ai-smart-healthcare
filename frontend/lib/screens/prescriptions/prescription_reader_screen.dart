@@ -1,3 +1,4 @@
+import '../../widgets/capsule_loader.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -104,7 +105,7 @@ class _PrescriptionReaderScreenState extends State<PrescriptionReaderScreen> {
               future: _list,
               builder: (context, snap) {
                 if (snap.connectionState != ConnectionState.done) {
-                  return const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()));
+                  return const Padding(padding: EdgeInsets.all(24), child: Center(child: CapsuleLoader(size: 48)));
                 }
                 if (snap.hasError) return ErrorView(message: 'Could not load prescriptions.', onRetry: _reload);
                 final list = snap.data!;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import 'app_button.dart';
+import 'capsule_loader.dart';
 
 /// Shown while data is loading.
 class LoadingView extends StatelessWidget {
@@ -15,8 +16,8 @@ class LoadingView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: AppColors.accent),
-          const SizedBox(height: 16),
+          const CapsuleLoader(),
+          const SizedBox(height: 10),
           Text(message, style: const TextStyle(color: AppColors.textMuted)),
         ],
       ),

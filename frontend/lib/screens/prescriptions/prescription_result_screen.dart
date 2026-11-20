@@ -1,3 +1,4 @@
+import '../../widgets/capsule_loader.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -156,7 +157,7 @@ class _PrescriptionResultScreenState extends State<PrescriptionResultScreen> {
           Positioned.fill(
             child: ColoredBox(
               color: Colors.white.withAlpha(180),
-              child: const Center(child: CircularProgressIndicator()),
+              child: const Center(child: CapsuleLoader(size: 48)),
             ),
           ),
       ]),

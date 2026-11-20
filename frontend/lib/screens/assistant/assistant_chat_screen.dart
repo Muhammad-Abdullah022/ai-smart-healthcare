@@ -1,3 +1,4 @@
+import '../../widgets/capsule_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -493,7 +494,7 @@ class _AssistantChatScreenState extends State<AssistantChatScreen> {
       body: Column(children: [
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: CapsuleLoader())
               : ListView(
                   controller: _scroll,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
