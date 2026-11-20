@@ -26,3 +26,4 @@ mongomock-motor==0.0.34
 
 # ---- Testing only ----
 pytest==8.3.4
+openpyxl>=3.1

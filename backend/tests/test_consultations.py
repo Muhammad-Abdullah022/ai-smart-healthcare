@@ -158,3 +158,25 @@ def test_admin_manages_accounts_and_issues(registered):
     assert mine[0]["messages"][-1]["from"] == "admin" and "user_email" not in mine[0]
     users = client.get("/admin/users", headers=admin).json()
     assert {"ayesha@example.com", DOCTOR["email"]} <= {u["email"] for u in users}
+
+
+def test_doctor_accounts_excel_export(registered):
+    import asyncio
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    from app.doctor_accounts_export import build_workbook, doctor_account_rows
+    client, _ = registered
+    _doctor(client)
+    client.post("/auth/register-doctor", json={**DOCTOR, "email": "waiting@gmail.com",
+                                                "doctor": {**JOIN, "pmdc_number": "777-P"}})
+    rows = asyncio.run(doctor_account_rows(client.app.state.db))
+    assert {(r["Login email (Gmail)"], r["Status"]) for r in rows} == {
+        (DOCTOR["email"], "Approved"), ("waiting@gmail.com", "Waiting for approval")}
+    assert next(r for r in rows if r["Status"] != "Approved")["Gmail?"] == "Yes"
+    buf = BytesIO()
+    build_workbook(rows).save(buf)
+    ws = load_workbook(BytesIO(buf.getvalue())).active
+    text = " ".join(str(c.value) for row in ws.iter_rows() for c in row if c.value is not None)
+    assert "Dr. Sara Malik" in text and "waiting@gmail.com" in text and "password" not in text.split("Passwords")[0].lower()
