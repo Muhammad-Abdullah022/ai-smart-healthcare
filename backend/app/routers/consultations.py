@@ -259,8 +259,7 @@ async def request_consultation(body: ConsultRequest, user: dict = Depends(get_cu
                        "This doctor is not on the app yet. Please call the clinic or send an appointment request.")
     if doctor["user_id"] == user["_id"]:
         raise ApiError(status.HTTP_409_CONFLICT, "own_profile", "You cannot consult yourself.")
-    if not doctor.get("available", True):
-        raise ApiError(status.HTTP_409_CONFLICT, "unavailable", "This doctor is not taking online consultations now.")
+    # A doctor who is "Away" still receives the request in the doctor panel and answers later.
     open_one = await db.consultations.find_one({"user_id": user["_id"], "doctor_id": doctor["_id"],
                                                 "status": {"$in": list(ACTIVE)}})
     if open_one:
@@ -340,7 +339,13 @@ async def accept(cid: str, user: dict = Depends(get_current_user), db=Depends(ge
     c, role, doctor = await _load(db, user, cid)
     _need(role, "doctor")
     _need_status(c, "requested", message="Already answered.")
-    fee = c.get("fee_pkr")
+    fee = doctor.get("fee_pkr") or c.get("fee_pkr")
+    if fee and not doctor.get("payment_account"):
+        raise ApiError(status.HTTP_409_CONFLICT, "no_payment_account",
+                       "Add your JazzCash / Easypaisa / bank account in Edit profile first, so the patient can pay.")
+    if fee != c.get("fee_pkr"):
+        await db.consultations.update_one({"_id": c["_id"]}, {"$set": {"fee_pkr": fee}})
+        c["fee_pkr"] = fee
     if fee:
         text = (f"{doctor['name']} accepted your request. Please pay Rs {fee:,.0f} by {doctor.get('payment_method')} "
                 f"to {doctor.get('payment_title')} ({doctor.get('payment_account')}) and upload the payment screenshot.")

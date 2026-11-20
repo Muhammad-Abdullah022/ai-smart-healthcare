@@ -326,6 +326,12 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
   }
 
   Future<void> _toggleAvailable(bool v) async {
+    final doc = _data!.doctor;
+    if (v && ('${doc['payment_account'] ?? ''}'.length < 5 || '${doc['pmdc_number'] ?? ''}'.length < 3)) {
+      showMessage(context, 'First add your PMDC number and payment account in your profile.');
+      await _editProfile();
+      return;
+    }
     final d = Map<String, dynamic>.from(_data!.doctor)..['available'] = v;
     d.remove('id');
     try {
@@ -408,6 +414,7 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
           padding: EdgeInsets.zero,
           children: [
             _profileCard(d),
+            if (context.watch<AuthProvider>().user?.mustChangePassword ?? false) _passwordBanner(),
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 900),
@@ -552,6 +559,34 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
       ),
     );
   }
+
+  Widget _passwordBanner() => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7E6),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFF5C26B)),
+            ),
+            child: Row(children: [
+              const Icon(Icons.lock_reset, color: Color(0xFFB45309)),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('You are using the default password. Set your own password now.',
+                    style: TextStyle(color: Color(0xFF7C4A03), fontWeight: FontWeight.w600, fontSize: 13)),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB45309), visualDensity: VisualDensity.compact),
+                onPressed: () => showChangePasswordDialog(context, forced: true),
+                child: const Text('Change'),
+              ),
+            ]),
+          ),
+        ),
+      );
 
   Widget _headerChip(IconData icon, String text) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),

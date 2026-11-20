@@ -139,7 +139,7 @@ class DoctorDetailScreen extends StatelessWidget {
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
                   onPressed: () async {
-                    if (d.online) {
+                    if (d.online || d.hasAccount) {
                       await showConsultRequestSheet(context, doctor: d, reason: reason, fromChat: fromChat);
                       return;
                     }
@@ -152,13 +152,13 @@ class DoctorDetailScreen extends StatelessWidget {
                         ..pop();
                     }
                   },
-                  child: Text(d.online ? 'Consult online now' : 'Get Appointment',
+                  child: Text(d.online ? 'Consult online now' : d.hasAccount ? 'Book & chat with doctor' : 'Get Appointment',
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 ),
               ),
             ),
           ),
-          if (d.online)
+          if (d.online || d.hasAccount)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: TextButton(

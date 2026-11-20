@@ -20,7 +20,8 @@ class Doctor {
         about = j['about'] as String? ?? '',
         demo = j['demo'] as bool? ?? false,
         government = j['government'] as bool? ?? false,
-        online = j['online'] as bool? ?? false;
+        online = j['online'] as bool? ?? false,
+        hasAccount = j['has_account'] as bool? ?? false;
 
   final String id;
   final String name;
@@ -47,6 +48,9 @@ class Doctor {
 
   /// Joined the app's doctor panel: live chat, fee by screenshot, online prescription.
   final bool online;
+
+  /// Has a doctor-panel login: a booking reaches the doctor's panel (even when not "Online now").
+  final bool hasAccount;
 
   String get initials {
     final parts = name.replaceAll(RegExp(r'^(Dr\.?|Prof\.?)\s+', caseSensitive: false), '').split(' ');

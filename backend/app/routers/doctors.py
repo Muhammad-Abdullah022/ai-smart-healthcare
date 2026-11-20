@@ -35,7 +35,9 @@ def _doctor_out(d: dict) -> dict:
             "about": d.get("about", ""), "demo": bool(d.get("demo")),
             "government": "govt" in d.get("qualification", "").lower(),
             # Joined the app's doctor panel: can chat, take the fee and prescribe online.
-            "online": bool(d.get("user_id")) and d.get("available", True) and d.get("approved", True)}
+            "online": bool(d.get("user_id")) and d.get("available", True) and d.get("approved", True),
+            # Has a doctor-panel login: booking goes to the doctor's panel (even while "Away").
+            "has_account": bool(d.get("user_id")) and d.get("approved", True) is not False}
 
 
 @router.get("/doctors/specialties")

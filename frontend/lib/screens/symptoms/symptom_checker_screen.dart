@@ -459,7 +459,7 @@ class _BookPromptState extends State<_BookPrompt> {
   String? _bookedId;
 
   Future<void> _book(Doctor d) async {
-    if (d.online) {
+    if (d.online || d.hasAccount) {
       final id = await showConsultRequestSheet(context, doctor: d, reason: widget.reason, fromChat: true);
       if (id != null && mounted) setState(() => _bookedId = d.id);
     } else {

@@ -22,7 +22,9 @@ from app.routers import admin, assessments, assistant, auth, companion, consents
 
 
 async def _import_data(db) -> None:
-    for step in (ensure_lab_data, ensure_doctor_data, ensure_pharmacy_data):
+    from app.doctor_logins import run_doctor_login_job
+
+    for step in (ensure_lab_data, ensure_doctor_data, ensure_pharmacy_data, run_doctor_login_job):
         try:
             await step(db)
         except Exception as exc:  # keep the server running; the import is retried at the next start

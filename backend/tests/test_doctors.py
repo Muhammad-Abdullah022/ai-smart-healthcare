@@ -107,3 +107,48 @@ def test_recommended_doctors_only_of_that_specialty(registered):
         assert {d["specialty"] for d in body["doctors"]} == {body["specialty"]}
         assert body["specialty"] == spec.split(" ")[0] or body["backup"]
 
+
+
+def test_default_doctor_logins_job(registered, tmp_path):
+    import asyncio
+    import json
+
+    from openpyxl import load_workbook
+
+    from app.doctor_logins import run_doctor_login_job
+    client, tokens = registered
+    db = client.app.state.db
+    total = asyncio.run(db.doctors.count_documents({}))
+    job = tmp_path / "doctor_logins.json"
+    job.write_text(json.dumps({"password": "ABC12345"}))
+    xlsx = tmp_path / "Doctor_Logins.xlsx"
+    asyncio.run(run_doctor_login_job(db, job, xlsx))
+    assert not job.exists()  # the password is not left on disk
+    ws = load_workbook(xlsx).active
+    rows = [r for r in ws.iter_rows(min_row=5, values_only=True) if r[0]]
+    assert len(rows) == total and len({r[5] for r in rows}) == total
+    assert all(r[5].endswith("@example.com") and r[6] == "ABC12345" for r in rows)
+
+    name, email = rows[0][1], rows[0][5]
+    login = client.post("/auth/login", json={"email": email, "password": "ABC12345"})
+    assert login.status_code == 200
+    doctor = auth_header(login.json())
+    assert client.get("/auth/me", headers=doctor).json()["must_change_password"]
+    me = client.get("/doctor-panel/me", headers=doctor).json()
+    assert me["name"] == name and me["available"] is False
+
+    # Not "online" for patients until the doctor turns Available on, but a booking still reaches the panel.
+    patient = auth_header(tokens)
+    d = next(x for x in client.get("/doctors", headers=patient, params={"city": me["city"], "specialty": me["specialty"], "limit": 200}).json()["doctors"]
+             if x["id"] == me["id"])
+    assert d["has_account"] and not d["online"]
+    cid = client.post("/consultations", headers=patient, json={"doctor_id": me["id"], "reason": "Pain"}).json()["id"]
+    assert client.get("/doctor-panel/consultations", headers=doctor).json()["stats"]["new"] == 1
+    assert client.post(f"/consultations/{cid}/accept", headers=doctor).json()["status"] == "paid"  # no fee listed
+
+    # Running the job again makes no duplicates and shows changed passwords as changed.
+    client.post("/auth/change-password", headers=doctor, json={"current_password": "ABC12345", "new_password": "Mine12345"})
+    job.write_text(json.dumps({"password": "ABC12345"}))
+    asyncio.run(run_doctor_login_job(db, job, xlsx))
+    rows2 = [r for r in load_workbook(xlsx).active.iter_rows(min_row=5, values_only=True) if r[0]]
+    assert len(rows2) == total and next(r for r in rows2 if r[5] == email)[6] == "(changed by the doctor)"
