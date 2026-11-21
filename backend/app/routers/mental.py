@@ -225,3 +225,49 @@ async def save_breathing(body: BreathingRequest, user: dict = Depends(get_curren
 async def breathing_summary(user: dict = Depends(get_current_user), db=Depends(get_db)):
     sessions = [s async for s in db.breathing_sessions.find({"user_id": user["_id"]})]
     return {"sessions": len(sessions), "total_minutes": round(sum(s["duration_seconds"] for s in sessions) / 60)}
+
+
+# ---------- Meditation & wellness plan (feature 23) ----------
+# A 7-day plan of short guided sessions. The session texts live in the app; the server only keeps which
+# sessions were completed, so progress is the same on every device.
+
+PLAN_DAYS = 7
+SESSIONS_PER_DAY = 3
+
+
+class WellnessDone(BaseModel):
+    day: int = Field(ge=1, le=PLAN_DAYS)
+    session: int = Field(ge=1, le=SESSIONS_PER_DAY)
+    minutes: int = Field(default=0, ge=0, le=120)
+
+
+async def _plan_state(db, user_id) -> dict:
+    done = [d async for d in db.wellness_progress.find({"user_id": user_id}).sort("completed_at", 1)]
+    keys = sorted({(d["day"], d["session"]) for d in done})
+    today = next((day for day in range(1, PLAN_DAYS + 1)
+                  if any((day, s) not in keys for s in range(1, SESSIONS_PER_DAY + 1))), PLAN_DAYS)
+    day_done_today = any(d["completed_at"].date() == datetime.now(timezone.utc).date() for d in done
+                         if isinstance(d.get("completed_at"), datetime))
+    return {"completed": [{"day": d, "session": s} for d, s in keys],
+            "current_day": today, "finished": len(keys) >= PLAN_DAYS * SESSIONS_PER_DAY,
+            "total_minutes": sum(d.get("minutes", 0) for d in done), "practised_today": day_done_today,
+            "days": PLAN_DAYS, "sessions_per_day": SESSIONS_PER_DAY}
+
+
+@router.get("/wellness-plan")
+async def wellness_plan(user: dict = Depends(get_current_user), db=Depends(get_db)):
+    return await _plan_state(db, user["_id"])
+
+
+@router.post("/wellness-plan/complete")
+async def wellness_complete(body: WellnessDone, user: dict = Depends(get_current_user), db=Depends(get_db)):
+    await db.wellness_progress.update_one(
+        {"user_id": user["_id"], "day": body.day, "session": body.session},
+        {"$set": {"minutes": body.minutes, "completed_at": datetime.now(timezone.utc)}}, upsert=True)
+    return await _plan_state(db, user["_id"])
+
+
+@router.delete("/wellness-plan")
+async def wellness_restart(user: dict = Depends(get_current_user), db=Depends(get_db)):
+    await db.wellness_progress.delete_many({"user_id": user["_id"]})
+    return await _plan_state(db, user["_id"])

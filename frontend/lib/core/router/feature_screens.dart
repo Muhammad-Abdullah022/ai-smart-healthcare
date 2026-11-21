@@ -15,6 +15,7 @@ import '../../screens/reports/reports_screen.dart';
 import '../../services/report_repository.dart';
 import '../../screens/emergency/sos_screen.dart';
 import '../../screens/medicines/medicines_screen.dart';
+import '../../screens/mental/wellness_plan_screen.dart';
 import '../../screens/mental/breathing_screen.dart';
 import '../../screens/mental/crisis_screen.dart';
 import '../../screens/mental/companion/mood_checkin_screen.dart';
@@ -64,6 +65,8 @@ Widget screenForFeature(int number) {
       return const MoodCheckInScreen();
     case 22:
       return const BreathingScreen();
+    case 23:
+      return const WellnessPlanScreen();
     case 24:
       return const MoodScreen();
     case 25:

@@ -79,12 +79,12 @@ const List<HealthModule> healthModules = [
   HealthModule(
     id: 'mental',
     title: 'Mental Health & Stress',
-    subtitle: 'MindEase: mood check-in, tips, chat and insights',
+    subtitle: 'MindEase chat, PHQ-9/GAD-7 check, wellness plan, mood tracker',
     icon: Icons.self_improvement,
     color: AppColors.mind,
     tint: AppColors.mindTint,
     features: [
-      HealthFeature(16, 'Mental Health Screening', Icons.psychology_outlined, status: FeatureStatus.available),
+      HealthFeature(16, 'Depression & Anxiety Check (PHQ-9 / GAD-7)', Icons.psychology_outlined, status: FeatureStatus.available),
       HealthFeature(17, 'MindEase Companion Chat', Icons.chat_bubble_outline, status: FeatureStatus.available),
       HealthFeature(18, 'Stress, Anxiety & Mood Assessment', Icons.mood_outlined, status: FeatureStatus.available),
       HealthFeature(19, 'Personalized Stress Relief', Icons.spa_outlined, status: FeatureStatus.available),
@@ -93,7 +93,7 @@ const List<HealthModule> healthModules = [
       HealthFeature(21, 'Posture Detection & Correction', Icons.accessibility_new,
           status: FeatureStatus.prototype, note: 'On-device prototype.'),
       HealthFeature(22, 'Guided Breathing & Relaxation', Icons.air, status: FeatureStatus.available),
-      HealthFeature(23, 'Meditation & Wellness Plan', Icons.self_improvement),
+      HealthFeature(23, 'Meditation & Wellness Plan', Icons.self_improvement, status: FeatureStatus.available),
       HealthFeature(24, 'Daily Mood Tracking Dashboard', Icons.insights_outlined, status: FeatureStatus.available),
       HealthFeature(25, 'Crisis Support & Professional Referral', Icons.support_agent, status: FeatureStatus.available),
     ],
@@ -180,7 +180,8 @@ const Set<int> mergedIntoSymptomChecker = {2, 3, 4, 5};
 /// The Mental Health section now shows only the MindEase module (feature 17). These features are
 /// hidden from lists and search; breathing (22) and crisis help (25) stay reachable inside MindEase,
 /// and nothing is deleted, so any of them can be shown again by removing it from this set.
-const Set<int> hiddenMentalFeatures = {16, 18, 19, 20, 21, 22, 23, 24, 25};
+// Shown: MindEase (17), PHQ-9/GAD-7 screening (16), wellness plan (23), mood dashboard (24).
+const Set<int> hiddenMentalFeatures = {18, 19, 20, 21, 22, 25};
 
 /// Whether a feature appears in section lists and search.
 /// Appointment booking (11) now happens from the chat result and the doctor list, so it has no row.

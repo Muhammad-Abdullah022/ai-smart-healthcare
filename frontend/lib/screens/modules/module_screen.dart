@@ -33,17 +33,20 @@ class ModuleScreen extends StatelessWidget {
           const _AssistantHero(),
           const SizedBox(height: 16),
         ],
-        if (module.id == 'mental')
-          // Mental Health = the MindEase module only (check-in, tips, chat, memory, insights).
-          const _MindEaseHero()
-        else
-          GroupedList(children: [
-            for (final f in module.features)
-              // Features 2–5 (questions, prediction, triage, tests) live inside the Symptom Checker chat.
-              // Features 1 and 13 (symptom checker + assistant) are the large card above.
-              if (isListedFeature(f) && !(module.id == 'diagnosis' && (f.number == 13 || f.number == 1)))
-                FeatureTile(feature: f, color: module.color, tint: module.tint, inGroup: true),
-          ]),
+        if (module.id == 'mental') ...[
+          // Mental Health: MindEase as the big card, then screening, wellness plan and mood tracker.
+          const _MindEaseHero(),
+          const SizedBox(height: 16),
+        ],
+        GroupedList(children: [
+          for (final f in module.features)
+            // Features 2–5 (questions, prediction, triage, tests) live inside the Symptom Checker chat.
+            // Features 1 and 13 (symptom checker + assistant) and 17 (MindEase) are the large cards above.
+            if (isListedFeature(f) &&
+                !(module.id == 'diagnosis' && (f.number == 13 || f.number == 1)) &&
+                !(module.id == 'mental' && f.number == 17))
+              FeatureTile(feature: f, color: module.color, tint: module.tint, inGroup: true),
+        ]),
       ],
     );
   }

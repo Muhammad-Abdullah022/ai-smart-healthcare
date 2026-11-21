@@ -10,6 +10,7 @@ import '../../widgets/app_button.dart';
 import '../../widgets/error_banner.dart';
 import '../../widgets/section_card.dart';
 import '../../widgets/state_views.dart';
+import '../doctors/doctor_booking_card.dart';
 
 /// Features 16 and 18: PHQ-9 (mood) and GAD-7 (anxiety), scored by fixed published rules.
 class ScreeningScreen extends StatefulWidget {
@@ -191,10 +192,64 @@ class _ResultView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        // Moderate or worse: show real psychiatrists to book (same flow as the symptom checker).
+        if (const {'moderate', 'moderately severe', 'severe'}.contains(result.severity)) ...[
+          DoctorBookingCard(
+            specialty: 'Psychiatrist',
+            reason: '${result.title}: score ${result.score}/${result.maxScore} (${result.severity}). '
+                'I would like to talk to a psychiatrist.',
+          ),
+          const SizedBox(height: 4),
+        ] else ...[
+          SectionCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Helpful next steps', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              const SizedBox(height: 10),
+              _NextStep(
+                icon: Icons.self_improvement,
+                title: 'Meditation & wellness plan',
+                subtitle: '7 days of short guided sessions',
+                onTap: () => context.push('/feature/23'),
+              ),
+              _NextStep(
+                icon: Icons.chat_bubble_outline,
+                title: 'Talk to MindEase',
+                subtitle: 'A supportive chat, any time',
+                onTap: () => context.push('/feature/17'),
+              ),
+              _NextStep(
+                icon: Icons.insights_outlined,
+                title: 'Track your mood',
+                subtitle: 'See how you feel over the weeks',
+                onTap: () => context.push('/feature/24'),
+              ),
+            ]),
+          ),
+        ],
+        const SizedBox(height: 12),
         Text(result.note, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
         const SizedBox(height: 16),
         AppButton(label: 'Take another check', outlined: true, onPressed: onAgain),
       ],
     );
   }
+}
+
+
+class _NextStep extends StatelessWidget {
+  const _NextStep({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        onTap: onTap,
+        leading: CircleAvatar(backgroundColor: AppColors.mindTint, child: Icon(icon, color: AppColors.mind)),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right),
+      );
 }

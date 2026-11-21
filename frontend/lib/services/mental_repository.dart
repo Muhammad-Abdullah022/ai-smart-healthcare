@@ -132,4 +132,16 @@ class MentalRepository {
 
   Future<void> saveBreathing(String pattern, int seconds) =>
       api.post('/mental/breathing', body: {'pattern': pattern, 'duration_seconds': seconds});
+
+  /// Meditation & wellness plan (feature 23): which sessions are done.
+  Future<Map<String, dynamic>> wellnessPlan() async =>
+      (await api.get('/mental/wellness-plan') as Map).cast<String, dynamic>();
+
+  Future<Map<String, dynamic>> completeWellness(int day, int session, int minutes) async =>
+      (await api.post('/mental/wellness-plan/complete', body: {'day': day, 'session': session, 'minutes': minutes})
+              as Map)
+          .cast<String, dynamic>();
+
+  Future<Map<String, dynamic>> restartWellness() async =>
+      (await api.delete('/mental/wellness-plan') as Map).cast<String, dynamic>();
 }

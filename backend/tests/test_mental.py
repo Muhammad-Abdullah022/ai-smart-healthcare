@@ -86,3 +86,18 @@ def test_breathing_sessions(registered):
     client.post("/mental/breathing", headers=h, json={"pattern": "box", "duration_seconds": 120})
     client.post("/mental/breathing", headers=h, json={"pattern": "4-7-8", "duration_seconds": 60})
     assert client.get("/mental/breathing/summary", headers=h).json() == {"sessions": 2, "total_minutes": 3}
+
+
+def test_wellness_plan_progress(registered):
+    client, tokens = registered
+    h = auth_header(tokens)
+    s = client.get("/mental/wellness-plan", headers=h).json()
+    assert s["current_day"] == 1 and s["completed"] == [] and not s["finished"]
+    for n in (1, 2, 3):
+        s = client.post("/mental/wellness-plan/complete", headers=h, json={"day": 1, "session": n, "minutes": 5}).json()
+    assert s["current_day"] == 2 and s["total_minutes"] == 15 and s["practised_today"]
+    # Repeating a session does not count twice.
+    s = client.post("/mental/wellness-plan/complete", headers=h, json={"day": 1, "session": 1, "minutes": 5}).json()
+    assert len(s["completed"]) == 3
+    assert client.post("/mental/wellness-plan/complete", headers=h, json={"day": 9, "session": 1}).status_code == 422
+    assert client.delete("/mental/wellness-plan", headers=h).json()["completed"] == []
