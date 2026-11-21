@@ -5,6 +5,12 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 TriageLevel = Literal["critical", "urgent", "moderate", "routine"]
+# What the patient should do next:
+#   self_care   - minor problem: self-care + over-the-counter medicine (ask a pharmacist), no doctor needed
+#   tests_first - a few tests decide it: show only the tests; after the report is uploaded the AI decides again
+#   see_doctor  - needs a doctor: show matching doctors to book
+#   emergency   - call 1122 / go to emergency now
+CarePath = Literal["self_care", "tests_first", "see_doctor", "emergency"]
 TRIAGE_ORDER = {"routine": 0, "moderate": 1, "urgent": 2, "critical": 3}
 
 
@@ -50,6 +56,24 @@ class AISymptomOutput(BaseModel):
     specialist_type: str | None = Field(default=None, max_length=80)
     warning_signs: list[str] = Field(default_factory=list, max_length=6)
     otc_options: list[OTCOption] = Field(default_factory=list, max_length=4)
+    care_path: Literal["self_care", "tests_first", "see_doctor"] = "see_doctor"
+
+
+class AIReportReview(BaseModel):
+    """The AI's decision after reading the test report the symptom check asked for."""
+    care_path: Literal["self_care", "see_doctor"]
+    summary: str = Field(max_length=500)
+    findings: list[str] = Field(default_factory=list, max_length=6)
+    likely_cause: str = Field(default="", max_length=120)
+    triage_level: TriageLevel = "routine"
+    next_steps: list[str] = Field(default_factory=list, max_length=6)
+    otc_options: list[OTCOption] = Field(default_factory=list, max_length=4)
+    specialist_type: str | None = Field(default=None, max_length=80)
+    warning_signs: list[str] = Field(default_factory=list, max_length=6)
+
+
+class ReportReviewRequest(BaseModel):
+    report_id: str
 
 
 # ----- What the app receives -----
@@ -80,6 +104,9 @@ class AssessmentOut(BaseModel):
     tests_to_discuss: list[str] = []
     specialist_type: str | None = None
     warning_signs: list[str] = []
+    care_path: CarePath = "see_doctor"
+    # Filled after the patient uploads the report asked for in "tests_first".
+    report_review: dict | None = None
     symptoms: str
     answers: list[FollowUpAnswer] = []  # the chat: follow-up questions and the user's answers
     explanation: Explanation

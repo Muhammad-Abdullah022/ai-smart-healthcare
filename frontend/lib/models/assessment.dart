@@ -63,6 +63,8 @@ class Assessment {
     this.warningSigns = const [],
     this.specialistType,
     this.answers = const [],
+    this.carePath = 'see_doctor',
+    this.reportReview,
   });
 
   final String id;
@@ -89,6 +91,13 @@ class Assessment {
 
   /// The chat: follow-up questions and the user's answers.
   final List<(String, String)> answers;
+
+  /// What to do next: self_care (medicines only) | tests_first (tests only, then upload the report)
+  /// | see_doctor (book a doctor) | emergency.
+  final String carePath;
+
+  /// The AI's reading of the report uploaded after "tests_first" (summary, findings, abnormal values).
+  final Map<String, dynamic>? reportReview;
 
   factory Assessment.fromJson(Map<String, dynamic> j) => Assessment(
         id: j['id'] as String,
@@ -125,6 +134,8 @@ class Assessment {
           for (final a in (j['answers'] as List<dynamic>? ?? const []))
             ((a as Map)['question'] as String, a['answer'] as String),
         ],
+        carePath: j['care_path'] as String? ?? (j['emergency'] == true ? 'emergency' : 'see_doctor'),
+        reportReview: (j['report_review'] as Map?)?.cast<String, dynamic>(),
       );
 }
 

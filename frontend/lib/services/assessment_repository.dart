@@ -33,6 +33,14 @@ class AssessmentRepository {
     return data.map((e) => AssessmentSummary.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// After "tests_first": the AI reads the uploaded report with the symptoms and decides
+  /// self-care (medicines) or a doctor.
+  Future<Assessment> reviewReport(String assessmentId, String reportId) async {
+    final data = await api.post('/assessments/symptoms/$assessmentId/report-review',
+        body: {'report_id': reportId}) as Map<String, dynamic>;
+    return Assessment.fromJson(data);
+  }
+
   Future<Assessment> getById(String id) async {
     final data = await api.get('/assessments/symptoms/$id') as Map<String, dynamic>;
     return Assessment.fromJson(data);

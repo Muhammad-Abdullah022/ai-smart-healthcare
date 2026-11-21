@@ -39,7 +39,7 @@ def test_symptom_check_returns_validated_result(registered):
     assert body["possible_causes"][0]["name"] == "Viral fever"
     assert "not a medical diagnosis" in body["disclaimer"]
     assert body["explanation"]["ai_provider"] == "gemini"
-    assert body["explanation"]["prompt_version"] == "symptom-v3"
+    assert body["explanation"]["prompt_version"] == "symptom-v4"
 
 
 def test_dosing_advice_is_removed(registered):
@@ -148,3 +148,59 @@ def test_chat_answers_are_saved_with_the_result(registered):
                           json={"symptoms": "back pain", "answers": qa}).json()
     again = client.get(f"/assessments/symptoms/{created['id']}", headers=auth_header(tokens)).json()
     assert again["answers"] == qa
+
+
+def _ready(**over):
+    return json.dumps({**AI_REPLY, "follow_up_questions": [], "ready": True, **over})
+
+
+def test_care_path_self_care_shows_only_medicines(registered):
+    client, tokens = registered
+    _use_ai(client, _ready(care_path="self_care", otc_options=[{"name": "Paracetamol", "helps_with": "fever"}]))
+    body = client.post("/assessments/symptoms", headers=auth_header(tokens),
+                       json={**REQUEST, "symptoms": "mild cold and sore throat"}).json()
+    assert body["care_path"] == "self_care"
+    assert body["otc_options"][0]["name"] == "paracetamol"
+    assert body["specialist_type"] is None and body["tests_to_discuss"] == []
+
+
+def test_care_path_tests_first_then_report_decides(registered):
+    from tests.test_reports import _reply, _upload
+    client, tokens = registered
+    h = auth_header(tokens)
+    _use_ai(client, _ready(care_path="tests_first", tests_to_discuss=["CBC", "Dengue NS1"],
+                           otc_options=[{"name": "Paracetamol"}]))
+    a = client.post("/assessments/symptoms", headers=h, json={**REQUEST, "symptoms": "fever for 4 days"}).json()
+    assert a["care_path"] == "tests_first" and a["tests_to_discuss"] == ["CBC", "Dengue NS1"]
+    assert a["otc_options"] == [] and a["specialist_type"] is None   # only the tests are shown
+
+    # Normal report -> self-care medicines, no doctor.
+    _use_ai(client, _reply(hb="13.5", flag="normal"), json.dumps({
+        "care_path": "self_care", "summary": "Blood count is normal; fits a viral fever.", "findings": ["CBC normal"],
+        "triage_level": "routine", "next_steps": ["Rest and fluids."],
+        "otc_options": [{"name": "Paracetamol", "helps_with": "fever", "avoid_if": "liver disease"}]}))
+    rid = _upload(client, tokens).json()["id"]
+    r = client.post(f"/assessments/symptoms/{a['id']}/report-review", headers=h, json={"report_id": rid})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["care_path"] == "self_care" and body["otc_options"][0]["name"] == "paracetamol"
+    assert body["specialist_type"] is None and body["report_review"]["summary"].startswith("Blood count")
+
+    # Abnormal report -> doctor to book (even if the AI said self-care when a value is critical).
+    _use_ai(client, json.dumps({
+        "report_type": "CBC", "values": [{"name": "Platelets", "value": "15000", "unit": "/uL",
+                                          "reference_range": "150000-450000", "flag": "low"}],
+        "summary": "Platelets very low.", "doctor_type": "General physician", "urgency": "urgent", "next_steps": []}),
+        json.dumps({"care_path": "self_care", "summary": "Low platelets.", "triage_level": "moderate",
+                    "otc_options": [{"name": "Ibuprofen"}]}))
+    rid2 = _upload(client, tokens).json()["id"]
+    body = client.post(f"/assessments/symptoms/{a['id']}/report-review", headers=h, json={"report_id": rid2}).json()
+    assert body["care_path"] == "see_doctor" and body["specialist_type"] and body["otc_options"] == []
+    assert body["triage_level"] in ("urgent", "critical")
+
+
+def test_urgent_never_self_care(registered):
+    client, tokens = registered
+    _use_ai(client, _ready(care_path="self_care", triage_level="urgent"))
+    body = client.post("/assessments/symptoms", headers=auth_header(tokens), json=REQUEST).json()
+    assert body["care_path"] == "see_doctor" and body["specialist_type"] == "General physician"

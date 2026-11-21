@@ -9,6 +9,8 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../services/assessment_repository.dart';
 import '../../services/doctor_repository.dart';
+import '../../services/report_repository.dart' show ReportRepository, mimeTypeFor;
+import '../reports/report_widgets.dart' show pickReport;
 import '../consult/doctor_panel_screens.dart' show showConsultRequestSheet;
 import '../doctors/doctor_detail_screen.dart';
 import '../doctors/doctors_screens.dart';
@@ -294,16 +296,79 @@ class _Typing extends StatelessWidget {
   }
 }
 
-/// Final answer shown inside the chat: triage, what to do, doctor, tests and next actions.
-class SymptomResultBubble extends StatelessWidget {
-  const SymptomResultBubble({required this.assessment});
+/// Final answer shown inside the chat. What it shows depends on the care path:
+///   self_care   -> what to do + over-the-counter medicines (no doctor, no tests)
+///   tests_first -> only the tests to get, then "Upload report"; the AI reads it and decides again
+///   see_doctor  -> doctor type + matching doctors to book
+///   emergency   -> call 1122
+class SymptomResultBubble extends StatefulWidget {
+  const SymptomResultBubble({super.key, required this.assessment});
   final Assessment assessment;
 
   @override
+  State<SymptomResultBubble> createState() => _SymptomResultBubbleState();
+}
+
+class _SymptomResultBubbleState extends State<SymptomResultBubble> {
+  late Assessment _a = widget.assessment;
+  bool _uploading = false;
+  String? _step;
+
+  Future<void> _uploadReport() async {
+    final picked = await pickReport(context);
+    if (picked == null || !mounted) return;
+    final api = context.read<AuthProvider>().repository.api;
+    setState(() {
+      _uploading = true;
+      _step = 'Reading your report…';
+    });
+    try {
+      final report = await ReportRepository(api).upload(
+          bytes: picked.bytes, fileName: picked.name, mimeType: mimeTypeFor(picked.name));
+      if (report.analysis == null) {
+        throw report.error ?? 'The report could not be read. Please upload a clearer photo.';
+      }
+      if (mounted) setState(() => _step = 'Checking the results with your symptoms…');
+      final updated = await AssessmentRepository(api).reviewReport(_a.id, report.id);
+      if (mounted) setState(() => _a = updated);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$e'), backgroundColor: AppColors.critical));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _uploading = false;
+          _step = null;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final a = assessment;
+    final a = _a;
+    final path = a.emergency ? 'emergency' : a.carePath;
     final style = TriageStyle.of(a.triageLevel);
-    final critical = a.triageLevel == 'critical';
+    final (title, advice, color, bg, icon) = switch (path) {
+      'self_care' => (
+          'Self-care at home',
+          'This looks minor. Rest and the medicines below usually help. No doctor needed for now.',
+          AppColors.success,
+          const Color(0xFFE7F7EF),
+          Icons.spa_outlined
+        ),
+      'tests_first' => (
+          'Get these tests first',
+          'The tests will show whether home care is enough or you need a doctor.',
+          const Color(0xFF2563EB),
+          const Color(0xFFE8F0FE),
+          Icons.biotech_outlined
+        ),
+      _ => (style.label, style.advice, style.color, style.background, style.icon),
+    };
+    final review = a.reportReview;
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
@@ -316,125 +381,229 @@ class SymptomResultBubble extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Coloured triage header
           Container(
-            color: style.background,
+            color: bg,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: Row(
-              children: [
-                CircleAvatar(radius: 18, backgroundColor: style.color, child: Icon(style.icon, color: Colors.white, size: 20)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(style.label, style: TextStyle(color: style.color, fontWeight: FontWeight.w800, fontSize: 17)),
-                      Text(style.advice, style: const TextStyle(fontSize: 13, color: AppColors.text)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            child: Row(children: [
+              CircleAvatar(radius: 18, backgroundColor: color, child: Icon(icon, color: Colors.white, size: 20)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 17)),
+                  Text(advice, style: const TextStyle(fontSize: 13, color: AppColors.text)),
+                ]),
+              ),
+            ]),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (critical && a.emergencyNumbers.isNotEmpty)
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (path == 'emergency' && a.emergencyNumbers.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text('Call ${a.emergencyNumbers.map((n) => n.number).join(' or ')} now.',
+                      style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.critical, fontSize: 15)),
+                ),
+              if (review != null) _ReportReviewCard(review: review),
+              if (review == null && a.possibleCauses.isNotEmpty) ...[
+                const Text('It may be', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                const SizedBox(height: 4),
+                for (final c in a.possibleCauses.take(3))
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Text('Call ${a.emergencyNumbers.map((n) => n.number).join(' or ')} now.',
-                        style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.critical, fontSize: 15)),
-                  ),
-                if (a.possibleCauses.isNotEmpty) ...[
-                  const Text('It may be', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
-                  const SizedBox(height: 4),
-                  for (final c in a.possibleCauses.take(3))
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: c.likelihood == 'high'
-                                ? AppColors.primary
-                                : c.likelihood == 'medium'
-                                    ? AppColors.accent
-                                    : const Color(0xFFB3BDC9),
-                          ),
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: c.likelihood == 'high'
+                              ? AppColors.primary
+                              : c.likelihood == 'medium'
+                                  ? AppColors.accent
+                                  : const Color(0xFFB3BDC9),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                    ]),
+                  ),
+              ],
+              // Tests-first: only the tests.
+              if (path == 'tests_first') ...[
+                const SizedBox(height: 12),
+                const Text('Tests to get', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                const SizedBox(height: 6),
+                Wrap(spacing: 6, runSpacing: 6, children: [
+                  for (final t in a.testsToDiscuss)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F0FE),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.science_outlined, size: 15, color: Color(0xFF2563EB)),
+                        const SizedBox(width: 5),
+                        Text(t, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.text)),
                       ]),
                     ),
-                ],
+                ]),
+                const SizedBox(height: 12),
+                if (_uploading)
+                  Row(children: [
+                    const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(_step ?? '', style: const TextStyle(color: AppColors.textMuted))),
+                  ])
+                else
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB), padding: const EdgeInsets.symmetric(vertical: 13)),
+                      onPressed: _uploadReport,
+                      icon: const Icon(Icons.upload_file_outlined),
+                      label: const Text('Upload test report'),
+                    ),
+                  ),
+                const SizedBox(height: 4),
+                const Text('After the test, upload the report here. The AI will read it and tell you the next step.',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+              ],
+              // See a doctor: which doctor and (if any) the tests to take along.
+              if (path == 'see_doctor') ...[
                 if (a.specialistType != null) ...[
                   const SizedBox(height: 12),
                   _InfoLine(icon: Icons.medical_services_outlined, label: 'Doctor to see', value: a.specialistType!),
                 ],
-                if (a.testsToDiscuss.isNotEmpty) ...[
+                if (a.testsToDiscuss.isNotEmpty && review == null) ...[
                   const SizedBox(height: 8),
                   _InfoLine(icon: Icons.biotech_outlined, label: 'Tests (English)', value: a.testsToDiscuss.join(', ')),
                 ],
-                if (!critical && a.nextSteps.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Text('What you can do now', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
-                  const SizedBox(height: 4),
-                  for (final step in a.nextSteps.take(3))
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Icon(Icons.check_circle_outline, size: 16, color: AppColors.success),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(step, style: const TextStyle(fontSize: 14))),
-                      ]),
-                    ),
-                ],
-                if (a.otcOptions.isNotEmpty) _OtcCard(options: a.otcOptions),
               ],
-            ),
+              if (path != 'emergency' && path != 'tests_first' && a.nextSteps.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text('What you can do now', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                const SizedBox(height: 4),
+                for (final step in a.nextSteps.take(3))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Icon(Icons.check_circle_outline, size: 16, color: AppColors.success),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(step, style: const TextStyle(fontSize: 14))),
+                    ]),
+                  ),
+              ],
+              // Self-care: the medicines.
+              if (path == 'self_care' && a.otcOptions.isNotEmpty) _OtcCard(options: a.otcOptions),
+              if (path == 'self_care' && a.warningSigns.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: const Color(0xFFFFF4E5), borderRadius: BorderRadius.circular(12)),
+                  child: Text('See a doctor if: ${a.warningSigns.take(3).join('; ')}',
+                      style: const TextStyle(fontSize: 12.5, color: Color(0xFF7C4A03))),
+                ),
+              ],
+            ]),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
+            child: Wrap(spacing: 8, runSpacing: 8, children: [
+              _ActionPill(
+                icon: Icons.description_outlined,
+                label: 'Full result',
+                onTap: () =>
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => SymptomResultScreen(assessment: a))),
+              ),
+              if (path == 'tests_first')
                 _ActionPill(
-                  icon: Icons.description_outlined,
-                  label: 'Full result',
+                  icon: Icons.biotech_outlined,
+                  label: 'Labs & prices',
                   onTap: () => Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => SymptomResultScreen(assessment: a))),
+                      .push(MaterialPageRoute(builder: (_) => LabOptionsScreen(tests: a.testsToDiscuss))),
                 ),
-                if (a.testsToDiscuss.isNotEmpty)
-                  _ActionPill(
-                    icon: Icons.biotech_outlined,
-                    label: 'Labs & prices',
-                    onTap: () => Navigator.of(context)
-                        .push(MaterialPageRoute(builder: (_) => LabOptionsScreen(tests: a.testsToDiscuss))),
-                  ),
-                if (a.testsToDiscuss.isNotEmpty)
-                  _ActionPill(
-                    icon: Icons.upload_file_outlined,
-                    label: 'Add report',
-                    onTap: () => GoRouter.of(context).push('/feature/8'),
-                  ),
-              ],
-            ),
+              if (path == 'self_care' && a.otcOptions.isNotEmpty)
+                _ActionPill(
+                  icon: Icons.local_pharmacy_outlined,
+                  label: 'Nearby pharmacy',
+                  onTap: () => GoRouter.of(context).push('/feature/28'),
+                ),
+            ]),
           ),
-          if (a.specialistType != null && !a.emergency)
+          // Only when a doctor is really needed.
+          if (path == 'see_doctor' && a.specialistType != null)
             _BookPrompt(
+              key: ValueKey('book-${a.specialistType}-${review != null}'),
               specialty: a.specialistType!,
               reason: [
                 a.symptoms,
-                if (a.possibleCauses.isNotEmpty) 'Possible: ${a.possibleCauses.first.name}',
+                if (review != null && '${review['summary'] ?? ''}'.isNotEmpty) 'Report: ${review['summary']}'
+                else if (a.possibleCauses.isNotEmpty) 'Possible: ${a.possibleCauses.first.name}',
               ].join(' — '),
             ),
         ],
       ),
+    );
+  }
+}
+
+/// What the AI found in the uploaded report.
+class _ReportReviewCard extends StatelessWidget {
+  const _ReportReviewCard({required this.review});
+  final Map<String, dynamic> review;
+
+  @override
+  Widget build(BuildContext context) {
+    final abnormal = (review['abnormal'] as List? ?? const []).cast<Map>();
+    final findings = (review['findings'] as List? ?? const []).cast<Object>();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F8F7),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.fact_check_outlined, size: 18, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text('Your report: ${review['report_type'] ?? ''}',
+                style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
+          ),
+        ]),
+        if ('${review['summary'] ?? ''}'.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text('${review['summary']}', style: const TextStyle(fontSize: 13.5, height: 1.35)),
+        ],
+        if (abnormal.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final v in abnormal)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: v['critical'] == true ? const Color(0xFFFDE2E2) : const Color(0xFFFFF4E5),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text('${v['name']} ${v['value']} ${v['unit'] ?? ''} ${v['flag'] == 'high' ? '↑' : '↓'}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+          ]),
+        ] else if (findings.isEmpty) ...[
+          const SizedBox(height: 6),
+          const Text('All values in range.', style: TextStyle(fontSize: 12.5, color: AppColors.success)),
+        ],
+        for (final f in findings.take(3))
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('• $f', style: const TextStyle(fontSize: 12.5, color: AppColors.text)),
+          ),
+      ]),
     );
   }
 }
@@ -444,7 +613,7 @@ class SymptomResultBubble extends StatelessWidget {
 /// each with "Book now". Online doctors open the live consultation straight away; others get the
 /// appointment request sheet. The rest of the flow (chat, payment, prescription) continues from there.
 class _BookPrompt extends StatefulWidget {
-  const _BookPrompt({required this.specialty, required this.reason});
+  const _BookPrompt({super.key, required this.specialty, required this.reason});
   final String specialty;
   final String reason;
 

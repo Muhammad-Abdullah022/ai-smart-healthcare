@@ -12,7 +12,14 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from fastapi import APIRouter, Depends, Request, status
 
-from app.ai.prompts import SYMPTOM_PROMPT_VERSION, SYMPTOM_SYSTEM, language_rule, symptom_user_prompt
+from app.ai.prompts import (
+    REPORT_REVIEW_SYSTEM,
+    SYMPTOM_PROMPT_VERSION,
+    SYMPTOM_SYSTEM,
+    language_rule,
+    report_review_prompt,
+    symptom_user_prompt,
+)
 from app.ai.safety import DISCLAIMER, EMERGENCY_NUMBERS, check_red_flags, filter_otc, remove_dosing
 from app.ai.service import AIService, AIUnavailableError
 from app.core.config import get_settings
@@ -21,7 +28,9 @@ from app.core.rate_limit import limit_by_user
 from app.deps import get_current_user, get_repo
 from app.models.assessment import (
     TRIAGE_ORDER,
+    AIReportReview,
     AISymptomOutput,
+    ReportReviewRequest,
     AssessmentOut,
     AssessmentSummary,
     Explanation,
@@ -86,6 +95,18 @@ def _raise_to(level: str, minimum: str) -> str:
     return level if TRIAGE_ORDER[level] >= TRIAGE_ORDER[minimum] else minimum
 
 
+def decide_care_path(ai_path: str, level: str, tests: list[str], specialist: str | None,
+                     emergency: bool) -> tuple[str, list[str]]:
+    """Safety rules on top of the AI's choice. Returns (care_path, rules applied)."""
+    if emergency or level == "critical":
+        return "emergency", []
+    if level == "urgent" and ai_path != "see_doctor":
+        return "see_doctor", ["Urgent: a doctor is needed today, so a doctor is shown"]
+    if ai_path == "tests_first" and not tests:
+        return ("see_doctor" if specialist else "self_care"), ["No tests were named, so the tests step was skipped"]
+    return ai_path, []
+
+
 def _out(doc: dict) -> AssessmentOut:
     return AssessmentOut(id=str(doc["_id"]), **{k: v for k, v in doc.items() if k not in ("_id", "user_id")})
 
@@ -126,6 +147,7 @@ async def assess_symptoms(
         numbers = EMERGENCY_NUMBERS + (CRISIS_LINES if self_harm else [])
         doc.update(
             emergency=True,
+            care_path="emergency",
             triage_level=red_flag.level,
             triage_reason=" ".join(red_flag.reasons),
             emergency_numbers=numbers,
@@ -169,9 +191,25 @@ async def assess_symptoms(
         if len(otc) < len(output.otc_options) and ready:
             rules.append("Over-the-counter suggestions limited by safety rules")
 
+        tests = remove_dosing(output.tests_to_discuss, medicines=False)
+        care_path, path_rules = decide_care_path(output.care_path, level, tests, output.specialist_type,
+                                                 level == "critical")
+        rules += path_rules
+        specialist = output.specialist_type
+        if care_path == "see_doctor" and not specialist:
+            specialist = "General physician"
+        # Show only what fits the path: medicines for self-care, tests for tests-first, a doctor when needed.
+        if care_path == "tests_first":
+            otc, tests_out, show_specialist = [], tests, None
+        elif care_path == "self_care":
+            tests_out, show_specialist = [], None
+        else:
+            tests_out, show_specialist = tests, specialist
         doc.update(
             emergency=level == "critical",
             ready=ready,
+            care_path=care_path if ready else "see_doctor",
+            planned_specialist=specialist,
             otc_options=otc,
             triage_level=level,
             triage_reason=output.triage_reason,
@@ -179,8 +217,8 @@ async def assess_symptoms(
             possible_causes=[c.model_dump() for c in output.possible_causes],
             next_steps=next_steps,
             follow_up_questions=[] if ready else output.follow_up_questions,
-            tests_to_discuss=remove_dosing(output.tests_to_discuss, medicines=False),
-            specialist_type=output.specialist_type,
+            tests_to_discuss=tests_out,
+            specialist_type=show_specialist,
             warning_signs=remove_dosing(output.warning_signs),
             explanation=Explanation(
                 method="AI assessment with safety rules",
@@ -219,3 +257,71 @@ async def get_assessment(assessment_id: str, user: dict = Depends(get_current_us
     if doc is None:
         raise ApiError(status.HTTP_404_NOT_FOUND, "not_found", "Assessment not found.")
     return _out(doc)
+
+
+@router.post("/symptoms/{assessment_id}/report-review", response_model=AssessmentOut,
+             dependencies=[limit_by_user("ai_symptoms", 20, 3600)])
+async def review_report(assessment_id: str, body: ReportReviewRequest, user: dict = Depends(get_current_user),
+                        repo: UserRepository = Depends(get_repo), ai: AIService = Depends(get_ai_service)):
+    """After "tests_first": the patient uploads the report; the AI reads it together with the symptoms and
+    decides self-care (medicines) or a doctor (booking)."""
+    oid = to_object_id(assessment_id)
+    doc = await repo.db.symptom_assessments.find_one({"_id": oid, "user_id": user["_id"]}) if oid else None
+    if doc is None:
+        raise ApiError(status.HTTP_404_NOT_FOUND, "not_found", "Assessment not found.")
+    roid = to_object_id(body.report_id)
+    report = await repo.db.medical_reports.find_one({"_id": roid, "user_id": user["_id"]}) if roid else None
+    if report is None:
+        raise ApiError(status.HTTP_404_NOT_FOUND, "not_found", "Report not found.")
+    analysis = report.get("analysis")
+    if not analysis:
+        raise ApiError(status.HTTP_422_UNPROCESSABLE_ENTITY, "report_unreadable",
+                       report.get("error") or "The report could not be read. Please upload a clearer photo.")
+    profile = await repo.get_profile(user["_id"]) or {}
+    prompt = report_review_prompt(doc["symptoms"], doc.get("answers", []),
+                                  [c.get("name", "") for c in doc.get("possible_causes", [])],
+                                  doc.get("tests_to_discuss", []), analysis)
+    try:
+        result = await ai.generate(AIReportReview, REPORT_REVIEW_SYSTEM, prompt)
+    except AIUnavailableError as exc:
+        raise ApiError(status.HTTP_503_SERVICE_UNAVAILABLE, "ai_unavailable", exc.message)
+    review: AIReportReview = result.data
+
+    rules = []
+    level = review.triage_level
+    critical_values = [v["name"] for v in analysis.get("values", []) if v.get("critical")]
+    abnormal = [v for v in analysis.get("values", []) if v.get("flag") in ("low", "high")]
+    path = review.care_path
+    if critical_values or analysis.get("urgency") == "urgent":
+        level = _raise_to(level, "urgent")
+        rules.append(f"Very abnormal result ({', '.join(critical_values[:3]) or 'report marked urgent'}): doctor today")
+    if level in ("urgent", "critical") and path != "see_doctor":
+        path = "see_doctor"
+        rules.append("Urgent result: a doctor is shown instead of self-care")
+    specialist = review.specialist_type or doc.get("planned_specialist") or analysis.get("doctor_type") \
+        or "General physician"
+    all_text = " ".join([doc["symptoms"]] + [a["answer"] for a in doc.get("answers", [])])
+    otc = filter_otc([o.model_dump() for o in review.otc_options], level, None, profile.get("allergies", []),
+                     profile.get("conditions", []), all_text) if path == "self_care" else []
+    now = datetime.now(timezone.utc)
+    changes = {
+        "care_path": path,
+        "triage_level": _raise_to(level, doc["triage_level"]) if path == "see_doctor" else level,
+        "otc_options": otc,
+        "specialist_type": specialist if path == "see_doctor" else None,
+        "next_steps": remove_dosing(review.next_steps) or doc.get("next_steps", []),
+        "warning_signs": remove_dosing(review.warning_signs) or doc.get("warning_signs", []),
+        "emergency": level == "critical",
+        "emergency_numbers": EMERGENCY_NUMBERS if level in ("critical", "urgent") else [],
+        "report_review": {
+            "report_id": str(report["_id"]), "report_type": analysis.get("report_type", ""), "at": now,
+            "summary": review.summary, "findings": remove_dosing(review.findings, medicines=False),
+            "likely_cause": review.likely_cause,
+            "abnormal": [{"name": v["name"], "value": v.get("value"), "unit": v.get("unit", ""), "flag": v["flag"],
+                          "critical": v.get("critical", False)} for v in abnormal][:10],
+            "rules": rules, "ai_provider": result.provider,
+        },
+    }
+    await repo.db.symptom_assessments.update_one({"_id": doc["_id"]}, {"$set": changes})
+    await repo.audit(user["_id"], "assessment.report_review", {"care_path": path})
+    return _out({**doc, **changes})
