@@ -94,7 +94,7 @@ class SettingsScreen extends StatelessWidget {
               tint: AppColors.medicineTint,
             ),
           ]),
-          const SectionTitle('Demo'),
+          const SectionTitle('Lab prices'),
           const GroupedList(children: [_DemoPricesRow()]),
           const SizedBox(height: 24),
           GroupedList(children: [
@@ -143,7 +143,7 @@ class _DemoPricesRowState extends State<_DemoPricesRow> {
     return ListRow(
       icon: Icons.science_outlined,
       title: 'Estimated lab prices',
-      subtitle: 'Shows an estimated (demo) price for labs that have not published prices. Always marked "demo".',
+      subtitle: 'Shows an approximate price for labs that have not published prices. Always marked "approx."',
       color: const Color(0xFFC2410C),
       tint: const Color(0xFFFFEDD5),
       trailing: Switch(

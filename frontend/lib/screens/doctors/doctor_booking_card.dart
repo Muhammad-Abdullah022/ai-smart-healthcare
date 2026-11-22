@@ -161,7 +161,6 @@ class _DoctorBookingCardState extends State<DoctorBookingCard> {
             Wrap(spacing: 4, children: [
               if (d.online) _tag('Online now', AppColors.green),
               if (d.government) _tag('Govt. list', AppColors.primary),
-              if (d.demo) _tag('Demo profile', AppColors.warning),
             ]),
           ]),
         ),

@@ -4,31 +4,23 @@ data/medicines/generics.csv : one row per salt (generic): class, uses, common si
 data/medicines/brands.csv   : Pakistani brand names -> salt, company, forms, strengths (the app's list).
 data/medicines/brands_drap_2021.csv : brands from DRAP's 2021 maximum retail price list (Open Data Pakistan).
 data/pharmacies/sourced_pharmacies.csv : real pharmacies found online (with the source page).
-Every supported city also gets its government hospital pharmacy (DHQ for a district city, THQ for a tehsil)
-and a few demo pharmacies (made up, flagged demo=True, shown with a "demo" label).
+Every supported city also gets its government hospital pharmacy (DHQ for a district city, THQ for a tehsil).
+No made-up pharmacies are added: only real, sourced ones are shown.
 
 Data is imported into MongoDB at start-up when the files change (same pattern as labs and doctors).
 """
 import csv
 import hashlib
-import random
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from app.labs.loader import demo_address, demo_phone
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 MED_DIR = DATA / "medicines"
 PHARM_DIR = DATA / "pharmacies"
 CITIES_FILE = DATA / "labs" / "all_target_cities_tehsils.csv"
-VERSION = b"pharmacy-v2"
-BIG_CITIES = {"Lahore", "Faisalabad", "Rawalpindi", "Multan", "Gujranwala", "Sialkot", "Bahawalpur", "Sargodha",
-              "Sahiwal", "Sheikhupura"}
-DEMO_NAMES = ["Madina Medical Store", "Al-Shifa Pharmacy", "Rehman Medicos", "City Pharmacy", "Al-Noor Medical Store",
-              "Fazal Medical Hall", "New Life Pharmacy", "Ittefaq Medical Store", "Care Plus Pharmacy",
-              "Khan Medicos", "Bismillah Medical Store", "Health Point Pharmacy", "Imran Medical Store",
-              "Faisal Medicos", "Hamza Pharmacy", "Ali Medical Store"]
+VERSION = b"pharmacy-v3"
 
 
 def key(text: str) -> str:
@@ -68,15 +60,6 @@ def build_pharmacies() -> list[dict]:
             "source": "Punjab government hospital — free medicines for registered patients; confirm locally",
             "demo": False,
         })
-        r = random.Random(hashlib.sha256(f"pharm|{city}".encode()).hexdigest())
-        count = 5 if city in BIG_CITIES else (3 if is_district else 2)
-        for name in r.sample(DEMO_NAMES, count):
-            pharmacies.append({
-                "city": city, "name": name, "address": demo_address(name, city),
-                "phone": demo_phone(name, city, district),
-                "hours": r.choice(["24 hours", "9 am – 11 pm", "8 am – 12 am", "10 am – 10 pm"]),
-                "kind": "independent", "source": "", "demo": True,
-            })
     for p in pharmacies:
         p["city_key"] = key(p["city"])
         p["name_key"] = key(p["name"])

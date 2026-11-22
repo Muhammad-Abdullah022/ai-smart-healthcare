@@ -289,8 +289,8 @@ class _LabRow extends StatelessWidget {
             if (o.branch.isNotEmpty) Text(o.branch, style: const TextStyle(color: AppColors.textMuted)),
             const SizedBox(height: 12),
             if (o.publishedName.isNotEmpty) _kv('Lab calls this test', o.publishedName),
-            if (o.address.isNotEmpty) _kv(o.addressDemo ? 'Address (demo)' : 'Address', _cleanAddress(o.address)),
-            if (o.phone.isNotEmpty) _kv(o.phoneDemo ? 'Phone (demo)' : 'Phone', o.phone),
+            if (o.address.isNotEmpty && !o.addressDemo) _kv('Address', _cleanAddress(o.address)),
+            if (o.phone.isNotEmpty && !o.phoneDemo) _kv('Phone', o.phone),
             if (o.notes.isNotEmpty) _kv('Note', o.notes),
             if (o.sourceUrl.isNotEmpty)
               _kv('Source', '${Uri.tryParse(o.sourceUrl)?.host ?? o.sourceUrl} · checked ${o.checked}'),
@@ -363,7 +363,7 @@ class _LabRow extends StatelessWidget {
               const Icon(Icons.place_outlined, size: 15, color: AppColors.textMuted),
               const SizedBox(width: 4),
               Expanded(
-                child: Text((o.branches > 1 ? '$area  (+${o.branches - 1} more)' : area) + (o.addressDemo ? '  · demo' : ''),
+                child: Text((o.branches > 1 ? '$area  (+${o.branches - 1} more)' : area),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
@@ -373,11 +373,11 @@ class _LabRow extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(left: 44, top: 2),
           child: Row(children: [
-            if (o.phone.isNotEmpty)
+            if (o.phone.isNotEmpty && !o.phoneDemo)
               TextButton.icon(
                 style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                 icon: const Icon(Icons.call_outlined, size: 16),
-                label: Text(o.phone.split(',').first.trim() + (o.phoneDemo ? '  · demo' : '')),
+                label: Text(o.phone.split(',').first.trim()),
                 onPressed: () => _copyPhone(context),
               ),
             TextButton.icon(
@@ -515,7 +515,7 @@ class _AllLabsScreenState extends State<AllLabsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               child: Text('${list.length} labs · registered with the Punjab Healthcare Commission and other sources. '
-                  'Where a lab has not published a phone or street address, a demo one is shown (marked "demo"). '
+                  'Where a lab has not published a phone or street address, none is shown. '
                   'To compare test prices, use Lab Test Price Comparison.',
                   style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
             ),

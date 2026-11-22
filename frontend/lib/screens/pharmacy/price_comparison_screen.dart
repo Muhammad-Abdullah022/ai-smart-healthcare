@@ -326,7 +326,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(p.name + (p.demo ? '  (demo)' : ''),
+              Text(p.name,
                   style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.deep)),
               Text(
                   [p.address, if (p.open24h) 'Open 24 hours', if (p.kind == 'government') 'Free for registered patients']

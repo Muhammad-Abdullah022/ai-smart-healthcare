@@ -198,8 +198,7 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
           const Padding(
             padding: EdgeInsets.only(top: 6),
             child: Text(
-                'Stock is not shown live — call the pharmacy to check your medicine. Entries marked "demo" are '
-                'sample data for the app demo.',
+                'Stock is not shown live — call the pharmacy to check your medicine.',
                 style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
           ),
         ]);
@@ -247,7 +246,6 @@ class _PharmacyCard extends StatelessWidget {
                 if (!p.open24h && p.hours.isNotEmpty) _tag(p.hours, AppColors.textMuted, AppColors.primaryTint),
                 if (p.kind == 'chain') _tag('Pharmacy chain', AppColors.deep, AppColors.primaryTint),
                 if (govt) _tag('Free for registered patients', AppColors.records, AppColors.recordsTint),
-                if (p.demo) _tag('demo', AppColors.textMuted, AppColors.primaryTint),
               ]),
             ]),
           ),

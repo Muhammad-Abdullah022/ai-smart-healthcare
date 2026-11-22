@@ -84,7 +84,6 @@ class DoctorDetailScreen extends StatelessWidget {
                         d.experienceYears != null ? '${d.experienceYears} years' : 'Consultant'),
                     if (d.government) _pill(Icons.account_balance_outlined, 'Govt. of Punjab'),
                     if (d.online) _pill(Icons.forum_outlined, 'Online consultation'),
-                    if (d.demo) _pill(Icons.info_outline, 'Demo profile', warn: true),
                   ]),
                   const SizedBox(height: 16),
                   if (d.qualification.isNotEmpty) _row(Icons.school_outlined, 'Qualification', d.qualification),
@@ -98,7 +97,7 @@ class DoctorDetailScreen extends StatelessWidget {
                         ScaffoldMessenger.of(context)
                             .showSnackBar(SnackBar(content: Text('Number copied: ${d.phone}')));
                       },
-                      child: _row(Icons.call_outlined, d.demo ? 'Phone (demo) · tap to copy' : 'Phone · tap to copy',
+                      child: _row(Icons.call_outlined, 'Phone · tap to copy',
                           d.phone),
                     ),
                   const SizedBox(height: 6),

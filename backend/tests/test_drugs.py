@@ -38,9 +38,9 @@ def test_pharmacies_every_city(registered):
     h = auth_header(tokens)
     p = client.get("/pharmacies", headers=h, params={"city": "Sahiwal"}).json()["pharmacies"]
     assert p[0]["name"] == "Allied Plus Pharmacy" and not p[0]["demo"]
-    assert any(x["kind"] == "government" for x in p) and any(x["demo"] for x in p)
+    assert any(x["kind"] == "government" for x in p) and not any(x["demo"] for x in p)
     small = client.get("/pharmacies", headers=h, params={"city": "Attock"}).json()["pharmacies"]
-    assert len(small) >= 3
+    assert len(small) >= 1  # at least the government hospital pharmacy
     assert all(x["open_24h"] for x in client.get("/pharmacies", headers=h,
                                                  params={"city": "Lahore", "open_24h": True}).json()["pharmacies"])
 

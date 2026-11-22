@@ -445,11 +445,6 @@ class DoctorCard extends StatelessWidget {
                     Text(d.fee != null ? 'Rs ${d.fee!.toStringAsFixed(0)}' : (d.government ? 'Govt OPD' : ''),
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.deep)),
                   ]),
-                  if (d.demo)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6),
-                      child: Text('Demo profile', style: TextStyle(fontSize: 10.5, color: Color(0xFFC2410C))),
-                    ),
                 ]),
               ),
             ]),
