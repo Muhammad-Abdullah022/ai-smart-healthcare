@@ -10,6 +10,8 @@ class Medicine {
     required this.times,
     required this.instructions,
     this.allergyWarning,
+    this.startDate,
+    this.endDate,
   });
 
   final String id;
@@ -20,6 +22,8 @@ class Medicine {
   final List<String> times;
   final String instructions;
   final String? allergyWarning;
+  final DateTime? startDate;
+  final DateTime? endDate;
 
   factory Medicine.fromJson(Map<String, dynamic> j) => Medicine(
         id: j['id'] as String,
@@ -30,6 +34,8 @@ class Medicine {
         times: (j['times'] as List).cast<String>(),
         instructions: j['instructions'] as String? ?? '',
         allergyWarning: j['allergy_warning'] as String?,
+        startDate: DateTime.tryParse('${j['start_date'] ?? ''}'),
+        endDate: DateTime.tryParse('${j['end_date'] ?? ''}'),
       );
 }
 
