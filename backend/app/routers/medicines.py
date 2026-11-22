@@ -247,3 +247,66 @@ async def adherence(days: int = Query(default=7, ge=1, le=90), user: dict = Depe
         counts[log["status"]] = counts.get(log["status"], 0) + 1
     total = sum(counts.values())
     return {**counts, "days": days, "percent_taken": round(100 * counts["taken"] / total) if total else None}
+
+
+# ---------- Automatic reminders from a doctor's prescription in the online consultation ----------
+
+PK_OFFSET = timedelta(hours=5)  # Pakistan time
+_FORMS = {"tablet", "capsule", "syrup", "injection", "drops", "inhaler", "cream"}
+
+
+def times_for(times_per_day: int | None, how_to_take: str) -> list[str]:
+    """Reminder times from the doctor's line: "1+0+1" -> morning and night; else from times per day."""
+    m = re.search(r"(\d)\s*\+\s*(\d)\s*\+\s*(\d)", how_to_take or "")
+    if m:
+        t = [x for x, n in zip(("08:00", "14:00", "21:00"), m.groups()) if n != "0"]
+        if t:
+            return t
+    low = (how_to_take or "").lower()
+    if not times_per_day:
+        if any(w in low for w in ("twice", "2 times", "two times", "morning and night", "subah sham", "bd")):
+            times_per_day = 2
+        elif any(w in low for w in ("thrice", "3 times", "three times", "tds")):
+            times_per_day = 3
+        elif "night" in low or "raat" in low or "bedtime" in low:
+            return ["21:00"]
+    return {1: ["09:00"], 2: ["08:00", "21:00"], 3: ["08:00", "14:00", "21:00"],
+            4: ["08:00", "12:00", "16:00", "21:00"]}.get(times_per_day or 1, ["08:00", "14:00", "21:00"])
+
+
+def form_for(text: str) -> str:
+    low = (text or "").lower()
+    for f in _FORMS:
+        if f in low or (f == "tablet" and "tab" in low) or (f == "capsule" and "cap" in low):
+            return f
+    return "tablet" if not low else "other"
+
+
+async def add_doctor_reminders(db, patient_id, lines: list[dict], prescription_id, doctor_name: str) -> dict:
+    """Make medicine reminders for each line the doctor wrote. A line that matches a recorded allergy is
+    NOT added (the patient must decide). Reminders from an earlier prescription of the same consultation
+    are replaced, so a corrected prescription does not double the doses."""
+    now = datetime.now(timezone.utc)
+    today = (now + PK_OFFSET).date()
+    profile = await db.profiles.find_one({"user_id": patient_id}) or {}
+    added, skipped = [], []
+    for m in lines:
+        name = (m.get("name") or "").strip()
+        if len(name) < 2:
+            continue
+        match = allergy_match(profile.get("allergies", []), name, m.get("generic_name", ""))
+        if match:
+            skipped.append({"name": name, "allergy": match})
+            continue
+        days = m.get("duration_days") or 0
+        doc = {"user_id": patient_id, "name": name[:80], "salt": (m.get("generic_name") or "")[:120],
+               "strength": (m.get("strength") or "")[:40], "form": form_for(m.get("form") or name),
+               "times": times_for(m.get("times_per_day"), m.get("how_to_take", "")),
+               "instructions": " · ".join(x for x in (m.get("how_to_take", ""), m.get("timing", "")) if x)[:200],
+               "start_date": today.isoformat(),
+               "end_date": (today + timedelta(days=days - 1)).isoformat() if days > 0 else None,
+               "prescription_id": str(prescription_id), "source": "doctor", "doctor_name": doctor_name,
+               "active": True, "allergy_warning": None, "created_at": now}
+        await db.medicine_records.insert_one(doc)
+        added.append({"name": name, "times": doc["times"], "end_date": doc["end_date"]})
+    return {"added": added, "skipped": skipped}

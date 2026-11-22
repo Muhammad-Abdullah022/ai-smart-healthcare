@@ -1,20 +1,25 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../services/drug_repository.dart';
+import '../../widgets/confirm_dialog.dart';
 import '../../widgets/state_views.dart';
 import 'pharmacy_finder_screen.dart';
 
 /// Feature 30 (+37): search any medicine by brand or salt; open it to see what it is for,
 /// side effects, warnings and every other brand with the SAME salt (e.g. Naprox -> Naprosyn, Neoprox).
 class MedicineSearchScreen extends StatefulWidget {
-  const MedicineSearchScreen({super.key, this.initialQuery});
+  const MedicineSearchScreen({super.key, this.initialQuery, this.openCamera = false});
   final String? initialQuery;
+
+  /// Feature 27: open straight to "search by photo".
+  final bool openCamera;
 
   @override
   State<MedicineSearchScreen> createState() => _MedicineSearchScreenState();
@@ -38,6 +43,7 @@ class _MedicineSearchScreenState extends State<MedicineSearchScreen> {
       if (mounted) setState(() => _stats = s);
     }).catchError((_) {});
     if (_ctrl.text.isNotEmpty) _run(_ctrl.text);
+    if (widget.openCamera) WidgetsBinding.instance.addPostFrameCallback((_) => _photo());
   }
 
   @override
@@ -76,6 +82,63 @@ class _MedicineSearchScreenState extends State<MedicineSearchScreen> {
     }
   }
 
+  bool _reading = false;
+
+  /// Camera / gallery photo of the box or strip -> AI reads the name -> search for it.
+  Future<void> _photo() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text('Take a clear photo of the medicine name on the box, strip or bottle.',
+                style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera)),
+          ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (source == null) return;
+    XFile? photo;
+    try {
+      photo = await ImagePicker().pickImage(source: source, imageQuality: 85, maxWidth: 1800);
+    } catch (_) {
+      if (mounted) showMessage(context, 'Could not open the camera or gallery.', error: true);
+      return;
+    }
+    if (photo == null) return;
+    final bytes = await photo.readAsBytes();
+    final name = photo.name.isEmpty ? 'medicine.jpg' : photo.name;
+    final low = name.toLowerCase();
+    final mime = low.endsWith('.png') ? 'image/png' : (low.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
+    setState(() => _reading = true);
+    try {
+      final r = await _repo.identify(bytes, name, mime);
+      if (!mounted) return;
+      _ctrl.text = r.search;
+      await _run(r.search);
+      if (!mounted) return;
+      showMessage(context,
+          'Found: ${r.brand.isEmpty ? r.generic : r.brand}${r.strength.isEmpty ? '' : ' ${r.strength}'}'
+          '${r.generic.isNotEmpty && r.brand.isNotEmpty ? ' (${r.generic})' : ''}');
+      if (_results.isEmpty && r.search.length >= 2) _open(r.search);
+    } on ApiException catch (e) {
+      if (mounted) showMessage(context, e.message, error: true);
+    } finally {
+      if (mounted) setState(() => _reading = false);
+    }
+  }
+
   void _open(String name) => Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => MedicineDetailScreen(repository: _repo, name: name)));
 
@@ -89,21 +152,34 @@ class _MedicineSearchScreenState extends State<MedicineSearchScreen> {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: TextField(
             controller: _ctrl,
-            autofocus: widget.initialQuery == null,
+            autofocus: widget.initialQuery == null && !widget.openCamera,
             textInputAction: TextInputAction.search,
             onChanged: _onChanged,
             onSubmitted: (v) => v.trim().length >= 2 ? _open(v.trim()) : null,
             decoration: InputDecoration(
-              hintText: 'Medicine or salt name, e.g. Naprox or Naproxen',
+              hintText: 'Medicine name or salt — or tap the camera',
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: q.isEmpty
-                  ? null
-                  : IconButton(
+              suffixIcon: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (q.isNotEmpty)
+                  IconButton(
+                      tooltip: 'Clear',
                       icon: const Icon(Icons.close),
                       onPressed: () {
                         _ctrl.clear();
                         _run('');
                       }),
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: _reading
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+                      : IconButton(
+                          tooltip: 'Search by photo',
+                          icon: const Icon(Icons.photo_camera_outlined, color: AppColors.primary),
+                          onPressed: _photo),
+                ),
+              ]),
             ),
           ),
         ),

@@ -39,7 +39,7 @@ def test_symptom_check_returns_validated_result(registered):
     assert body["possible_causes"][0]["name"] == "Viral fever"
     assert "not a medical diagnosis" in body["disclaimer"]
     assert body["explanation"]["ai_provider"] == "gemini"
-    assert body["explanation"]["prompt_version"] == "symptom-v4"
+    assert body["explanation"]["prompt_version"] == "symptom-v5"
 
 
 def test_dosing_advice_is_removed(registered):

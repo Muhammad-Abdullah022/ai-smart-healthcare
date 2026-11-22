@@ -57,14 +57,18 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
 
   void _reload() {
     if (_city == null) return;
-    setState(() => _future = _repo.pharmacies(_city!, q: _search.text, open24h: _filter == '24h'));
+    // All pharmacies of the city are loaded once; the filter chips work on this list instantly.
+    setState(() => _future = _repo.pharmacies(_city!, q: _search.text));
   }
 
   Future<void> _pickCity() async {
     final c = await Navigator.of(context)
         .push<String>(MaterialPageRoute(builder: (_) => CityPickerScreen(repository: _labs)));
     if (c == null || !mounted) return;
-    _city = c;
+    setState(() {
+      _city = c;
+      _cityLoaded = true;
+    });
     _labs.saveCity(c).catchError((_) {});
     _reload();
   }
@@ -72,39 +76,79 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_city == null ? 'Pharmacies' : 'Pharmacies in $_city'),
-        actions: [
-          TextButton.icon(
-              onPressed: _pickCity,
-              icon: const Icon(Icons.location_on_outlined, size: 18),
-              label: const Text('City')),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Pharmacies')),
       body: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+          child: Material(
+            color: AppColors.deep,
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: _pickCity,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                child: Row(children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(color: Colors.white.withAlpha(30), borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.location_on_rounded, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Your city', style: TextStyle(color: Colors.white.withAlpha(190), fontSize: 12)),
+                      Text(_city ?? 'Choose city',
+                          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
+                    ]),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                    child: const Text('Change',
+                        style: TextStyle(color: AppColors.deep, fontWeight: FontWeight.w700, fontSize: 13)),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
           child: TextField(
             controller: _search,
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => _reload(),
-            decoration: const InputDecoration(hintText: 'Search pharmacy name', prefixIcon: Icon(Icons.search)),
+            decoration: InputDecoration(
+              hintText: 'Search pharmacy name',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: IconButton(icon: const Icon(Icons.arrow_forward_rounded), onPressed: _reload),
+            ),
           ),
         ),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
           child: Row(children: [
-            for (final (k, label) in const [('all', 'All'), ('24h', 'Open 24 hours'), ('govt', 'Govt hospital (free)')])
+            for (final (k, label, icon) in const [
+              ('all', 'All', Icons.apps_rounded),
+              ('24h', 'Open 24 hours', Icons.schedule_rounded),
+              ('govt', 'Govt hospital (free)', Icons.local_hospital_outlined),
+            ])
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ChoiceChip(
+                  avatar: Icon(icon, size: 16, color: _filter == k ? Colors.white : AppColors.primary),
                   label: Text(label),
                   selected: _filter == k,
-                  onSelected: (_) {
-                    _filter = k;
-                    _reload();
-                  },
+                  showCheckmark: false,
+                  selectedColor: AppColors.primary,
+                  backgroundColor: Colors.white,
+                  side: BorderSide(color: _filter == k ? AppColors.primary : AppColors.border),
+                  labelStyle: TextStyle(
+                      color: _filter == k ? Colors.white : AppColors.deep, fontWeight: FontWeight.w600),
+                  onSelected: (_) => setState(() => _filter = k),
                 ),
               ),
           ]),
@@ -132,12 +176,24 @@ class _PharmacyFinderScreenState extends State<PharmacyFinderScreen> {
           final e = snap.error;
           return ErrorView(message: e is ApiException ? e.message : 'Could not load pharmacies.', onRetry: _reload);
         }
-        var list = snap.data!;
-        if (_filter == 'govt') list = list.where((p) => p.kind == 'government').toList();
+        final all = snap.data!;
+        final list = switch (_filter) {
+          'govt' => all.where((p) => p.kind == 'government').toList(),
+          '24h' => all.where((p) => p.open24h).toList(),
+          _ => all,
+        };
         if (list.isEmpty) {
-          return const EmptyView(icon: Icons.local_pharmacy_outlined, title: 'No pharmacy found', message: 'Try another search.');
+          return EmptyView(
+              icon: Icons.local_pharmacy_outlined,
+              title: 'No pharmacy found',
+              message: _filter == 'all' ? 'Try another search or city.' : 'None with this filter in $_city.');
         }
         return ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 24), children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8, left: 2),
+            child: Text('${list.length} pharmac${list.length == 1 ? 'y' : 'ies'} in $_city',
+                style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+          ),
           for (final p in list) _PharmacyCard(pharmacy: p),
           const Padding(
             padding: EdgeInsets.only(top: 6),

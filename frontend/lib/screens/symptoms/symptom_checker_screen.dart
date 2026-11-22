@@ -8,6 +8,8 @@ import '../../models/assessment.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../services/assessment_repository.dart';
+import '../../services/medicine_repository.dart';
+import '../../widgets/confirm_dialog.dart';
 import '../../services/report_repository.dart' show ReportRepository, mimeTypeFor;
 import '../reports/report_widgets.dart' show pickReport;
 import '../doctors/doctor_booking_card.dart';
@@ -639,7 +641,7 @@ const _otcTint = Color(0xFFF4F2FF);
 /// pack gives the dose. Shown only for mild/moderate results for adults (filtered on the backend).
 class _OtcCard extends StatelessWidget {
   const _OtcCard({required this.options});
-  final List<({String name, String helpsWith, String avoidIf})> options;
+  final List<({String name, String helpsWith, String avoidIf, int days})> options;
 
   @override
   Widget build(BuildContext context) {
@@ -663,13 +665,24 @@ class _OtcCard extends StatelessWidget {
         ]),
         const SizedBox(height: 10),
         for (final o in options) _OtcItem(option: o),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: _otcInk,
+            minimumSize: const Size.fromHeight(46),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          icon: const Icon(Icons.alarm_add_rounded, size: 20),
+          label: const Text('Add to my medicine reminders'),
+          onPressed: () => showOtcReminderSheet(context, options),
+        ),
+        const SizedBox(height: 8),
         const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.info_outline, size: 14, color: AppColors.textMuted),
           SizedBox(width: 6),
           Expanded(
-            child: Text('For relief only, not a prescription. The pharmacist gives the dose. '
-                'See a doctor if you are not better in 2–3 days.',
+            child: Text('For relief only, not a prescription. Take it as written on the pack or as the pharmacist '
+                'says. See a doctor if you are not better in the days shown.',
                 style: TextStyle(fontSize: 11.5, color: AppColors.textMuted, height: 1.35)),
           ),
         ]),
@@ -680,7 +693,7 @@ class _OtcCard extends StatelessWidget {
 
 class _OtcItem extends StatelessWidget {
   const _OtcItem({required this.option});
-  final ({String name, String helpsWith, String avoidIf}) option;
+  final ({String name, String helpsWith, String avoidIf, int days}) option;
 
   Widget _line(IconData icon, Color color, String text) {
     final rtl = _urduText.hasMatch(text);
@@ -718,7 +731,8 @@ class _OtcItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(color: _otcTint, borderRadius: BorderRadius.circular(8)),
-            child: const Text('OTC', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: _otcInk)),
+            child: Text('Up to ${o.days} days',
+                style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: _otcInk)),
           ),
         ]),
         if (o.helpsWith.isNotEmpty) _line(Icons.check_circle_rounded, AppColors.success, o.helpsWith),
@@ -749,5 +763,164 @@ class _InfoLine extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+
+/// One tap: the self-care medicines become reminders for the days the AI said (never longer than a week).
+/// The app never sets a dose: the user picks the times written on the pack or told by the pharmacist.
+Future<void> showOtcReminderSheet(
+    BuildContext context, List<({String name, String helpsWith, String avoidIf, int days})> options) async {
+  final api = context.read<AuthProvider>().repository.api;
+  final repo = MedicineRepository(api);
+  final selected = [for (final _ in options) true];
+  final days = [for (final o in options) o.days.clamp(1, 7).toInt()];
+  final times = [
+    for (final _ in options) <String>['09:00', '21:00']
+  ];
+  var saving = false;
+  String cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+  String iso(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  String form(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('cream') || n.contains('lotion')) return 'cream';
+    if (n.contains('spray') || n.contains('ors') || n.contains('rehydration') || n.contains('lozenge')) return 'other';
+    return 'tablet';
+  }
+
+  final added = await showModalBottomSheet<int>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setSheet) => Padding(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.of(ctx).viewInsets.bottom),
+        child: SingleChildScrollView(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('Add medicine reminders',
+                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.deep)),
+            const SizedBox(height: 4),
+            const Text('Reminders stop by themselves after the days shown. Set the times written on the pack '
+                'or told by your pharmacist.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.35)),
+            const SizedBox(height: 12),
+            for (var i = 0; i < options.length; i++)
+              Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.fromLTRB(4, 4, 10, 10),
+                decoration: BoxDecoration(
+                  color: selected[i] ? _otcTint : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: selected[i] ? _otcInk.withAlpha(60) : AppColors.border),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  CheckboxListTile(
+                    value: selected[i],
+                    onChanged: (v) => setSheet(() => selected[i] = v ?? false),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: Text(cap(options[i].name), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                    subtitle: Text('For ${days[i]} day${days[i] == 1 ? '' : 's'} (from today)'),
+                  ),
+                  if (selected[i])
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          const Text('Days', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.remove_circle_outline),
+                            onPressed: days[i] > 1 ? () => setSheet(() => days[i]--) : null,
+                          ),
+                          Text('${days[i]}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.add_circle_outline),
+                            onPressed: days[i] < 7 ? () => setSheet(() => days[i]++) : null,
+                          ),
+                        ]),
+                        Wrap(spacing: 6, runSpacing: 6, children: [
+                          for (var t = 0; t < times[i].length; t++)
+                            InputChip(
+                              label: Text(times[i][t]),
+                              avatar: const Icon(Icons.alarm, size: 16),
+                              onPressed: () async {
+                                final parts = times[i][t].split(':');
+                                final picked = await showTimePicker(
+                                    context: ctx,
+                                    initialTime: TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1])));
+                                if (picked != null) {
+                                  setSheet(() => times[i][t] =
+                                      '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
+                                }
+                              },
+                              onDeleted: times[i].length > 1 ? () => setSheet(() => times[i].removeAt(t)) : null,
+                            ),
+                          ActionChip(
+                            avatar: const Icon(Icons.add, size: 16),
+                            label: const Text('Time'),
+                            onPressed: times[i].length >= 4 ? null : () => setSheet(() => times[i].add('14:00')),
+                          ),
+                        ]),
+                      ]),
+                    ),
+                ]),
+              ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52), backgroundColor: _otcInk),
+              icon: saving
+                  ? const SizedBox(
+                      width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.alarm_add_outlined),
+              label: const Text('Save reminders'),
+              onPressed: saving || !selected.contains(true)
+                  ? null
+                  : () async {
+                      setSheet(() => saving = true);
+                      var count = 0;
+                      final today = DateTime.now();
+                      for (var i = 0; i < options.length; i++) {
+                        if (!selected[i]) continue;
+                        final o = options[i];
+                        final body = {
+                          'name': cap(o.name),
+                          'salt': cap(o.name),
+                          'form': form(o.name),
+                          'times': times[i],
+                          'instructions': 'As written on the pack or as your pharmacist says. '
+                              'Stop and see a doctor if not better in ${days[i]} days.',
+                          'start_date': iso(today),
+                          'end_date': iso(today.add(Duration(days: days[i] - 1))),
+                        };
+                        try {
+                          await repo.add(body);
+                          count++;
+                        } on ApiException catch (e) {
+                          if (e.code == 'allergy_warning' && ctx.mounted) {
+                            final ok = await showConfirmDialog(ctx,
+                                title: 'Allergy warning', message: e.message, confirmLabel: 'Add anyway');
+                            if (ok) {
+                              try {
+                                await repo.add(body, confirmAllergy: true);
+                                count++;
+                              } on ApiException catch (_) {}
+                            }
+                          } else if (ctx.mounted) {
+                            showMessage(ctx, '${o.name}: ${e.message}', error: true);
+                          }
+                        }
+                      }
+                      if (ctx.mounted) Navigator.pop(ctx, count);
+                    },
+            ),
+          ]),
+        ),
+      ),
+    ),
+  );
+  if (added != null && added > 0 && context.mounted) {
+    showMessage(context, '$added reminder${added == 1 ? '' : 's'} added. See them in Smart Medicine Reminders.');
   }
 }

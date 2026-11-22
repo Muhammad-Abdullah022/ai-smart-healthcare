@@ -1,3 +1,4 @@
+from datetime import date
 import json
 
 from app.ai.service import AIService
@@ -74,10 +75,18 @@ def test_full_consultation_flow_with_live_events(registered):
     r = client.post(f"/consultations/{cid}/prescribe", headers=doctor, json=rx)
     assert r.status_code == 200
     got = client.get(f"/prescriptions/{r.json()['prescription_id']}", headers=patient).json()
-    assert got["status"] == "needs_review" and got["reading"]["medicines"][0]["name"] == "Panadol"
+    assert got["status"] == "verified" and got["reading"]["medicines"][0]["name"] == "Panadol"
+    # Reminders are made automatically: 3 times a day for 3 days.
+    meds = client.get("/medicines", headers=patient).json()
+    assert len(meds) == 1 and meds[0]["times"] == ["08:00", "14:00", "21:00"]
+    start, end = meds[0]["start_date"], meds[0]["end_date"]
+    assert (date.fromisoformat(end) - date.fromisoformat(start)).days == 2
 
     msgs = client.get(f"/consultations/{cid}", headers=patient).json()["messages"]
-    assert [m["kind"] for m in msgs][-1] == "prescription"
+    assert [m["kind"] for m in msgs][-2:] == ["prescription", "reminders"]
+    # A corrected prescription replaces the earlier reminders (no double doses).
+    client.post(f"/consultations/{cid}/prescribe", headers=doctor, json=rx)
+    assert len(client.get("/medicines", headers=patient).json()) == 1
     assert client.post(f"/consultations/{cid}/messages", headers=patient, json={"text": "Thank you"}).status_code == 201
 
 

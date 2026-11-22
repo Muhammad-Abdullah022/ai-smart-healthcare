@@ -128,111 +128,145 @@ class _PrescriptionReaderScreenState extends State<PrescriptionReaderScreen> {
 
   Widget _hero() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         gradient: const LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.deep, AppColors.green]),
+            begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.deep, Color(0xFF0F766E)]),
         boxShadow: AppColors.softShadow,
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(color: Colors.white.withAlpha(36), borderRadius: BorderRadius.circular(14)),
-            child: const Icon(Icons.document_scanner_outlined, color: Colors.white, size: 26),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text('Read your prescription',
-                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
-          ),
-        ]),
-        const SizedBox(height: 10),
-        Text(
-          'Take a photo of the doctor\'s prescription. The AI reads the handwriting and tells you each medicine, '
-          'how to take it and for how long.',
-          style: TextStyle(color: Colors.white.withAlpha(225), height: 1.45),
-        ),
-        const SizedBox(height: 14),
-        Text('Explain in', style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 12)),
-        const SizedBox(height: 6),
-        Wrap(spacing: 8, children: [
-          for (final l in chatLanguages)
-            ChoiceChip(
-              label: Text(l.label),
-              selected: _language == l.code,
-              onSelected: (_) => setState(() => _language = l.code),
-              selectedColor: Colors.white,
-              backgroundColor: Colors.white.withAlpha(30),
-              side: BorderSide(color: Colors.white.withAlpha(90)),
-              labelStyle: TextStyle(
-                  color: _language == l.code ? AppColors.deep : Colors.white, fontWeight: FontWeight.w600),
-              showCheckmark: false,
-            ),
-        ]),
-        const SizedBox(height: 16),
-        Row(children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppColors.deep,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              icon: const Icon(Icons.photo_camera_rounded),
-              label: const Text('Camera', style: TextStyle(fontWeight: FontWeight.w700)),
-              onPressed: _reading ? null : () => _pick('camera'),
-            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Read your prescription',
+                  style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800, height: 1.2)),
+              const SizedBox(height: 6),
+              Text('AI reads the doctor\'s handwriting: each medicine, how to take it and for how long.',
+                  style: TextStyle(color: Colors.white.withAlpha(220), fontSize: 13.5, height: 1.4)),
+            ]),
           ),
           const SizedBox(width: 10),
-          Expanded(
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white),
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              icon: const Icon(Icons.photo_library_outlined),
-              label: const Text('Gallery'),
-              onPressed: _reading ? null : () => _pick('gallery'),
-            ),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(color: Colors.white.withAlpha(36), borderRadius: BorderRadius.circular(18)),
+            child: const Icon(Icons.document_scanner_rounded, color: Colors.white, size: 30),
           ),
         ]),
-        Center(
-          child: TextButton.icon(
-            style: TextButton.styleFrom(foregroundColor: Colors.white),
-            icon: const Icon(Icons.attach_file, size: 18),
-            label: const Text('Upload a PDF or file'),
-            onPressed: _reading ? null : () => _pick('file'),
-          ),
+        const SizedBox(height: 16),
+        Text('Explain in', style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 12, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        // Segmented language picker (custom, so the text is always readable on the dark card).
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(color: Colors.black.withAlpha(45), borderRadius: BorderRadius.circular(16)),
+          child: Row(children: [
+            for (final l in chatLanguages)
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _language = l.code),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _language == l.code ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(l.label,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: _language == l.code ? AppColors.deep : Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13.5)),
+                  ),
+                ),
+              ),
+          ]),
         ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFFFC857),
+            foregroundColor: AppColors.deep,
+            minimumSize: const Size.fromHeight(56),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          ),
+          icon: const Icon(Icons.photo_camera_rounded),
+          label: const Text('Scan with camera'),
+          onPressed: _reading ? null : () => _pick('camera'),
+        ),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(child: _ghostButton(Icons.photo_library_outlined, 'Gallery', () => _pick('gallery'))),
+          const SizedBox(width: 10),
+          Expanded(child: _ghostButton(Icons.picture_as_pdf_outlined, 'PDF / file', () => _pick('file'))),
+        ]),
       ]),
     );
   }
 
+  Widget _ghostButton(IconData icon, String label, VoidCallback onTap) => OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          backgroundColor: Colors.white.withAlpha(18),
+          side: BorderSide(color: Colors.white.withAlpha(120)),
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        icon: Icon(icon, size: 20),
+        label: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        onPressed: _reading ? null : onTap,
+      );
+
   Widget _tips() {
-    Widget tip(IconData i, String t) => Expanded(
+    Widget step(int n, IconData i, String title, String text) => Expanded(
           child: Column(children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(12)),
-              child: Icon(i, color: AppColors.green, size: 20),
-            ),
+            Stack(clipBehavior: Clip.none, children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(15)),
+                child: Icon(i, color: AppColors.green, size: 22),
+              ),
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(color: AppColors.deep, shape: BoxShape.circle),
+                  child: Text('$n', style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ]),
             const SizedBox(height: 6),
-            Text(t, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.deep)),
+            Text(text, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
           ]),
         );
-    return Row(children: [
-      tip(Icons.wb_sunny_outlined, 'Good light,\nno shadow'),
-      tip(Icons.crop_free, 'Whole page\nin the photo'),
-      tip(Icons.straighten, 'Paper flat,\ncamera straight'),
-      tip(Icons.verified_user_outlined, 'You check\nbefore saving'),
-    ]);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 14, 8, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          step(1, Icons.wb_sunny_outlined, 'Photo', 'Good light, whole page'),
+          step(2, Icons.auto_awesome_outlined, 'AI reads', 'Medicines & timings'),
+          step(3, Icons.fact_check_outlined, 'You check', 'Fix anything unclear'),
+          step(4, Icons.alarm_on_outlined, 'Reminders', 'Set automatically'),
+        ]),
+      ]),
+    );
   }
 }
 

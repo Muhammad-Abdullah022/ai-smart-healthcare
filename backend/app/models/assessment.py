@@ -43,6 +43,8 @@ class OTCOption(BaseModel):
     name: str = Field(max_length=60)
     helps_with: str = Field(default="", max_length=200)
     avoid_if: str = Field(default="", max_length=240)
+    # Self-care limit: use it for at most this many days; if not better, see a doctor. Not a dose.
+    days: int | None = Field(default=None, ge=1, le=14)
 
 
 class AISymptomOutput(BaseModel):

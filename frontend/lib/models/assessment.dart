@@ -84,7 +84,7 @@ class Assessment {
   final bool ready;
 
   /// Over-the-counter medicines a pharmacist could suggest (generic names, never doses).
-  final List<({String name, String helpsWith, String avoidIf})> otcOptions;
+  final List<({String name, String helpsWith, String avoidIf, int days})> otcOptions;
   final List<String> testsToDiscuss;
   final List<String> warningSigns;
   final String? specialistType;
@@ -125,6 +125,7 @@ class Assessment {
               name: o['name'] as String? ?? '',
               helpsWith: o['helps_with'] as String? ?? '',
               avoidIf: o['avoid_if'] as String? ?? '',
+              days: (o['days'] as num?)?.toInt() ?? 3,
             )
         ],
         testsToDiscuss: _strings(j['tests_to_discuss']),

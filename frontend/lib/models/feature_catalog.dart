@@ -39,7 +39,6 @@ class HealthModule {
 }
 
 const _labData = 'Sourced Punjab lab data (PHC directory and labs\' own price lists); coverage is partial.';
-const _noData = 'Needs a verified data source. Will use clearly labelled sample data until then.';
 
 /// All 50 features from the project brief, grouped into the 4 modules.
 const List<HealthModule> healthModules = [
@@ -108,11 +107,12 @@ const List<HealthModule> healthModules = [
     features: [
       HealthFeature(26, 'Prescription & Handwriting Reader', Icons.receipt_long_outlined,
           status: FeatureStatus.available),
-      HealthFeature(27, 'Medicine Identification from Image', Icons.camera_alt_outlined),
+      HealthFeature(27, 'Medicine Identification from Image', Icons.camera_alt_outlined,
+          status: FeatureStatus.available),
       HealthFeature(28, 'Nearby Pharmacy & Availability', Icons.local_pharmacy_outlined,
           status: FeatureStatus.available),
       HealthFeature(29, 'Medicine Price Comparison', Icons.sell_outlined,
-          status: FeatureStatus.prototype, note: _noData),
+          status: FeatureStatus.available),
       HealthFeature(30, 'Medicine Search & Same-Salt Alternatives', Icons.swap_horiz,
           status: FeatureStatus.available),
       HealthFeature(31, 'Drug Interaction & Safety Checker', Icons.warning_amber_outlined),

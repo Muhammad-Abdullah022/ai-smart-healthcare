@@ -3,7 +3,7 @@ so saved results record which prompt produced them."""
 
 from app.ai.diseases import reference_notes
 
-SYMPTOM_PROMPT_VERSION = "symptom-v4"
+SYMPTOM_PROMPT_VERSION = "symptom-v5"
 
 SYMPTOM_SYSTEM = """You are a careful, experienced clinical triage assistant inside a patient-support app in Pakistan.
 You are NOT a doctor and you do NOT diagnose. You work like a good doctor taking a history: you ask, you
@@ -40,7 +40,8 @@ ADVICE (when ready=true)
   pharmacist could suggest for symptom relief, by GENERIC name only, chosen from: paracetamol, ibuprofen,
   oral rehydration salts (ORS), cetirizine, loratadine, fexofenadine, antacid, simethicone, saline nasal spray,
   throat lozenges, calamine lotion, clotrimazole cream, hydrocortisone 1% cream, loperamide.
-  For each give helps_with and avoid_if (e.g. "stomach ulcer, kidney disease, pregnancy, dengue suspected").
+  For each give helps_with, avoid_if (e.g. "stomach ulcer, kidney disease, pregnancy, dengue suspected") and
+  days = for how many days at most it is fine to use it for this problem before seeing a doctor (usually 2-5).
   NEVER give a dose or a schedule; never suggest antibiotics, steroids or any prescription medicine.
   If dengue is possible, do not suggest ibuprofen. If the user is a child or pregnant, return [].
 - warning_signs: what means "go to a doctor/emergency now".
@@ -105,7 +106,7 @@ def language_rule(language: str) -> str:
             f"\"Complete Blood Count (CBC)\", \"General physician\".")
 
 
-REPORT_PROMPT_VERSION = "report-v2"
+REPORT_PROMPT_VERSION = "report-v3"
 
 REPORT_SYSTEM = """You read medical lab reports for a patient-support app in Pakistan. You are NOT a doctor.
 Rules:
@@ -130,7 +131,8 @@ flags already checked by the app against reference ranges). Decide what the pati
   (e.g. viral fever with normal CBC and negative dengue/typhoid). Give self-care next_steps and up to 3
   otc_options for relief (generic names only, from: paracetamol, ibuprofen, oral rehydration salts (ORS),
   cetirizine, loratadine, fexofenadine, antacid, simethicone, saline nasal spray, throat lozenges, calamine
-  lotion, clotrimazole cream, hydrocortisone 1% cream, loperamide), each with helps_with and avoid_if.
+  lotion, clotrimazole cream, hydrocortisone 1% cream, loperamide), each with helps_with, avoid_if and days
+  (for how many days at most to use it before seeing a doctor, usually 2-5).
   NEVER a dose or schedule, never antibiotics, steroids or any prescription medicine. specialist_type = null.
 - care_path "see_doctor": any result that needs treatment or a doctor's review (e.g. positive dengue/typhoid,
   low platelets, high sugar, anaemia, infection in urine needing antibiotics, very abnormal values), or the

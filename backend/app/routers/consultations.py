@@ -34,6 +34,7 @@ from app.health.record import age_of
 from app.realtime import hub
 from app.repositories.user_repository import to_object_id
 from app.routers.assessments import get_ai_service
+from app.routers.medicines import add_doctor_reminders
 from app.routers.notifications import notify
 
 router = APIRouter(tags=["consultations"])
@@ -528,15 +529,37 @@ async def prescribe(cid: str, body: PrescribeIn, user: dict = Depends(get_curren
                                  + (f" Diagnosis: {body.diagnosis}." if body.diagnosis else ""),
                       "medicines": meds, "notes": notes[:8],
                       "warnings": ["Take medicines exactly as the doctor wrote. Ask the doctor in this chat if anything is unclear."]}}
+    # The doctor wrote it, so it counts as checked: it is saved as verified and the reminders are made now.
+    rx["status"] = "verified"
+    rx["confirmed_medicines"] = meds
+    rx["verified_at"] = now
     rx_id = (await db.prescriptions.insert_one(rx)).inserted_id
+    # A corrected prescription in the same consultation replaces the earlier reminders.
+    old = [d["_id"] async for d in db.prescriptions.find(
+        {"consultation_id": c["_id"], "_id": {"$ne": rx_id}}, {"_id": 1})]
+    if old:
+        await db.medicine_records.update_many(
+            {"user_id": c["user_id"], "prescription_id": {"$in": [str(o) for o in old]}, "source": "doctor"},
+            {"$set": {"active": False, "stopped_at": now}})
+    auto = await add_doctor_reminders(db, c["user_id"], meds, rx_id, doctor["name"])
     lines = [f"{m.name} {m.strength}".strip() + f" — {m.how_to_take}" +
              (f" for {m.duration_days} days" if m.duration_days else "") for m in body.medicines]
     await _post(db, c, "doctor", "prescription", "Prescription:\n" + "\n".join(lines),
                 meta={"prescription_id": str(rx_id), "diagnosis": body.diagnosis, "medicines": [m.model_dump() for m in body.medicines],
                       "advice": body.advice, "tests": body.tests, "follow_up": body.follow_up},
                 new_status="advised")
-    await _ping(db, c["user_id"], "Prescription received", f"{doctor['name']} sent your medicines.", c["_id"])
-    return {"status": c["status"], "prescription_id": str(rx_id)}
+    if auto["added"]:
+        names = ", ".join(a["name"] for a in auto["added"])
+        await _post(db, c, "system", "reminders",
+                    f"Medicine reminders added automatically: {names}. You can change the times in "
+                    "Smart Medicine Reminders.", meta={"added": auto["added"]})
+    for s_ in auto["skipped"]:
+        await _post(db, c, "system", "status",
+                    f'{s_["name"]} was NOT added to reminders because it may match your allergy "{s_["allergy"]}". '
+                    "Please tell the doctor in this chat.")
+    await _ping(db, c["user_id"], "Prescription received",
+                f"{doctor['name']} sent your medicines." + (" Reminders are set." if auto["added"] else ""), c["_id"])
+    return {"status": c["status"], "prescription_id": str(rx_id), "reminders": auto}
 
 
 URGENCY_TEXT = {"emergency": "This may be an emergency. Go to the nearest emergency department now or call 1122.",

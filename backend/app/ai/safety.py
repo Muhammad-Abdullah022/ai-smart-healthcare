@@ -157,5 +157,7 @@ def filter_otc(options: list[dict], level: str, age: int | None, allergies: list
         if _DOSE_PATTERN.search(helps) or _DOSE_PATTERN.search(avoid):
             helps, avoid = ("" if _DOSE_PATTERN.search(helps) else helps), ("" if _DOSE_PATTERN.search(avoid) else avoid)
         if not any(x["name"] == generic for x in out):
-            out.append({"name": generic, "helps_with": helps, "avoid_if": avoid})
+            days = o.get("days")
+            days = days if isinstance(days, int) and 1 <= days <= 7 else 3  # self-care limit, never longer than a week
+            out.append({"name": generic, "helps_with": helps, "avoid_if": avoid, "days": days})
     return out[:3]

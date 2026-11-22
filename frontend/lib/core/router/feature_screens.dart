@@ -23,6 +23,7 @@ import '../../screens/mental/mood_screen.dart';
 import '../../screens/mental/screening_screen.dart';
 import '../../screens/modules/feature_form_screen.dart';
 import '../../screens/pharmacy/medicine_search_screen.dart';
+import '../../screens/pharmacy/price_comparison_screen.dart';
 import '../../screens/pharmacy/pharmacy_finder_screen.dart';
 import '../../screens/prescriptions/prescription_reader_screen.dart';
 import '../../screens/modules/feature_screen.dart';
@@ -73,6 +74,10 @@ Widget screenForFeature(int number) {
       return const CrisisScreen();
     case 28:
       return const PharmacyFinderScreen();
+    case 27:
+      return const MedicineSearchScreen(openCamera: true);
+    case 29:
+      return const PriceComparisonScreen();
     case 30 || 37:
       return const MedicineSearchScreen();
     case 26 || 34:

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -612,6 +613,11 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         return _bubbleWrap(mine, _prescriptionCard(c, m));
       case 'clinic_visit':
         return _bubbleWrap(mine, _clinicCard(m));
+      case 'reminders':
+        return GestureDetector(
+          onTap: c.isDoctor ? null : () => GoRouter.of(context).push('/feature/33'),
+          child: _pill(m.text, AppColors.green, Icons.alarm_on_outlined),
+        );
       default:
         return _bubble(mine, m);
     }
@@ -817,8 +823,8 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
           width: double.infinity,
           child: FilledButton.icon(
             onPressed: () => _openPrescription('${m.meta['prescription_id']}'),
-            icon: const Icon(Icons.alarm_add_outlined, size: 18),
-            label: const Text('Check & add medicine reminders'),
+            icon: const Icon(Icons.receipt_long_outlined, size: 18),
+            label: const Text('View prescription'),
           ),
         ),
     ]);
