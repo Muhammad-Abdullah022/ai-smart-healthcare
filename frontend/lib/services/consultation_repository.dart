@@ -120,6 +120,11 @@ class ConsultationRepository {
 
   Future<List<int>> file(String id, String fileId) => api.getBytes('/consultations/$id/files/$fileId');
 
+  /// Send a photo, PDF or document in the chat.
+  Future<void> sendFile(String id, List<int> bytes, String name, String mime, {String caption = ''}) =>
+      api.postFile('/consultations/$id/attachments',
+          bytes: bytes, filename: name, mimeType: mime, fields: {'caption': caption});
+
   Future<void> verifyPayment(String id, bool ok, {String note = ''}) =>
       api.post('/consultations/$id/payment/verify', body: {'ok': ok, 'note': note});
 

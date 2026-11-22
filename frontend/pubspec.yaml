@@ -35,6 +35,9 @@ dependencies:
   speech_to_text: ^7.0.0
   file_picker: ^8.1.2
   image_picker: ^1.1.2
+  # Open PDFs / documents sent in the doctor chat with the phone's viewer
+  open_filex: ^4.6.0
+  path_provider: ^2.1.4
   # Smartwatch / fitness band over Bluetooth Low Energy (feature 42)
   flutter_blue_plus: ^1.32.12
   # Inter font

@@ -74,6 +74,7 @@ class LiveNotifications {
         'prescription' => 'Prescription received',
         'clinic_visit' => 'Please visit the clinic',
         'summary' => 'Symptom check shared',
+        'file' => 'New photo or file',
         _ => m['sender'] == 'system' ? 'Consultation update' : 'New message',
       };
       _show(title, '${m['text'] ?? ''}', '/consultation/$cid', channel: 'messages');

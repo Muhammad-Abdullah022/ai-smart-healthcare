@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,6 +16,7 @@ import '../../services/live_notifications.dart';
 import '../../services/prescription_repository.dart';
 import '../../services/report_repository.dart' show mimeTypeFor;
 import '../../widgets/confirm_dialog.dart';
+import '../../widgets/file_opener.dart';
 import '../../widgets/state_views.dart';
 import '../prescriptions/prescription_result_screen.dart';
 import 'issues_screen.dart';
@@ -43,6 +45,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   Object? _error;
   bool _busy = false;
   bool _sending = false;
+  bool _sendingFile = false;
   bool _showPatient = true;
 
   @override
@@ -197,6 +200,207 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     } catch (e) {
       if (mounted) showMessage(context, '$e', error: true);
     }
+  }
+
+  // ---------------------------------------------------------------- attachments
+
+  static const _mimeByExt = {
+    'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp',
+    'pdf': 'application/pdf', 'doc': 'application/msword', 'txt': 'text/plain',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  };
+
+  Future<void> _attach() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.photo_camera_outlined, color: AppColors.green),
+            title: const Text('Camera'),
+            onTap: () => Navigator.pop(ctx, 'camera'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined, color: AppColors.green),
+            title: const Text('Photo from gallery'),
+            onTap: () => Navigator.pop(ctx, 'gallery'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.picture_as_pdf_outlined, color: AppColors.green),
+            title: const Text('PDF, Word or other file'),
+            subtitle: const Text('Old reports, prescriptions, X-ray reports…'),
+            onTap: () => Navigator.pop(ctx, 'file'),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    List<int>? bytes;
+    String name = 'file';
+    try {
+      if (choice == 'file') {
+        final r = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: _mimeByExt.keys.toList(),
+          withData: true,
+        );
+        final f = r?.files.single;
+        if (f == null || f.bytes == null) return;
+        bytes = f.bytes;
+        name = f.name;
+      } else {
+        final x = await ImagePicker().pickImage(
+            source: choice == 'camera' ? ImageSource.camera : ImageSource.gallery, imageQuality: 85, maxWidth: 2000);
+        if (x == null) return;
+        bytes = await x.readAsBytes();
+        name = x.name.isEmpty ? 'photo.jpg' : x.name;
+      }
+    } catch (_) {
+      if (mounted) showMessage(context, 'Could not open the camera or files.', error: true);
+      return;
+    }
+    if (bytes == null || !mounted) return;
+    if (bytes.length > 10 * 1024 * 1024) {
+      showMessage(context, 'The file is too big (max 10 MB).', error: true);
+      return;
+    }
+    final ext = name.toLowerCase().split('.').last;
+    final mime = _mimeByExt[ext] ?? 'image/jpeg';
+    final isImage = mime.startsWith('image/');
+    final caption = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(isImage ? 'Send photo' : 'Send file'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (isImage)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.memory(Uint8List.fromList(bytes!), height: 220, fit: BoxFit.contain),
+              )
+            else
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(_fileIcon(mime), color: AppColors.critical, size: 36),
+                title: Text(name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                subtitle: Text(_size(bytes!.length)),
+              ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: caption,
+              decoration: const InputDecoration(labelText: 'Message (optional)', border: OutlineInputBorder()),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.send_rounded, size: 18),
+            label: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+    final text = caption.text.trim();
+    caption.dispose();
+    if (ok != true || !mounted) return;
+    setState(() => _sendingFile = true);
+    try {
+      await _repo.sendFile(widget.id, bytes, name, mime, caption: text);
+      await _load(scrollDown: true);
+    } catch (e) {
+      if (mounted) showMessage(context, '$e', error: true);
+    } finally {
+      if (mounted) setState(() => _sendingFile = false);
+    }
+  }
+
+  static IconData _fileIcon(String mime) => mime == 'application/pdf'
+      ? Icons.picture_as_pdf
+      : mime.startsWith('image/')
+          ? Icons.image_outlined
+          : Icons.description_outlined;
+
+  static String _size(int b) => b > 1024 * 1024
+      ? '${(b / 1024 / 1024).toStringAsFixed(1)} MB'
+      : '${(b / 1024).ceil()} KB';
+
+  Future<void> _openFile(ConsultMessage m) async {
+    try {
+      final bytes = await _repo.file(widget.id, '${m.meta['file_id']}');
+      final err = await openFileBytes(bytes, '${m.meta['file_name'] ?? 'file'}', '${m.meta['mime_type']}');
+      if (err != null && mounted) showMessage(context, err, error: true);
+    } catch (e) {
+      if (mounted) showMessage(context, '$e', error: true);
+    }
+  }
+
+  Widget _fileBubble(bool mine, ConsultMessage m) {
+    final kind = '${m.meta['file_kind']}';
+    final name = '${m.meta['file_name'] ?? 'file'}';
+    final caption = m.text == 'Photo' || m.text == 'PDF: $name' || m.text == 'File: $name' ? '' : m.text;
+    return Align(
+      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .72),
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: mine ? AppColors.deep : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 4, offset: Offset(0, 1))],
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (kind == 'image')
+            _PaymentImage(repo: _repo, consultationId: widget.id, fileId: '${m.meta['file_id']}')
+          else
+            InkWell(
+              onTap: () => _openFile(m),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: mine ? Colors.white12 : const Color(0xFFF3F6F5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(children: [
+                  Icon(_fileIcon('${m.meta['mime_type']}'),
+                      size: 34, color: kind == 'pdf' ? const Color(0xFFE5484D) : const Color(0xFF2563EB)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, color: mine ? Colors.white : AppColors.text, fontSize: 13.5)),
+                      Text('${_size((m.meta['size'] as num?)?.toInt() ?? 0)} · Tap to open',
+                          style: TextStyle(fontSize: 11.5, color: mine ? Colors.white60 : AppColors.textMuted)),
+                    ]),
+                  ),
+                ]),
+              ),
+            ),
+          if (caption.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+              child: Text(caption, style: TextStyle(color: mine ? Colors.white : AppColors.text, fontSize: 14)),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 4, 6, 2),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(_time(m.createdAt),
+                  style: TextStyle(fontSize: 10.5, color: mine ? Colors.white60 : AppColors.textMuted)),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 
   // ---------------------------------------------------------------- doctor actions
@@ -398,6 +602,8 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         return _bubbleWrap(mine, _summaryCard(m));
       case 'payment':
         return _bubbleWrap(mine, _paymentCard(c, m));
+      case 'file':
+        return _fileBubble(mine, m);
       case 'payment_ok':
         return _pill(m.text, AppColors.green, Icons.verified_outlined);
       case 'payment_rejected':
@@ -784,8 +990,15 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         top: false,
         child: Container(
           color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(10, 6, 8, 8),
+          padding: const EdgeInsets.fromLTRB(4, 6, 8, 8),
           child: Row(children: [
+            IconButton(
+              tooltip: 'Send photo or file',
+              onPressed: _sendingFile ? null : _attach,
+              icon: _sendingFile
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.attach_file_rounded, color: AppColors.textMuted),
+            ),
             Expanded(
               child: TextField(
                 controller: _input,

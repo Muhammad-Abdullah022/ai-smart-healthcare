@@ -425,6 +425,53 @@ async def upload_payment(cid: str, request: Request, file: UploadFile = File(...
     return {"status": c["status"], "meta": meta}
 
 
+ATTACHMENT_TYPES = {
+    "image/jpeg": "image", "image/png": "image", "image/webp": "image", "application/pdf": "pdf",
+    "application/msword": "document",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "document",
+    "text/plain": "document",
+}
+MAX_ATTACHMENT = 10 * 1024 * 1024
+
+
+@router.post("/consultations/{cid}/attachments", status_code=status.HTTP_201_CREATED,
+             dependencies=[limit_by_user("consult_attachment", 40, 3600)])
+async def send_attachment(cid: str, file: UploadFile = File(...), caption: str = Form(""),
+                          user: dict = Depends(get_current_user), db=Depends(get_db)):
+    """Patient or doctor sends a photo, PDF or document in the chat (e.g. old reports, X-ray, rash photo)."""
+    c, role, doctor = await _load(db, user, cid)
+    _need_status(c, *ACTIVE, message="This consultation is closed.")
+    mime = (file.content_type or "").lower()
+    # Safe file name (also used in the download header).
+    name = re.sub(r"[^A-Za-z0-9 ._()-]", "_", file.filename or "file")[:120] or "file"
+    if mime not in ATTACHMENT_TYPES:
+        # Some phones send "application/octet-stream": decide by the file name.
+        ext = name.lower().rsplit(".", 1)[-1] if "." in name else ""
+        mime = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp",
+                "pdf": "application/pdf", "doc": "application/msword", "txt": "text/plain",
+                "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}.get(ext, mime)
+    if mime not in ATTACHMENT_TYPES:
+        raise ApiError(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "bad_type",
+                       "You can send photos (JPG, PNG), PDF, Word or text files.")
+    data = await file.read(MAX_ATTACHMENT + 1)
+    if not data:
+        raise ApiError(status.HTTP_400_BAD_REQUEST, "empty", "The file is empty.")
+    if len(data) > MAX_ATTACHMENT:
+        raise ApiError(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "too_large", "Files must be under 10 MB.")
+    file_id = (await db.consult_files.insert_one({
+        "consultation_id": c["_id"], "user_id": user["_id"], "data": Binary(data), "mime_type": mime,
+        "file_name": name, "sha256": hashlib.sha256(data).hexdigest(), "created_at": _now()})).inserted_id
+    kind = ATTACHMENT_TYPES[mime]
+    text = caption.strip()[:500] or {"image": "Photo", "pdf": f"PDF: {name}"}.get(kind, f"File: {name}")
+    m = await _post(db, c, role, "file", text, meta={"file_id": str(file_id), "file_name": name, "mime_type": mime,
+                                                    "file_kind": kind, "size": len(data)})
+    other = c["user_id"] if role == "doctor" else doctor.get("user_id")
+    if not hub.online(other):
+        await _ping(db, other, f"New file from {c['doctor_name'] if role == 'doctor' else c['patient_name']}",
+                    text[:100], c["_id"])
+    return _msg_out(m)
+
+
 @router.get("/consultations/{cid}/files/{file_id}")
 async def consult_file(cid: str, file_id: str, user: dict = Depends(get_current_user), db=Depends(get_db)):
     c, _, _ = await _load(db, user, cid)
@@ -432,7 +479,10 @@ async def consult_file(cid: str, file_id: str, user: dict = Depends(get_current_
     f = await db.consult_files.find_one({"_id": oid, "consultation_id": c["_id"]}) if oid else None
     if f is None:
         raise ApiError(status.HTTP_404_NOT_FOUND, "not_found", "File not found.")
-    return Response(content=bytes(f["data"]), media_type=f["mime_type"], headers={"Cache-Control": "private, no-store"})
+    name = f.get("file_name") or ("payment.jpg" if f["mime_type"].startswith("image/") else "file")
+    return Response(content=bytes(f["data"]), media_type=f["mime_type"],
+                    headers={"Cache-Control": "private, no-store",
+                             "Content-Disposition": f'inline; filename="{name}"'})
 
 
 @router.post("/consultations/{cid}/payment/verify")

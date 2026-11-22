@@ -180,3 +180,26 @@ def test_doctor_accounts_excel_export(registered):
     ws = load_workbook(BytesIO(buf.getvalue())).active
     text = " ".join(str(c.value) for row in ws.iter_rows() for c in row if c.value is not None)
     assert "Dr. Sara Malik" in text and "waiting@gmail.com" in text and "password" not in text.split("Passwords")[0].lower()
+
+
+def test_chat_attachments(registered):
+    client, tokens = registered
+    patient = auth_header(tokens)
+    _, doctor, doctor_id = _doctor(client)
+    cid = client.post("/consultations", headers=patient, json={"doctor_id": doctor_id, "reason": "Rash"}).json()["id"]
+    pdf = b"%PDF-1.4 test report"
+    r = client.post(f"/consultations/{cid}/attachments", headers=patient,
+                    files={"file": ("old_report.pdf", pdf, "application/pdf")}, data={"caption": "My old CBC"})
+    assert r.status_code == 201, r.text
+    meta = r.json()["meta"]
+    assert r.json()["kind"] == "file" and meta["file_kind"] == "pdf" and r.json()["text"] == "My old CBC"
+    got = client.get(f"/consultations/{cid}/files/{meta['file_id']}", headers=doctor)
+    assert got.content == pdf and "old_report.pdf" in got.headers["content-disposition"]
+    # Phone sends octet-stream: decided by the file name. The doctor can send photos too.
+    r = client.post(f"/consultations/{cid}/attachments", headers=doctor,
+                    files={"file": ("rash.jpg", PNG, "application/octet-stream")})
+    assert r.status_code == 201 and r.json()["meta"]["file_kind"] == "image" and r.json()["sender"] == "doctor"
+    assert client.post(f"/consultations/{cid}/attachments", headers=patient,
+                       files={"file": ("virus.exe", b"MZ", "application/octet-stream")}).status_code == 415
+    other = auth_header(client.post("/auth/register", json={**DOCTOR, "email": "z@example.com"}).json())
+    assert client.get(f"/consultations/{cid}/files/{meta['file_id']}", headers=other).status_code == 404
