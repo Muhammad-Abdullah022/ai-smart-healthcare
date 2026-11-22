@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// A soft heartbeat line drawn once across the home header — the app's signature.
 /// It draws itself in when the screen opens (one gentle animation, then still).
 class PulseLine extends StatefulWidget {
-  const PulseLine({super.key, this.color = const Color(0xFF0E9F6E), this.height = 56});
+  const PulseLine({super.key, this.color = const Color(0xFF7C3AED), this.height = 56});
 
   final Color color;
   final double height;

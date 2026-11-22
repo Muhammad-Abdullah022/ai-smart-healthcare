@@ -374,7 +374,7 @@ class _SymptomResultBubbleState extends State<SymptomResultBubble> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE2E8EC)),
-        boxShadow: const [BoxShadow(color: Color(0x0F0B2B3C), blurRadius: 16, offset: Offset(0, 6))],
+        boxShadow: const [BoxShadow(color: Color(0x0F2A1B4D), blurRadius: 16, offset: Offset(0, 6))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -562,7 +562,7 @@ class _ReportReviewCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F8F7),
+        color: const Color(0xFFF7F6FB),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),

@@ -78,87 +78,129 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
   }
 
   Widget _form() => Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-              colors: [AppColors.deep, Color(0xFF155E63)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-          borderRadius: BorderRadius.circular(22),
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.border),
+          boxShadow: AppColors.softShadow,
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('Compare prices',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          Text('All brands of the same medicine, cheapest first',
-              style: TextStyle(color: Colors.white.withAlpha(210), fontSize: 13)),
-          const SizedBox(height: 14),
-          _field(_name, 'Medicine name', 'e.g. Panadol or Paracetamol', Icons.medication_outlined),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(
-              flex: 4,
-              child: _field(_mg, 'Strength (mg)', 'e.g. 500', Icons.straighten_rounded,
-                  keyboard: const TextInputType.numberWithOptions(decimal: true)),
+          // Header strip
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [AppColors.deep, AppColors.primaryDeep]),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 5,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: _pickCity,
-                child: Container(
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-                  child: Row(children: [
-                    const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(_city ?? 'Choose city',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: _city == null ? AppColors.textMuted : AppColors.deep)),
-                    ),
-                    const Icon(Icons.expand_more, color: AppColors.textMuted),
+            child: Row(children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(color: Colors.white.withAlpha(30), borderRadius: BorderRadius.circular(13)),
+                child: const Icon(Icons.sell_rounded, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Compare prices',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                  Text('Same medicine, every brand, cheapest first',
+                      style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 12.5)),
+                ]),
+              ),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              _label('Medicine name'),
+              _field(_name, 'e.g. Panadol or Paracetamol', Icons.medication_outlined),
+              const SizedBox(height: 14),
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  flex: 4,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    _label('Strength (mg)'),
+                    _field(_mg, 'e.g. 500', Icons.straighten_rounded,
+                        keyboard: const TextInputType.numberWithOptions(decimal: true)),
                   ]),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 5,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    _label('City'),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: _pickCity,
+                      child: Container(
+                        height: 52,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(children: [
+                          const Icon(Icons.location_on_outlined, color: AppColors.accent, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(_city ?? 'Choose',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: _city == null ? AppColors.textMuted : AppColors.deep)),
+                          ),
+                          const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted),
+                        ]),
+                      ),
+                    ),
+                  ]),
+                ),
+              ]),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5),
+                ),
+                onPressed: _search,
+                icon: const Icon(Icons.search_rounded),
+                label: const Text('Show prices'),
               ),
-            ),
-          ]),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFFC857),
-              foregroundColor: AppColors.deep,
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5),
-            ),
-            onPressed: _search,
-            icon: const Icon(Icons.search_rounded),
-            label: const Text('Show prices'),
+            ]),
           ),
         ]),
       );
 
-  Widget _field(TextEditingController c, String label, String hint, IconData icon, {TextInputType? keyboard}) =>
-      TextField(
+  Widget _label(String t) => Padding(
+        padding: const EdgeInsets.only(left: 2, bottom: 6),
+        child: Text(t, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
+      );
+
+  Widget _field(TextEditingController c, String hint, IconData icon, {TextInputType? keyboard}) => TextField(
         controller: c,
         keyboardType: keyboard,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => _search(),
         style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.deep),
         decoration: InputDecoration(
+          isDense: true,
           filled: true,
-          fillColor: Colors.white,
-          labelText: label,
+          fillColor: AppColors.background,
           hintText: hint,
-          prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+          prefixIcon: Icon(icon, color: AppColors.accent, size: 20),
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
           focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFFFC857), width: 2)),
+              borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.6)),
         ),
       );
 
@@ -292,7 +334,7 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
               Text(c.brand, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.deep)),
               Text(
                   '${_rs(c.mrp)} for ${c.pack}'
-                  '${c.perUnit != null ? '  ·  ${_rs(c.perUnit)} per ${c.form == 'capsule' ? 'capsule' : 'tablet'}' : ''}',
+                  '${c.perUnit != null ? '  ·  ${_rs(c.perUnit)} per ${_unitWord(c.form)}' : ''}',
                   style: const TextStyle(fontSize: 13, color: AppColors.text)),
             ]),
           ),
@@ -349,6 +391,14 @@ class _PriceComparisonScreenState extends State<PriceComparisonScreen> {
         ]),
       );
 }
+
+String _unitWord(String form) => switch (form) {
+      'capsule' => 'capsule',
+      'sachet' => 'sachet',
+      'injection' => 'injection',
+      'tablet' => 'tablet',
+      _ => 'unit',
+    };
 
 String _rs(double? v) {
   if (v == null) return 'Price not listed';

@@ -53,3 +53,13 @@ def test_identify_photo(registered):
                     files={"file": ("box.jpg", b"\xff\xd8fakejpeg", "image/jpeg")})
     assert r.status_code == 200, r.text
     assert r.json()["search"] == "Panadol" and r.json()["in_list"]
+
+
+def test_sachet_with_buffer_is_a_mix():
+    from app.routers.drugs import _is_combo
+    rows = {r["brand"]: r for r in parse(SAMPLE + "327,58547,Getz Pharma (Pvt.) Limited,Risek Insta Sachet 20mg + 1680mg,"
+                                                  "Each Sachet contains: Omeprazoleâ€¦20mg Sodium Bicarbonate"
+                                                  "â€¦1680mg (as buffer),10's,Rs. 170.69\n")}
+    assert _is_combo(rows["Risek Insta Sachet 20mg + 1680mg"])
+    assert rows["Risek Insta Sachet 20mg + 1680mg"]["form"] == "sachet"
+    assert not _is_combo(rows["Panadol Tablet"]) and not _is_combo(rows["Flagyl Tablet"])

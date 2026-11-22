@@ -98,7 +98,7 @@ class ReportAnalysisCard extends StatelessWidget {
     final (uColor, uTint, uLabel) = switch (a.urgency) {
       'urgent' => (AppColors.critical, AppColors.criticalTint, 'See a doctor today'),
       'soon' => (AppColors.warning, AppColors.warningTint, 'See a doctor in the next few days'),
-      _ => (AppColors.success, const Color(0xFFE6F4EF), 'Discuss at your next visit'),
+      _ => (AppColors.success, const Color(0xFFF1EBFE), 'Discuss at your next visit'),
     };
     return _Shell(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -242,7 +242,7 @@ class _Shell extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFFE2E8EC)),
-          boxShadow: const [BoxShadow(color: Color(0x0F0B2B3C), blurRadius: 16, offset: Offset(0, 6))],
+          boxShadow: const [BoxShadow(color: Color(0x0F2A1B4D), blurRadius: 16, offset: Offset(0, 6))],
         ),
         clipBehavior: Clip.antiAlias,
         child: child,

@@ -132,7 +132,7 @@ class _PrescriptionReaderScreenState extends State<PrescriptionReaderScreen> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(26),
         gradient: const LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.deep, Color(0xFF0F766E)]),
+            begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.deep, Color(0xFF5B21B6)]),
         boxShadow: AppColors.softShadow,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

@@ -153,8 +153,14 @@ def _strength_num(text: str) -> str | None:
 
 
 def _is_combo(row: dict) -> bool:
+    """Two or more medicines in one pack (e.g. omeprazole + sodium bicarbonate)."""
     f = row["formulation"]
-    return bool(re.search(r"\+|&|;| and ", f)) or len({s.split()[0] for s in row["strengths"]}) > 2
+    if re.search(r"\+|&|;| and ", f):
+        return True
+    # Weights of the actives (mg/mcg/g; not ml or %): two different ones in the formulation = a mix.
+    weights = {s for s in row["strengths"] if s.split()[1] in ("mg", "mcg", "g")}
+    in_formula = {s for s in weights if s.split()[0] in f}
+    return len(in_formula) >= 2
 
 
 async def _pharmacies_in(db, city: str, limit: int = 12) -> list[dict]:

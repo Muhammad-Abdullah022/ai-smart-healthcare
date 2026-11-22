@@ -204,7 +204,7 @@ class _TestCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFE2E8EC)),
-        boxShadow: const [BoxShadow(color: Color(0x0A0B2B3C), blurRadius: 14, offset: Offset(0, 4))],
+        boxShadow: const [BoxShadow(color: Color(0x0A2A1B4D), blurRadius: 14, offset: Offset(0, 4))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -323,7 +323,7 @@ class _LabRow extends StatelessWidget {
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           CircleAvatar(
             radius: 20,
-            backgroundColor: gov ? const Color(0xFFE6F4EF) : AppColors.primaryTint,
+            backgroundColor: gov ? const Color(0xFFF1EBFE) : AppColors.primaryTint,
             child: Text(initials,
                 style: TextStyle(fontWeight: FontWeight.w800, color: gov ? AppColors.success : AppColors.primary)),
           ),
@@ -333,9 +333,9 @@ class _LabRow extends StatelessWidget {
               Text(o.lab, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 4),
               Wrap(spacing: 6, runSpacing: 4, children: [
-                if (best && !o.demo) const _Tag('Lowest price', AppColors.success, Color(0xFFE6F4EF)),
+                if (best && !o.demo) const _Tag('Lowest price', AppColors.success, Color(0xFFF1EBFE)),
                 if (o.branches > 1) _Tag('${o.branches} branches', AppColors.primary, AppColors.primaryTint),
-                if (gov) const _Tag('Government', AppColors.success, Color(0xFFE6F4EF)),
+                if (gov) const _Tag('Government', AppColors.success, Color(0xFFF1EBFE)),
               ]),
             ]),
           ),

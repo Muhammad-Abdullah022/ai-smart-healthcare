@@ -50,7 +50,7 @@ const checkInMoods = [
     key: 'calm',
     emoji: '😌',
     score: 4,
-    color: Color(0xFF0E9F6E),
+    color: Color(0xFF7C3AED),
     label: {'en': 'Calm', 'ur': 'پرسکون', 'roman_ur': 'Pursukoon'},
     affirmation: {
       'en': 'Calm is a strength. You can return to this feeling whenever you need it.',
@@ -158,7 +158,7 @@ const checkInMoods = [
     key: 'lonely',
     emoji: '🥺',
     score: 1,
-    color: Color(0xFF0F766E),
+    color: Color(0xFF5B21B6),
     label: {'en': 'Lonely', 'ur': 'تنہا', 'roman_ur': 'Tanha'},
     affirmation: {
       'en': 'Feeling lonely does not mean you are alone in this. Reaching out is a brave first step.',
