@@ -76,13 +76,17 @@ class ConsultTile extends StatelessWidget {
                     style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
                 const SizedBox(height: 6),
                 Row(children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: color.withAlpha(26), borderRadius: BorderRadius.circular(20)),
-                    child: Text(c.statusText,
-                        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: color.withAlpha(26), borderRadius: BorderRadius.circular(20)),
+                      child: Text(c.statusText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   if (c.unread > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -523,7 +527,7 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
                       style: const TextStyle(color: Colors.white70, fontSize: 13.5)),
                   const SizedBox(height: 8),
                   Wrap(spacing: 6, runSpacing: 6, children: [
-                    _headerChip(Icons.payments_outlined, 'Fee Rs $fee'),
+                    _headerChip(Icons.payments_outlined, fee == '0' ? 'Fee not set' : 'Fee Rs $fee'),
                     if ('${doc['payment_method'] ?? ''}'.isNotEmpty) _headerChip(Icons.account_balance_wallet_outlined, '${doc['payment_method']}'),
                     if ('${doc['timings'] ?? ''}'.isNotEmpty) _headerChip(Icons.schedule, '${doc['timings']}'),
                   ]),
@@ -588,14 +592,22 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
         ),
       );
 
-  Widget _headerChip(IconData icon, String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-        decoration: BoxDecoration(color: Colors.white.withAlpha(30), borderRadius: BorderRadius.circular(20)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 13, color: Colors.white70),
-          const SizedBox(width: 4),
-          Text(text, style: const TextStyle(color: Colors.white, fontSize: 11.5)),
-        ]),
+  Widget _headerChip(IconData icon, String text) => ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 120),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          decoration: BoxDecoration(color: Colors.white.withAlpha(30), borderRadius: BorderRadius.circular(20)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: 13, color: Colors.white70),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 11.5)),
+            ),
+          ]),
+        ),
       );
 
   Widget _statsGrid(Map<String, dynamic> s) {
@@ -698,9 +710,7 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
             Expanded(
               child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-          child: Row(children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   Expanded(
                     child: Text(c.patientName,
@@ -722,19 +732,21 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.3)),
-              ]),
-            ),
-            const SizedBox(width: 10),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: color,
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              ),
-              onPressed: () => _open(c.id),
-              icon: Icon(icon, size: 17),
-              label: Text(label, style: const TextStyle(fontSize: 12.5)),
-            ),
+                const SizedBox(height: 10),
+                // Button under the text, so nothing is squeezed on a narrow phone screen.
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: color,
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    ),
+                    onPressed: () => _open(c.id),
+                    icon: Icon(icon, size: 17),
+                    label: Text(label, style: const TextStyle(fontSize: 13)),
+                  ),
+                ),
           ]),
               ),
             ),
@@ -927,6 +939,8 @@ class _DoctorJoinScreenState extends State<DoctorJoinScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: SegmentedButton<String>(
+              showSelectedIcon: false,
+              style: SegmentedButton.styleFrom(visualDensity: VisualDensity.compact),
               segments: const [
                 ButtonSegment(value: 'JazzCash', label: Text('JazzCash')),
                 ButtonSegment(value: 'Easypaisa', label: Text('Easypaisa')),
