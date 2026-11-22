@@ -492,7 +492,7 @@ class _DoctorPanelScreenState extends State<DoctorPanelScreen> {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.deep, Color(0xFF4C1D95)]),
+            begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.deep, Color(0xFF1B4332)]),
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
       ),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),

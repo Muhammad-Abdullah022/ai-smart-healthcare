@@ -476,7 +476,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     final otherOnline = c.isDoctor ? (c.patient?['online_now'] == true) : (c.doctor['online_now'] == true);
     final closed = !c.summary.open;
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F1FA),
+      backgroundColor: const Color(0xFFEEF5F0),
       appBar: AppBar(
         titleSpacing: 0,
         title: Row(children: [
@@ -944,7 +944,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         margin: const EdgeInsets.fromLTRB(10, 0, 10, 6),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [AppColors.deep, Color(0xFF4C1D95)]),
+          gradient: const LinearGradient(colors: [AppColors.deep, Color(0xFF1B4332)]),
           borderRadius: BorderRadius.circular(18),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1015,7 +1015,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                 decoration: InputDecoration(
                   hintText: 'Type a message',
                   filled: true,
-                  fillColor: const Color(0xFFF4F1FA),
+                  fillColor: const Color(0xFFEEF5F0),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
                 ),
@@ -1144,7 +1144,7 @@ class _PaymentImageState extends State<_PaymentImage> {
       return Container(
           height: 140,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: const Color(0xFFF4F1FA), borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(color: const Color(0xFFEEF5F0), borderRadius: BorderRadius.circular(10)),
           child: const CircularProgressIndicator(strokeWidth: 2));
     }
     return GestureDetector(

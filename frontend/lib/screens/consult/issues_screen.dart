@@ -268,7 +268,7 @@ class _IssueThreadScreenState extends State<IssueThreadScreen> {
     final c = (_i['consultation'] as Map?)?.cast<String, dynamic>();
     final status = '${_i['status']}';
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F1FA),
+      backgroundColor: const Color(0xFFEEF5F0),
       appBar: AppBar(
         title: Text('${_i['subject']}', maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
@@ -351,7 +351,7 @@ class _IssueThreadScreenState extends State<IssueThreadScreen> {
                   decoration: InputDecoration(
                     hintText: widget.adminView ? 'Reply to the user' : 'Add more details',
                     filled: true,
-                    fillColor: const Color(0xFFF4F1FA),
+                    fillColor: const Color(0xFFEEF5F0),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
                   ),
