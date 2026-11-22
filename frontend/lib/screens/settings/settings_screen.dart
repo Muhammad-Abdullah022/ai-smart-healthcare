@@ -6,6 +6,7 @@ import '../../core/config/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/lab_repository.dart';
+import '../../widgets/server_address_dialog.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/section_card.dart';
 
@@ -68,15 +69,24 @@ class SettingsScreen extends StatelessWidget {
             ),
           ]),
           const SectionTitle('App'),
-          const GroupedList(children: [
+          GroupedList(children: [
             ListRow(
+              icon: Icons.dns_outlined,
+              title: 'Server address',
+              subtitle: context.read<AuthProvider>().repository.api.baseUrl,
+              onTap: () async {
+                await showServerAddressDialog(context);
+                if (context.mounted) (context as Element).markNeedsBuild();
+              },
+            ),
+            const ListRow(
               icon: Icons.language,
               title: 'Language',
               subtitle: 'English · Urdu coming soon',
               color: AppColors.mind,
               tint: AppColors.mindTint,
             ),
-            ListRow(
+            const ListRow(
               icon: Icons.notifications_outlined,
               title: 'Notifications',
               subtitle: 'Medicine reminders and alerts',

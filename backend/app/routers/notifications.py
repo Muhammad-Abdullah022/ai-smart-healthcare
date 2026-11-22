@@ -29,6 +29,9 @@ async def notify(db, user_id, type_: str, title: str, body: str, link: str | Non
         "user_id": user_id, "type": type_, "title": title, "body": body, "link": link,
         "read": False, "created_at": datetime.now(timezone.utc),
     })
+    # Also push it live, so an open app shows a phone notification straight away.
+    from app.realtime import hub  # local import: realtime is optional in some tests
+    await hub.send([user_id], {"type": "notification", "kind": type_, "title": title, "body": body, "link": link})
 
 
 def _out(d: dict) -> NotificationOut:

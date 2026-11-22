@@ -35,7 +35,19 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8000 " ^| findstr LISTENING
   taskkill /F /T /PID %%p >nul 2>&1
 )
 
+set LANIP=
+for /f "usebackq delims=" %%i in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0lan_ip.ps1"`) do set LANIP=%%i
+
 echo [3/3] Starting backend at http://localhost:8000  (API docs: http://localhost:8000/docs)
+if defined LANIP (
+  echo.
+  echo ================================================================
+  echo   Phone address:  %LANIP%:8000
+  echo   Phone and laptop must be on the same Wi-Fi.
+  echo   If Windows asks "Allow access" for Python, tick Private networks and press Allow.
+  echo ================================================================
+  echo.
+)
 echo Wait for "Application startup complete", then start the app.
 echo.
 REM Check files every few seconds, so code updated by Claude is picked up without a restart.

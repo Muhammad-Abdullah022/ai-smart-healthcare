@@ -29,11 +29,44 @@ class ApiClient {
     http.Client? httpClient,
     String? baseUrl,
   })  : _http = httpClient ?? http.Client(),
-        baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+        _fixedBaseUrl = baseUrl;
 
   final TokenStorage tokens;
   final http.Client _http;
-  final String baseUrl;
+  final String? _fixedBaseUrl;
+
+  /// The backend address in use (follows the "Server address" setting and automatic fallback).
+  String get baseUrl => _fixedBaseUrl ?? AppConfig.apiBaseUrl;
+
+  String get _offlineMessage => 'Cannot reach the server at $baseUrl. Make sure the backend is running and the '
+      'phone is on the same Wi-Fi as the laptop, or tap "Server address" on the login screen.';
+
+  /// The current address did not answer: try the other known addresses and switch to one that does.
+  Future<bool> _switchServer() async {
+    if (_fixedBaseUrl != null) return false;
+    final current = baseUrl;
+    for (final candidate in AppConfig.candidates) {
+      if (candidate == current) continue;
+      try {
+        final r = await _http.get(Uri.parse('$candidate/health')).timeout(const Duration(seconds: 4));
+        if (r.statusCode == 200) {
+          AppConfig.useServer(candidate);
+          return true;
+        }
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  /// Is a backend answering at [url]? Used by the "Server address" screen.
+  Future<bool> ping(String url) async {
+    try {
+      final r = await _http.get(Uri.parse('$url/health')).timeout(const Duration(seconds: 5));
+      return r.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// Called when the session can no longer be refreshed (user must log in again).
   void Function()? onSessionExpired;
@@ -67,7 +100,7 @@ class ApiClient {
     } on TimeoutException {
       throw ApiException('The server is taking too long. Please try again.', code: 'timeout');
     } on http.ClientException {
-      throw ApiException('Cannot reach the server. Is the backend running?', code: 'offline');
+      throw ApiException(_offlineMessage, code: 'offline');
     }
     if (response.statusCode == 401 && !retried) {
       if (await _refreshTokens()) {
@@ -102,8 +135,11 @@ class ApiClient {
     } on TimeoutException {
       throw ApiException('The server is taking too long. Please try again.', code: 'timeout');
     } on http.ClientException {
-      // Also covers "server not running" on Android, Windows and Chrome.
-      throw ApiException('Cannot reach the server. Is the backend running?', code: 'offline');
+      // Also covers "server not running" on Android, Windows and Chrome. Try the other addresses once.
+      if (!retried && await _switchServer()) {
+        return _send(method, path, body: body, auth: auth, retried: true);
+      }
+      throw ApiException(_offlineMessage, code: 'offline');
     }
 
     // Access token expired: try to refresh once, then repeat the request.
@@ -128,7 +164,7 @@ class ApiClient {
     } on TimeoutException {
       throw ApiException('The server is taking too long. Please try again.', code: 'timeout');
     } on http.ClientException {
-      throw ApiException('Cannot reach the server. Is the backend running?', code: 'offline');
+      throw ApiException(_offlineMessage, code: 'offline');
     }
     if (response.statusCode == 401 && !retried && await _refreshTokens()) {
       return getBytes(path, retried: true);
@@ -150,7 +186,7 @@ class ApiClient {
     } on TimeoutException {
       throw ApiException('The server is taking too long. Please try again.', code: 'timeout');
     } on http.ClientException {
-      throw ApiException('Cannot reach the server. Is the backend running?', code: 'offline');
+      throw ApiException(_offlineMessage, code: 'offline');
     }
     if (response.statusCode == 401 && !retried && await _refreshTokens()) {
       return postForBytes(path, body, retried: true);

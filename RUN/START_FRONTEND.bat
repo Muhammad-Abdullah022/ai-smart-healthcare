@@ -11,5 +11,13 @@ where adb >nul 2>&1 || set ADB="%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.ex
 call flutter pub get
 echo.
 echo Choose where to run the app (type the number and press Enter):
-call flutter run
+REM Build this PC's Wi-Fi address into the phone app, so it also works without the USB cable.
+set LANIP=
+for /f "usebackq delims=" %%i in (`powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0lan_ip.ps1"`) do set LANIP=%%i
+if defined LANIP (
+  echo Phone app will use the backend at http://%LANIP%:8000 ^(and localhost over USB^)
+  call flutter run --dart-define=LAN_SERVER=http://%LANIP%:8000
+) else (
+  call flutter run
+)
 pause

@@ -11,6 +11,7 @@ import '../../core/theme/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_client.dart';
 import '../../services/consultation_repository.dart';
+import '../../services/live_notifications.dart';
 import '../../services/prescription_repository.dart';
 import '../../services/report_repository.dart' show mimeTypeFor;
 import '../../widgets/confirm_dialog.dart';
@@ -48,6 +49,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   void initState() {
     super.initState();
     _load();
+    LiveNotifications.instance.openConsultationId = widget.id;
     LiveEvents.instance.ensureConnected(_api);
     _sub = LiveEvents.instance.events.listen((e) {
       if (e['consultation_id'] == widget.id) {
@@ -64,6 +66,9 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
 
   @override
   void dispose() {
+    if (LiveNotifications.instance.openConsultationId == widget.id) {
+      LiveNotifications.instance.openConsultationId = null;
+    }
     _sub?.cancel();
     _poll?.cancel();
     _input.dispose();

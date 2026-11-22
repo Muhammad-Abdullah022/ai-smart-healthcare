@@ -6,6 +6,7 @@ import 'core/config/app_config.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'services/live_notifications.dart';
 
 /// The root widget. It owns the router and the theme.
 class HealthcareApp extends StatefulWidget {
@@ -19,6 +20,13 @@ class HealthcareApp extends StatefulWidget {
 
 class _HealthcareAppState extends State<HealthcareApp> {
   late final GoRouter _router = createRouter(widget.auth);
+
+  @override
+  void initState() {
+    super.initState();
+    // Tapping a phone notification opens the right screen (e.g. the consultation chat).
+    LiveNotifications.instance.onOpen = (link) => _router.push(link);
+  }
 
   @override
   void dispose() {

@@ -5,6 +5,7 @@ import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/auth_repository.dart';
 import '../services/consultation_repository.dart';
+import '../services/live_notifications.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
@@ -35,6 +36,7 @@ class AuthProvider extends ChangeNotifier {
       try {
         user = await _repo.me();
         status = AuthStatus.authenticated;
+        _startLive();
       } on ApiException catch (e) {
         // Offline with saved tokens: keep the user out until the server is reachable.
         status = AuthStatus.unauthenticated;
@@ -77,6 +79,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    LiveNotifications.instance.stop();
     LiveEvents.instance.disconnect();
     await _repo.logout();
     user = null;
@@ -87,7 +90,13 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _loadUser() async {
     user = await _repo.me();
     status = AuthStatus.authenticated;
+    _startLive();
     notifyListeners();
+  }
+
+  /// Live chat connection + phone notifications for the logged-in user, on every screen.
+  void _startLive() {
+    LiveNotifications.instance.start(_repo.api, isDoctor: user?.isDoctor ?? false);
   }
 
   void _handleSessionExpired() {

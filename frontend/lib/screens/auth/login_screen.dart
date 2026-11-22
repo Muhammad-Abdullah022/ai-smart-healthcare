@@ -8,6 +8,7 @@ import '../../utils/validators.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/error_banner.dart';
+import '../../widgets/server_address_dialog.dart';
 import 'auth_header.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -97,6 +98,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       const Text("Don't have an account?"),
                       TextButton(onPressed: () => context.go('/register'), child: const Text('Sign up')),
                     ],
+                  ),
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () => showServerAddressDialog(context),
+                      icon: const Icon(Icons.dns_outlined, size: 16),
+                      label: const Text('Server address'),
+                    ),
                   ),
                 ],
               ),
