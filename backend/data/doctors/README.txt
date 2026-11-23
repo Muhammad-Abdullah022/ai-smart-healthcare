@@ -16,4 +16,4 @@ Files
     * SHC&ME Dept. seniority list, Associate Professors of Gastroenterology (Nov 2025)
   Anaesthesia, radiology and lab specialties are left out (patients do not book them).
   Fees and phone numbers are not published there, so they are blank: "confirm at the hospital".
-There are no made-up (demo) doctors. Doctors who sign up in the app appear after admin approval.
+There are no made-up doctors. Doctors who sign up in the app appear after admin approval.

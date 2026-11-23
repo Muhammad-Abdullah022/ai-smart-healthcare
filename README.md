@@ -158,7 +158,7 @@ cd frontend && flutter test
 
 ## Data & honesty
 - **Real data:** the PHC Punjab registered laboratories list, real doctors from the Punjab health department consultants list and the University of Health Sciences supervisors list (teaching hospitals), the DRAP medicine list, and pharmacies found online. Each has a source column.
-- **Demo data** (some lab prices and phone numbers) is generated for the demo and **always labelled "Demo" or "approx."** in the app. There are no made-up doctors.
+- **Approximate lab prices** (for labs that have not published prices) are always marked **"approx."** in the app. There are no made-up doctors or pharmacies, and lab phone numbers or addresses that were not published are not shown.
 - The AI never prescribes or suggests doses. Only an approved doctor can send a prescription.
 
 ## Security & privacy

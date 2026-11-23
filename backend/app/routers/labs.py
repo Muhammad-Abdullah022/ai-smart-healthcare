@@ -26,7 +26,7 @@ async def cities(user: dict = Depends(get_current_user), db=Depends(get_db)):
     return sorted(out, key=lambda c: (-c["labs"], c["city"]))
 
 
-DEMO_NOTE = "Estimated price (demo) — not published by the lab. Ask the lab for the real price."
+DEMO_NOTE = "Approximate price — not published by the lab. Ask the lab for the real price."
 
 
 @router.get("/tests")
